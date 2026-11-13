@@ -1,0 +1,13 @@
+# 白名单式 .dockerignore：只把运行必需的东西放进构建上下文，
+# 避免把 .env（密钥）、vendor、前端工程、日志等带进镜像。
+
+**
+!app/
+!bin/
+!config/
+!composer.json
+!composer.lock
+!migrations/
+!seeders/
+!docker/
+!docs/

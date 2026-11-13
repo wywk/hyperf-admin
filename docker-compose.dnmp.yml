@@ -1,0 +1,47 @@
+# 本地开发编排（dnmp 环境专用）
+#
+# 与上游的 docker-compose.yml 区别：不自建镜像、不新建网络，
+# 直接复用已拉取的 hyperf 镜像，并加入 dnmp 的 dnmp_default 网络，
+# 这样容器内可以用 mysql5 / redis 这样的服务名访问中间件。
+#
+# 使用方式（在本文件所在目录执行）：
+#   1) 先起依赖（只需一次）：cd ../../../ && docker compose up -d mysql5 redis
+#   2) 起/重建应用：docker compose -f docker-compose.dnmp.yml up -d
+#   3) 看日志：docker compose -f docker-compose.dnmp.yml logs -f
+#   4) 进容器：docker exec -it hyperf sh
+#
+# 注意：dnmp_default 是 dnmp 那份 docker-compose.yml 创建的网络，
+# 如果 dnmp 换了项目名，这里的 external name 也要跟着改。
+
+name: hyperf
+
+services:
+  hyperf:
+    image: hyperf/hyperf:8.1-alpine-v3.18-swoole
+    container_name: hyperf
+    # 镜像默认 CMD 是 /bin/sh，必须显式指定启动命令
+    command: php bin/hyperf.php start
+    working_dir: /data/project/hyperf-skeleton
+    volumes:
+      # 与原有容器保持一致：挂载上级目录，项目位于 /data/project/hyperf-skeleton
+      - ..:/data/project
+    ports:
+      - 9501:9501
+    environment:
+      APP_ENV: dev
+      SCAN_CACHEABLE: "false"
+      TZ: Asia/Shanghai
+    networks:
+      - dnmp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9501/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+networks:
+  dnmp:
+    external: true
+    name: dnmp_default

@@ -1,0 +1,78 @@
+# 生产部署栈：app + MySQL + Redis，一条命令拉起整套后端。
+#
+# 首次部署：
+#   1. 在本目录创建 .env.prod（参考 .env.example，改掉 DB_HOST/REDIS_HOST、密码与 JWT_SECRET）
+#      最少包含：JWT_SECRET、DB_PASSWORD、DB_DATABASE、DB_USERNAME、REDIS_HOST
+#   2. docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# MySQL/Redis 已在外面（如云数据库）时，去掉对应 service，
+# 并把 DB_HOST/REDIS_HOST 指向真实地址即可。
+
+services:
+  app:
+    build: .
+    image: hyperf-admin:latest
+    restart: unless-stopped
+    environment:
+      APP_ENV: prod
+      APP_NAME: hyperf-admin
+      # 首次启动自动建表 + 填充基础数据；稳定后可改为 false 走手动迁移
+      RUN_MIGRATIONS: "true"
+      RUN_SEEDER: "true"
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-hyperf}
+      DB_USERNAME: ${DB_USERNAME:-hyperf}
+      DB_PASSWORD: ${DB_PASSWORD:-hyperf123456}
+      # 统一表前缀：迁移建表、查询、模型都自动拼接
+      DB_PREFIX: ${DB_PREFIX:-ha_}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:?请在 .env.prod 里配置 JWT_SECRET}
+      JWT_TTL: ${JWT_TTL:-7200}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-1209600}
+      LOGIN_MAX_ATTEMPTS: ${LOGIN_MAX_ATTEMPTS:-5}
+      LOGIN_DECAY_SECONDS: ${LOGIN_DECAY_SECONDS:-900}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      LOGIN_LOG_RETENTION_DAYS: ${LOGIN_LOG_RETENTION_DAYS:-90}
+    ports:
+      - "${APP_PORT:-9501}:9501"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - app-logs:/opt/www/runtime/logs
+
+  mysql:
+    image: mysql:5.7.41
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123456}
+      MYSQL_DATABASE: ${DB_DATABASE:-hyperf}
+      MYSQL_USER: ${DB_USERNAME:-hyperf}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-hyperf123456}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_connections=500
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root123456}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.2
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+
+volumes:
+  mysql-data:
+  redis-data:
+  app-logs:

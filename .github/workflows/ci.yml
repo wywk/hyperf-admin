@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: swoole, pdo_mysql, redis, pcntl, bcmath
+          coverage: none
+
+      - name: Verify Swoole
+        run: php --ri swoole | head -3
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Lint (php -l)
+        run: |
+          find app config migrations seeders -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Code style (php-cs-fixer)
+        run: |
+          if [ -f vendor/bin/php-cs-fixer ]; then
+            PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run --diff || true
+          else
+            echo "php-cs-fixer not installed, skip"
+          fi
+
+  frontend:
+    name: Frontend (type check + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check (vue-tsc)
+        run: npx vue-tsc --noEmit
+
+      - name: Build
+        run: npm run build

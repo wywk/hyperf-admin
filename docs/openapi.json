@@ -1,0 +1,1071 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Hyperf Skeleton API",
+    "version": "1.0.0",
+    "description": "Hyperf 3.1 骨架的认证接口。所有接口返回统一结构 {\"code\": 0, \"message\": \"ok\", \"data\": ...}；失败时 code 与 HTTP 状态码一致（401/403/404/422/429/500），前端只需判断 code。"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:9501",
+      "description": "本地开发环境"
+    }
+  ],
+  "tags": [
+    {
+      "name": "认证",
+      "description": "登录、刷新、登出、当前用户"
+    },
+    {
+      "name": "审计",
+      "description": "登录审计日志查询"
+    },
+    {
+      "name": "系统",
+      "description": "连通性检查"
+    },
+    {
+      "name": "权限管理",
+      "description": "权限与角色的增删改查、角色授权（需对应权限码）"
+    },
+    {
+      "name": "权限管理",
+      "description": "权限树（菜单+按钮）与角色的增删改查、角色授权（需对应权限码）"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "系统"
+        ],
+        "summary": "连通性检查",
+        "description": "返回请求方法与问候语，用于确认服务是否存活。",
+        "parameters": [
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Hyperf"
+            },
+            "description": "要问候的名字"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "服务正常",
+            "content": {
+              "application/json": {
+                "example": {
+                  "method": "GET",
+                  "message": "Hello Hyperf."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "认证"
+        ],
+        "summary": "登录",
+        "description": "账号密码登录。同一 IP + 用户名连续失败 5 次后锁定 15 分钟（返回 429）。登录成功返回 access token（2 小时）与 refresh token（7 天）。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "username": "admin",
+                "password": "admin123456"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "登录成功",
+                  "data": {
+                    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                    "token_type": "Bearer",
+                    "expires_in": 7200,
+                    "expires_at": "2026-11-12 18:31:00",
+                    "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                    "refresh_expires_in": 604800,
+                    "refresh_expires_at": "2026-11-19 16:31:00",
+                    "user": {
+                      "id": 1,
+                      "username": "admin",
+                      "nickname": "管理员",
+                      "email": "admin@example.com",
+                      "status": 1,
+                      "role": "admin",
+                      "roles": [
+                        "admin"
+                      ],
+                      "permissions": [
+                        "dashboard.view",
+                        "profile.view",
+                        "audit.view",
+                        "user.manage"
+                      ],
+                      "last_login_at": "2026-11-12 16:30:59",
+                      "created_at": "2026-11-12 16:02:50"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "用户名或密码错误",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 401,
+                  "message": "用户名或密码错误",
+                  "data": null
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "账号已被禁用",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 403,
+                  "message": "账号已被禁用",
+                  "data": null
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数校验失败",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 422,
+                  "message": "参数校验失败",
+                  "data": {
+                    "password": [
+                      "请输入密码"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "登录失败次数过多，已锁定",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 429,
+                  "message": "登录失败次数过多，请 900 秒后再试",
+                  "data": {
+                    "retry_after": 900
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": [
+          "认证"
+        ],
+        "summary": "刷新 token",
+        "description": "用 refresh token 换取新的 token 对，旧 refresh token 立即作废（旋转）。若同一个 refresh token 被第二次使用，视为凭证泄露：整条登录链（含当前 access token）立即吊销，必须重新登录。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refresh_token"
+                ],
+                "properties": {
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "登录时返回的 refresh_token"
+                  }
+                }
+              },
+              "example": {
+                "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "刷新成功，结构与登录返回一致（不含 user 时可忽略）",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "刷新成功",
+                  "data": {
+                    "access_token": "eyJ...",
+                    "token_type": "Bearer",
+                    "expires_in": 7200,
+                    "expires_at": "2026-11-12 18:31:00",
+                    "refresh_token": "eyJ...",
+                    "refresh_expires_in": 604800,
+                    "refresh_expires_at": "2026-11-19 16:31:00"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "refresh token 无效、过期、已使用或整条链已吊销",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 401,
+                  "message": "检测到刷新凭证被重复使用，为保护账号安全已注销本次登录，请重新登录",
+                  "data": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "认证"
+        ],
+        "summary": "退出登录",
+        "description": "吊销当前 access token 及其所属的整条凭证链，refresh token 同步失效。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "已退出",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "已退出登录",
+                  "data": null
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录或登录已失效",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 401,
+                  "message": "未登录，请先登录",
+                  "data": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "认证"
+        ],
+        "summary": "当前登录用户",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "当前用户信息",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "ok",
+                  "data": {
+                    "id": 1,
+                    "username": "admin",
+                    "nickname": "管理员",
+                    "email": "admin@example.com",
+                    "status": 1,
+                    "role": "admin",
+                    "roles": [
+                      "admin"
+                    ],
+                    "permissions": [
+                      "dashboard.view",
+                      "profile.view",
+                      "audit.view",
+                      "user.manage"
+                    ],
+                    "last_login_at": "2026-11-12 16:30:59",
+                    "created_at": "2026-11-12 16:02:50"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未携带 token、token 过期或已吊销",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 401,
+                  "message": "登录状态无效或已过期，请重新登录",
+                  "data": null
+                }
+              }
+            }
+          }
+        },
+        "description": "返回 permissions（按钮+菜单码）与 menus（按角色过滤的菜单树，前端侧边栏直接渲染）。"
+      }
+    },
+    "/api/auth/login-logs": {
+      "get": {
+        "tags": [
+          "审计"
+        ],
+        "summary": "登录审计日志",
+        "description": "分页倒序返回登录相关事件：登录成功、密码错误、触发限流、账号禁用、退出登录、刷新凭证重放。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "event",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "login_success",
+                "login_failed",
+                "login_locked",
+                "login_disabled",
+                "logout",
+                "refresh_replay"
+              ]
+            }
+          },
+          {
+            "name": "username",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "ip",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "日志列表",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "ok",
+                  "data": {
+                    "total": 2,
+                    "page": 1,
+                    "page_size": 20,
+                    "items": [
+                      {
+                        "id": 2,
+                        "user_id": 1,
+                        "username": "admin",
+                        "event": "login_success",
+                        "event_text": "登录成功",
+                        "ip": "172.18.0.1",
+                        "user_agent": "curl/8.4.0",
+                        "message": "登录成功",
+                        "created_at": "2026-11-12 16:31:00"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/permissions": {
+      "get": {
+        "tags": [
+          "权限管理"
+        ],
+        "summary": "权限树",
+        "description": "返回整棵权限树（type=menu 菜单/目录，type=button 按钮，parent_id 组成层级）。带 keyword 时返回平铺的过滤结果。需要 `permission.view` 或 `role.view`（角色授权弹窗复用）。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "按权限码/名称模糊匹配，非空时返回平铺列表"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "权限树",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "ok",
+                  "data": {
+                    "flat": false,
+                    "items": [
+                      {
+                        "id": 3,
+                        "parent_id": 0,
+                        "type": "menu",
+                        "code": "system",
+                        "name": "系统管理",
+                        "path": "system",
+                        "icon": "Setting",
+                        "visible": 1,
+                        "is_system": 1,
+                        "sort": 30,
+                        "description": "",
+                        "role_count": 1,
+                        "children": [
+                          {
+                            "id": 4,
+                            "parent_id": 3,
+                            "type": "menu",
+                            "code": "permission",
+                            "name": "权限管理",
+                            "path": "system/permissions",
+                            "children": [
+                              {
+                                "id": 5,
+                                "parent_id": 4,
+                                "type": "button",
+                                "code": "permission.view",
+                                "name": "查看权限",
+                                "path": "",
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "权限管理"
+        ],
+        "summary": "新增权限节点",
+        "description": "需要 `permission.add`。按钮必须挂在菜单下；创建后自动授予系统角色。重复权限码返回 422。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "type",
+                  "code",
+                  "name"
+                ],
+                "properties": {
+                  "parent_id": {
+                    "type": "integer",
+                    "description": "上级节点，0=一级菜单；按钮必填且必须是菜单"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "menu",
+                      "button"
+                    ]
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_.]*$",
+                    "example": "report.export"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "导出报表"
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "路由路径，仅菜单；目录可留空"
+                  },
+                  "icon": {
+                    "type": "string",
+                    "description": "菜单图标（Element Plus 图标名）"
+                  },
+                  "visible": {
+                    "type": "integer",
+                    "enum": [
+                      0,
+                      1
+                    ],
+                    "description": "是否显示在侧边栏，仅菜单"
+                  },
+                  "sort": {
+                    "type": "integer"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "创建成功"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/permissions/{id}": {
+      "put": {
+        "tags": [
+          "权限管理"
+        ],
+        "summary": "更新权限节点",
+        "description": "需要 `permission.edit`。类型不可改；内置节点不可改权限码；移动节点会做成环检测。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parent_id": {
+                    "type": "integer"
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "icon": {
+                    "type": "string"
+                  },
+                  "visible": {
+                    "type": "integer"
+                  },
+                  "sort": {
+                    "type": "integer"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保存成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "保存成功"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "权限管理"
+        ],
+        "summary": "删除权限节点",
+        "description": "需要 `permission.delete`。内置节点不可删除；有子节点时需先删除子节点；删除时同步移除所有角色的授权。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "已删除",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "已删除"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles": {
+      "get": {
+        "tags": [
+          "权限管理"
+        ],
+        "summary": "角色列表",
+        "description": "需要 `role.view`。附用户数与权限数。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "角色列表",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "ok",
+                  "data": {
+                    "total": 2,
+                    "items": [
+                      {
+                        "id": 1,
+                        "code": "admin",
+                        "name": "管理员",
+                        "description": "拥有全部权限，内置角色不可删除",
+                        "is_system": 1,
+                        "sort": 10,
+                        "user_count": 1,
+                        "permission_count": 8,
+                        "created_at": "2026-11-12 18:08:54"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "权限管理"
+        ],
+        "summary": "新增角色",
+        "description": "需要 `role.add`。重复角色标识返回 422。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code",
+                  "name"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]*$",
+                    "maxLength": 32,
+                    "example": "auditor"
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "example": "审计员"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "sort": {
+                    "type": "integer",
+                    "default": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "创建成功",
+                  "data": {
+                    "id": 3
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles/{id}": {
+      "put": {
+        "tags": [
+          "权限管理"
+        ],
+        "summary": "更新角色",
+        "description": "需要 `role.edit`。修改角色标识会同步更新 `users.role`；内置角色标识不可改。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "sort": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保存成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "保存成功",
+                  "data": {
+                    "id": 3
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "权限管理"
+        ],
+        "summary": "删除角色",
+        "description": "需要 `role.delete`。内置角色不可删除；角色下仍有用户时返回 400 提示先转移。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "已删除",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "已删除",
+                  "data": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roles/{id}/permissions": {
+      "get": {
+        "tags": [
+          "权限管理"
+        ],
+        "summary": "角色已授权限 ID",
+        "description": "需要 `role.view`。返回该角色持有的全部权限节点 ID（含菜单与按钮）。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "授权明细",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "ok",
+                  "data": {
+                    "permission_ids": [
+                      1,
+                      2
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "权限管理"
+        ],
+        "summary": "保存角色授权（覆盖式）",
+        "description": "需要 `role.assign`。前端提交勾选+半选的全部节点 ID，覆盖式保存；系统角色的内置权限会被服务端补齐。",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "permission_ids"
+                ],
+                "properties": {
+                  "permission_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "example": [
+                      1,
+                      2,
+                      3
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "授权已保存",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "message": "授权已保存",
+                  "data": {
+                    "permission_ids": [
+                      1,
+                      2,
+                      3
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "登录后拿到的 access_token，放在 Authorization: Bearer <token>"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 64,
+            "example": "admin"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 64,
+            "example": "admin123456"
+          }
+        }
+      }
+    }
+  }
+}

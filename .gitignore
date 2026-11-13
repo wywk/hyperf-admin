@@ -1,0 +1,25 @@
+.buildpath
+.settings/
+.project
+*.patch
+.idea/
+.git/
+runtime/
+vendor/
+.phpintel/
+.env
+.env.prod
+.env.local
+.DS_Store
+.phpunit*
+*.cache
+.vscode/
+/phpstan.neon
+/phpunit.xml
+.phpunit.cache
+.workbuddy/
+.devcontainer/
+
+# frontend
+frontend/node_modules/
+frontend/dist/
