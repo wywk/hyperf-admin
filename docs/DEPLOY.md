@@ -227,6 +227,8 @@ docker compose -f /path/to/docker-compose.prod.yml exec app php bin/hyperf.php l
 | 登录一直 429 | 触发限流，等 `LOGIN_DECAY_SECONDS` 秒或清 Redis 中限流 key |
 | 构建时 buildx 报 `failed to update builder last activity` | 用 `DOCKER_BUILDKIT=0 docker build ...` |
 | 接口 403 但用户是管理员 | 检查角色的权限是否被改（admin 角色的内置权限不可取消；可在角色管理里重新授权） |
+| 启动日志报 `Command "migrate" is not defined` 并反复重启 | 用的是 2026-11-13 之前的旧镜像（migrate 命令当时由 dev 依赖注册，生产镜像没有），拉最新代码重建镜像即可 |
+| 启动/登录报 `DomainException: Provided key is too short` | `JWT_SECRET` 少于 32 字节，换成 `openssl rand -hex 32` 生成的强密钥 |
 
 ## 六、已知限制
 
