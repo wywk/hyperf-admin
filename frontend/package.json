@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Vue 3 + Element Plus 管理后台脚手架，对接 Hyperf 认证接口",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
