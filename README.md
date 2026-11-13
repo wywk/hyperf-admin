@@ -30,7 +30,7 @@
 ### Docker Compose（推荐）
 
 ```bash
-git clone https://github.com/hyperf-admin/hyperf-admin.git
+git clone https://github.com/wywk/hyperf-admin.git
 cd hyperf-admin
 
 # 配置环境变量（JWT_SECRET 必填）
