@@ -129,6 +129,13 @@ export const routes: RouteRecordRaw[] = [
     children: layoutRoutes,
   },
   {
+    // 手机商城 demo（H5 风格，需登录后访问，接口走后台鉴权）
+    path: '/shop',
+    name: 'shop',
+    component: () => import('@/views/shop/index.vue'),
+    meta: { title: '精选商城' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'notFound',
     component: () => import('@/views/error/404.vue'),
