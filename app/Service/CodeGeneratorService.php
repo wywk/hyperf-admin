@@ -123,7 +123,7 @@ class CodeGeneratorService
             }
         }
 
-        $ctx = $this->buildContext($module, $studly, $bare, $fields, (string) ($config['menu']['name'] ?? '') ?: $studly);
+        $ctx = $this->buildContext($module, $studly, $bare, $fields, (string) ($config['menu']['name'] ?? '') ?: $studly, (string) ($config['menu']['path'] ?? ''));
 
         $files = [
             "app/Model/{$studly}.php" => $this->renderModel($ctx),
@@ -284,7 +284,7 @@ class CodeGeneratorService
         return str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $value)));
     }
 
-    private function buildContext(string $module, string $studly, string $table, array $fields, string $menuName): array
+    private function buildContext(string $module, string $studly, string $table, array $fields, string $menuName, string $menuPath): array
     {
         $rules = [];
         $casts = [];
@@ -401,7 +401,7 @@ class CodeGeneratorService
             'form_rules' => $formRules === [] ? '{}' : "{\n" . implode("\n", $formRules) . "\n}",
             'option_maps' => $optionMaps === [] ? '' : implode("\n\n", $optionMaps) . "\n",
             'routes_block' => $this->renderRoutesBlock($module, $studly),
-            'frontend_route' => $this->renderFrontendRoute($module, $studly, $menuName),
+            'frontend_route' => $this->renderFrontendRoute($module, $studly, $menuName, $menuPath),
         ];
     }
 
@@ -463,11 +463,13 @@ class CodeGeneratorService
             . "}, ['middleware' => [AuthMiddleware::class]]);";
     }
 
-    private function renderFrontendRoute(string $module, string $studly, string $menuName): string
+    private function renderFrontendRoute(string $module, string $studly, string $menuName, string $menuPath): string
     {
+        // 路由 path 必须与权限表里菜单的 path 一致（侧边栏按它跳转），未配置时回退模块名
+        $routePath = $menuPath !== '' ? $menuPath : $module;
 
         return "  {\n"
-            . "    path: '{$module}',\n"
+            . "    path: '{$routePath}',\n"
             . "    name: 'gen-{$module}',\n"
             . "    component: () => import('@/views/gen/{$module}/index.vue'),\n"
             . "    meta: { title: '{$menuName}', permission: '{$module}' },\n"

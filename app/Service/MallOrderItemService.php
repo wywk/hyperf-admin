@@ -24,10 +24,10 @@ class MallOrderItemService
     {
         $query = MallOrderItem::query()->orderByDesc('id');
 
-        if (! empty($filters['order_id'])) {
+        if (isset($filters['order_id']) && $filters['order_id'] !== null && $filters['order_id'] !== '') {
             $query->where('order_id', $filters['order_id']);
         }
-        if (! empty($filters['goods_name'])) {
+        if (isset($filters['goods_name']) && $filters['goods_name'] !== null && $filters['goods_name'] !== '') {
             $query->where('goods_name', 'like', '%'.$filters['goods_name'].'%');
         }
 

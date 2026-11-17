@@ -24,16 +24,16 @@ class MallOrderService
     {
         $query = MallOrder::query()->orderByDesc('id');
 
-        if (! empty($filters['order_no'])) {
+        if (isset($filters['order_no']) && $filters['order_no'] !== null && $filters['order_no'] !== '') {
             $query->where('order_no', 'like', '%'.$filters['order_no'].'%');
         }
-        if (! empty($filters['receiver'])) {
+        if (isset($filters['receiver']) && $filters['receiver'] !== null && $filters['receiver'] !== '') {
             $query->where('receiver', 'like', '%'.$filters['receiver'].'%');
         }
-        if (! empty($filters['phone'])) {
+        if (isset($filters['phone']) && $filters['phone'] !== null && $filters['phone'] !== '') {
             $query->where('phone', 'like', '%'.$filters['phone'].'%');
         }
-        if (! empty($filters['status'])) {
+        if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
             $query->where('status', $filters['status']);
         }
 

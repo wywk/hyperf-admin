@@ -24,16 +24,16 @@ class MallGoodsService
     {
         $query = MallGoods::query()->orderByDesc('id');
 
-        if (! empty($filters['name'])) {
+        if (isset($filters['name']) && $filters['name'] !== null && $filters['name'] !== '') {
             $query->where('name', 'like', '%'.$filters['name'].'%');
         }
-        if (! empty($filters['category_id'])) {
+        if (isset($filters['category_id']) && $filters['category_id'] !== null && $filters['category_id'] !== '') {
             $query->where('category_id', $filters['category_id']);
         }
-        if (! empty($filters['price'])) {
+        if (isset($filters['price']) && $filters['price'] !== null && $filters['price'] !== '') {
             $query->where('price', $filters['price']);
         }
-        if (! empty($filters['status'])) {
+        if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
             $query->where('status', $filters['status']);
         }
 

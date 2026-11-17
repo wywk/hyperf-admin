@@ -24,10 +24,10 @@ class MallCategoryService
     {
         $query = MallCategory::query()->orderByDesc('id');
 
-        if (! empty($filters['name'])) {
+        if (isset($filters['name']) && $filters['name'] !== null && $filters['name'] !== '') {
             $query->where('name', 'like', '%'.$filters['name'].'%');
         }
-        if (! empty($filters['status'])) {
+        if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
             $query->where('status', $filters['status']);
         }
 

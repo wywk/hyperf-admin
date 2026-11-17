@@ -83,7 +83,7 @@ export const layoutRoutes: RouteRecordRaw[] = [
   // [gen:product] end
   // [gen:mall_category] start（代码生成器维护，勿手改）
   {
-    path: 'mall_category',
+    path: 'mall/category',
     name: 'gen-mall_category',
     component: () => import('@/views/gen/mall_category/index.vue'),
     meta: { title: '分类管理', permission: 'mall_category' },
@@ -91,7 +91,7 @@ export const layoutRoutes: RouteRecordRaw[] = [
   // [gen:mall_category] end
   // [gen:mall_goods] start（代码生成器维护，勿手改）
   {
-    path: 'mall_goods',
+    path: 'mall/goods',
     name: 'gen-mall_goods',
     component: () => import('@/views/gen/mall_goods/index.vue'),
     meta: { title: '商品管理', permission: 'mall_goods' },
@@ -99,7 +99,7 @@ export const layoutRoutes: RouteRecordRaw[] = [
   // [gen:mall_goods] end
   // [gen:mall_order] start（代码生成器维护，勿手改）
   {
-    path: 'mall_order',
+    path: 'mall/order',
     name: 'gen-mall_order',
     component: () => import('@/views/gen/mall_order/index.vue'),
     meta: { title: '订单管理', permission: 'mall_order' },
@@ -107,7 +107,7 @@ export const layoutRoutes: RouteRecordRaw[] = [
   // [gen:mall_order] end
   // [gen:mall_order_item] start（代码生成器维护，勿手改）
   {
-    path: 'mall_order_item',
+    path: 'mall/order-item',
     name: 'gen-mall_order_item',
     component: () => import('@/views/gen/mall_order_item/index.vue'),
     meta: { title: '订单明细', permission: 'mall_order_item' },

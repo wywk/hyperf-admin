@@ -92,6 +92,10 @@ Router::addGroup('/api', function () {
 
 
 
+
+
+
+
 // [gen:mall_category] start（代码生成器维护，勿手改）
 Router::addGroup('/api', function () {
     Router::get('/mall_category', [\App\Controller\Api\MallCategoryController::class, 'index']);
