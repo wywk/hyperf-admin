@@ -76,6 +76,7 @@ const emptyForm: Record<string, any> = {
   status: '',
   cover: '',
   summary: '',
+  specType: 'single',
 }
 
 function openCreate(): void {
@@ -93,7 +94,8 @@ function openEdit(row: any): void {
   Object.assign(form, JSON.parse(JSON.stringify(row)))
   delete form.id
   dialogVisible.value = true
-  void loadSkus(row.id)
+  // 规格类型按是否已有 SKU 判定（SKU 加载完成后修正）
+  void loadSkus(row.id, true)
 }
 
 function resetForm(): void {
@@ -108,25 +110,51 @@ async function submit(): Promise<void> {
     return
   }
 
+  // 切换为单规格时，已配置的 SKU 会被删除
+  const existingSkus = skuItems.value.filter((s) => s.id)
+  if (form.specType === 'single' && existingSkus.length > 0) {
+    const ok = await ElMessageBox.confirm(
+      `该商品已配置 ${existingSkus.length} 个 SKU，保存为单规格将删除这些 SKU，库存以商品库存为准。`,
+      '切换为单规格',
+      { type: 'warning', confirmButtonText: '仍要保存', cancelButtonText: '取消' },
+    ).catch(() => false)
+    if (!ok) {
+      return
+    }
+  }
+
   submitting.value = true
   try {
+    // 单规格：先清除已有 SKU（库存恢复为商品库存）
+    if (form.specType === 'single') {
+      for (const sku of existingSkus) {
+        await deleteMallGoodsSku(sku.id)
+      }
+      skuItems.value = []
+    }
+
+    // specType 不入库，提交前剔除
+    const { specType, ...goodsData } = form
+
     let goodsId = editingId.value
     if (goodsId > 0) {
-      await updateMallGoods(goodsId, { ...form })
+      await updateMallGoods(goodsId, { ...goodsData })
       ElMessage.success('已保存')
     } else {
-      const created = await createMallGoods({ ...form })
+      const created = await createMallGoods({ ...goodsData })
       goodsId = created.id
       ElMessage.success('已创建')
     }
 
-    // 商品新增/编辑弹窗内暂存的 SKU（无 id 的本地行）：保存商品后统一创建
-    for (const sku of skuItems.value.filter((s) => !s.id)) {
-      const { _key, ...payload } = sku
-      await createMallGoodsSku({ goods_id: goodsId, ...payload })
-    }
-    if (skuItems.value.some((s) => !s.id)) {
-      ElMessage.success('SKU 已保存')
+    // 多规格：商品新增/编辑弹窗内暂存的 SKU（无 id 的本地行）统一创建
+    if (form.specType === 'multi') {
+      for (const sku of skuItems.value.filter((s) => !s.id)) {
+        const { _key, ...payload } = sku
+        await createMallGoodsSku({ goods_id: goodsId, ...payload })
+      }
+      if (skuItems.value.some((s) => !s.id)) {
+        ElMessage.success('SKU 已保存')
+      }
     }
 
     dialogVisible.value = false
@@ -168,12 +196,15 @@ const skuStatusLabels: Record<string, string> = {
   '0': '停用',
 }
 
-/** 编辑已有商品时加载其 SKU；新增时为空（保存商品后统一创建） */
-async function loadSkus(goodsId: number): Promise<void> {
+/** 加载商品 SKU；syncSpecType 为 true 时按 SKU 数量自动修正规格类型 */
+async function loadSkus(goodsId: number, syncSpecType = false): Promise<void> {
   skuLoading.value = true
   try {
     const result = await fetchMallGoodsSkuList({ goods_id: goodsId, page_size: 100 })
     skuItems.value = result.items
+    if (syncSpecType) {
+      form.specType = result.items.length > 0 ? 'multi' : 'single'
+    }
   } catch {
     // 错误提示由请求层统一处理
   } finally {
@@ -360,9 +391,17 @@ async function removeSku(row: any): Promise<void> {
         <el-form-item label="售价(元)" prop="price">
           <el-input-number v-model="form.price" style="width: 100%" />
         </el-form-item>
+        <el-form-item label="规格类型" prop="specType">
+          <el-radio-group v-model="form.specType">
+            <el-radio value="single">单规格</el-radio>
+            <el-radio value="multi">多规格</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="库存" prop="stock">
           <el-input-number v-model="form.stock" :min="0" style="width: 100%" />
-          <div class="field-tip">已配置 SKU 的商品，库存由各 SKU 库存求和自动回写</div>
+          <div class="field-tip">
+            {{ form.specType === 'multi' ? '多规格商品：库存由各 SKU 库存求和自动回写' : '单规格商品：直接维护商品库存' }}
+          </div>
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status" clearable filterable>
@@ -378,9 +417,10 @@ async function removeSku(row: any): Promise<void> {
         </el-form-item>
       </el-form>
 
-      <!-- SKU 规格：新增时先暂存，保存商品后统一创建；编辑时已有 SKU 实时保存 -->
-      <el-divider content-position="left">SKU 规格（颜色/容量等，库存自动汇总到商品）</el-divider>
-      <div class="sku-toolbar">
+      <!-- SKU 规格：仅多规格显示；新增时先暂存，保存商品后统一创建；编辑时已有 SKU 实时保存 -->
+      <template v-if="form.specType === 'multi'">
+        <el-divider content-position="left">SKU 规格（颜色/容量等，库存自动汇总到商品）</el-divider>
+        <div class="sku-toolbar">
         <el-button v-permission="'mall_goods_sku.add'" type="primary" size="small" @click="openSkuCreate">新增 SKU</el-button>
       </div>
       <el-table v-loading="skuLoading" :data="skuItems" :row-key="(row: any) => row.id ?? row._key" size="small">
@@ -405,6 +445,7 @@ async function removeSku(row: any): Promise<void> {
           <el-empty description="暂无 SKU" :image-size="60" />
         </template>
       </el-table>
+      </template>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
