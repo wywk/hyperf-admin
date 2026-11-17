@@ -80,7 +80,7 @@ class MallOrderItemController extends AbstractController
     {
         $this->authorize('mall_order_item.edit');
 
-        $data = $this->validatorFactory->make($this->request->all(), $this->rules())->validate();
+        $data = $this->validatorFactory->make($this->request->all(), $this->rulesForUpdate())->validate();
         $this->service->update($id, $data);
 
         return ApiResponse::success(['id' => $id], '保存成功');
@@ -105,6 +105,15 @@ class MallOrderItemController extends AbstractController
             'quantity' => 'required|numeric',
             'amount' => 'required|numeric',
         ];
+    }
+
+    /** 更新支持部分字段提交：required 放宽为 nullable，传了才校验 */
+    private function rulesForUpdate(): array
+    {
+        return array_map(
+            static fn (string $rule): string => str_replace('required', 'nullable', $rule),
+            $this->rules()
+        );
     }
 
     /** 搜索字段的校验规则（生成器按配置展开；这里全部放宽为 nullable） */

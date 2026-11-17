@@ -10,6 +10,12 @@ import {
   fetchMallGoodsList,
   updateMallGoods,
 } from '@/api/gen/mall_goods'
+import {
+  createMallGoodsSku,
+  deleteMallGoodsSku,
+  fetchMallGoodsSkuList,
+  updateMallGoodsSku,
+} from '@/api/gen/mall_goods_sku'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
@@ -137,6 +143,119 @@ async function remove(row: any): Promise<void> {
     // 错误提示由请求层统一处理
   }
 }
+
+/* ---------------- SKU 管理（弹窗内按商品维护规格） ---------------- */
+
+const skuVisible = ref(false)
+const skuLoading = ref(false)
+const skuGoods = ref<{ id: number; name: string }>({ id: 0, name: '' })
+const skuItems = ref<any[]>([])
+const skuStatusLabels: Record<string, string> = {
+  '1': '启用',
+  '0': '停用',
+}
+
+function openSku(row: any): void {
+  skuGoods.value = { id: row.id, name: row.name }
+  skuVisible.value = true
+  void loadSkus()
+}
+
+async function loadSkus(): Promise<void> {
+  skuLoading.value = true
+  try {
+    const result = await fetchMallGoodsSkuList({ goods_id: skuGoods.value.id, page_size: 100 })
+    skuItems.value = result.items
+  } catch {
+    // 错误提示由请求层统一处理
+  } finally {
+    skuLoading.value = false
+  }
+}
+
+const skuDialogVisible = ref(false)
+const skuSubmitting = ref(false)
+const skuEditingId = ref(0)
+const skuFormRef = ref()
+const skuForm = reactive<Record<string, any>>({})
+const skuRules: Record<string, unknown> = {
+  sku_code: [{ required: true, message: '请填写 SKU 编码', trigger: 'blur' }],
+  price: [{ required: true, message: '请填写售价', trigger: 'blur' }],
+}
+const emptySkuForm: Record<string, any> = {
+  sku_code: '',
+  specs: '',
+  price: null,
+  stock: null,
+  status: '1',
+}
+
+function openSkuCreate(): void {
+  skuEditingId.value = 0
+  resetSkuForm()
+  Object.assign(skuForm, JSON.parse(JSON.stringify(emptySkuForm)))
+  skuDialogVisible.value = true
+}
+
+function openSkuEdit(row: any): void {
+  skuEditingId.value = row.id
+  resetSkuForm()
+  Object.assign(skuForm, JSON.parse(JSON.stringify(emptySkuForm)))
+  Object.assign(skuForm, JSON.parse(JSON.stringify(row)))
+  delete skuForm.id
+  delete skuForm.goods_id
+  skuDialogVisible.value = true
+}
+
+function resetSkuForm(): void {
+  for (const key of Object.keys(skuForm)) {
+    delete skuForm[key]
+  }
+}
+
+async function submitSku(): Promise<void> {
+  const valid = await skuFormRef.value?.validate().catch(() => false)
+  if (!valid) {
+    return
+  }
+
+  skuSubmitting.value = true
+  try {
+    if (skuEditingId.value > 0) {
+      await updateMallGoodsSku(skuEditingId.value, { ...skuForm })
+      ElMessage.success('已保存')
+    } else {
+      await createMallGoodsSku({ goods_id: skuGoods.value.id, ...skuForm })
+      ElMessage.success('已创建')
+    }
+    skuDialogVisible.value = false
+    await loadSkus()
+  } catch {
+    // 错误提示由请求层统一处理
+  } finally {
+    skuSubmitting.value = false
+  }
+}
+
+async function removeSku(row: any): Promise<void> {
+  try {
+    await ElMessageBox.confirm(`确定删除 SKU「${row.sku_code}」吗？`, '删除', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+    })
+  } catch {
+    return
+  }
+
+  try {
+    await deleteMallGoodsSku(row.id)
+    ElMessage.success('已删除')
+    await loadSkus()
+  } catch {
+    // 错误提示由请求层统一处理
+  }
+}
 </script>
 
 <template>
@@ -181,8 +300,9 @@ async function remove(row: any): Promise<void> {
       </template>
     </el-table-column>
     <el-table-column prop="summary" label="简介" min-width="130" show-overflow-tooltip />
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="210" fixed="right">
           <template #default="{ row }">
+            <el-button v-permission="'mall_goods_sku.view'" link type="warning" @click="openSku(row)">SKU</el-button>
             <el-button v-permission="'mall_goods.edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button v-permission="'mall_goods.delete'" link type="danger" @click="remove(row)">删除</el-button>
           </template>
@@ -236,6 +356,66 @@ async function remove(row: any): Promise<void> {
         <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- SKU 管理：按商品维护规格粒度的价格与库存 -->
+    <el-dialog v-model="skuVisible" :title="`SKU 管理 - ${skuGoods.name}`" width="760px">
+      <div class="sku-toolbar">
+        <el-button v-permission="'mall_goods_sku.add'" type="primary" size="small" @click="openSkuCreate">新增 SKU</el-button>
+      </div>
+      <el-table v-loading="skuLoading" :data="skuItems" row-key="id" size="small">
+        <el-table-column prop="sku_code" label="SKU 编码" min-width="140" show-overflow-tooltip />
+        <el-table-column prop="specs" label="规格" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="price" label="售价(元)" width="110" />
+        <el-table-column prop="stock" label="库存" width="90" />
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="Number(row.status) === 1 ? 'success' : 'info'" size="small">
+              {{ skuStatusLabels[String(row.status)] ?? row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" fixed="right">
+          <template #default="{ row }">
+            <el-button v-permission="'mall_goods_sku.edit'" link type="primary" size="small" @click="openSkuEdit(row)">编辑</el-button>
+            <el-button v-permission="'mall_goods_sku.delete'" link type="danger" size="small" @click="removeSku(row)">删除</el-button>
+          </template>
+        </el-table-column>
+        <template #empty>
+          <el-empty description="该商品还没有 SKU，点右上角新增" :image-size="70" />
+        </template>
+      </el-table>
+      <template #footer>
+        <el-button @click="skuVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- SKU 新增/编辑 -->
+    <el-dialog v-model="skuDialogVisible" :title="skuEditingId > 0 ? '编辑 SKU' : '新增 SKU'" width="480px" append-to-body>
+      <el-form ref="skuFormRef" :model="skuForm" :rules="skuRules" label-width="90px">
+        <el-form-item label="SKU 编码" prop="sku_code">
+          <el-input v-model="skuForm.sku_code" clearable placeholder="如 IP15PM-BK-512" />
+        </el-form-item>
+        <el-form-item label="规格" prop="specs">
+          <el-input v-model="skuForm.specs" clearable placeholder="如 颜色:黑色;存储:512G" />
+        </el-form-item>
+        <el-form-item label="售价(元)" prop="price">
+          <el-input-number v-model="skuForm.price" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="库存" prop="stock">
+          <el-input-number v-model="skuForm.stock" :min="0" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="skuForm.status" style="width: 100%">
+            <el-option label="启用" value="1" />
+            <el-option label="停用" value="0" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="skuDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="skuSubmitting" @click="submitSku">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -260,5 +440,11 @@ async function remove(row: any): Promise<void> {
   display: flex;
   justify-content: flex-end;
   margin-top: 14px;
+}
+
+.sku-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
 }
 </style>
