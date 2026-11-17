@@ -100,7 +100,7 @@ class MallCategoryController extends AbstractController
         return [
             'name' => 'required|string|max:191',
             'sort' => 'nullable|numeric',
-            'status' => 'nullable|string|max:191',
+            'status' => 'nullable|in:1,0',
             'description' => 'nullable|string|max:2000',
         ];
     }

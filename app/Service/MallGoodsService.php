@@ -34,7 +34,7 @@ class MallGoodsService
             $query->where('price', $filters['price']);
         }
         if (! empty($filters['status'])) {
-            $query->where('status', 'like', '%'.$filters['status'].'%');
+            $query->where('status', $filters['status']);
         }
 
         $total = (clone $query)->count();

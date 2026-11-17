@@ -13,6 +13,7 @@ import {
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
+
 const items = ref<any[]>([])
 const total = ref(0)
 const query = reactive<Record<string, any>>({

@@ -13,6 +13,14 @@ import {
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
+const statusLabels: Record<string, string> = {
+  '0': '待付款',
+  '1': '已付款',
+  '2': '已发货',
+  '3': '已完成',
+  '4': '已取消',
+}
+
 const items = ref<any[]>([])
 const total = ref(0)
 const query = reactive<Record<string, any>>({
@@ -154,11 +162,11 @@ async function remove(row: any): Promise<void> {
         </el-form-item>
         <el-form-item label="订单状态" prop="status">
           <el-select v-model="query.status" clearable filterable style="width: 180px">
-              <el-option key="0=待付款" label="0=待付款" value="0=待付款" />
-              <el-option key="1=已付款" label="1=已付款" value="1=已付款" />
-              <el-option key="2=已发货" label="2=已发货" value="2=已发货" />
-              <el-option key="3=已完成" label="3=已完成" value="3=已完成" />
-              <el-option key="4=已取消" label="4=已取消" value="4=已取消" />
+              <el-option key="0" label="待付款" value="0" />
+              <el-option key="1" label="已付款" value="1" />
+              <el-option key="2" label="已发货" value="2" />
+              <el-option key="3" label="已完成" value="3" />
+              <el-option key="4" label="已取消" value="4" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -173,7 +181,11 @@ async function remove(row: any): Promise<void> {
     <el-table-column prop="receiver" label="收货人" min-width="130" show-overflow-tooltip />
     <el-table-column prop="phone" label="联系电话" min-width="130" show-overflow-tooltip />
     <el-table-column prop="amount" label="金额(元)" min-width="130" show-overflow-tooltip />
-    <el-table-column prop="status" label="订单状态" min-width="130" show-overflow-tooltip />
+    <el-table-column prop="status" label="订单状态" width="90">
+      <template #default="{ row }">
+        <el-tag type="info">{{ statusLabels[String(row.status)] ?? row.status }}</el-tag>
+      </template>
+    </el-table-column>
     <el-table-column prop="user_id" label="用户ID" min-width="130" show-overflow-tooltip />
     <el-table-column prop="address" label="收货地址" min-width="130" show-overflow-tooltip />
         <el-table-column label="操作" width="160" fixed="right">
@@ -215,11 +227,11 @@ async function remove(row: any): Promise<void> {
         </el-form-item>
         <el-form-item label="订单状态" prop="status">
           <el-select v-model="form.status" clearable filterable>
-              <el-option key="0=待付款" label="0=待付款" value="0=待付款" />
-              <el-option key="1=已付款" label="1=已付款" value="1=已付款" />
-              <el-option key="2=已发货" label="2=已发货" value="2=已发货" />
-              <el-option key="3=已完成" label="3=已完成" value="3=已完成" />
-              <el-option key="4=已取消" label="4=已取消" value="4=已取消" />
+              <el-option key="0" label="待付款" value="0" />
+              <el-option key="1" label="已付款" value="1" />
+              <el-option key="2" label="已发货" value="2" />
+              <el-option key="3" label="已完成" value="3" />
+              <el-option key="4" label="已取消" value="4" />
           </el-select>
         </el-form-item>
         <el-form-item label="用户ID" prop="user_id">

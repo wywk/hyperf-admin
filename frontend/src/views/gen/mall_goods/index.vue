@@ -13,6 +13,11 @@ import {
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
+const statusLabels: Record<string, string> = {
+  '1': '上架',
+  '0': '下架',
+}
+
 const items = ref<any[]>([])
 const total = ref(0)
 const query = reactive<Record<string, any>>({
@@ -154,8 +159,8 @@ async function remove(row: any): Promise<void> {
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="query.status" clearable filterable style="width: 180px">
-              <el-option key="1=上架" label="1=上架" value="1=上架" />
-              <el-option key="0=下架" label="0=下架" value="0=下架" />
+              <el-option key="1" label="上架" value="1" />
+              <el-option key="0" label="下架" value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -170,7 +175,11 @@ async function remove(row: any): Promise<void> {
     <el-table-column prop="category_id" label="分类" min-width="130" show-overflow-tooltip />
     <el-table-column prop="price" label="售价(元)" min-width="130" show-overflow-tooltip />
     <el-table-column prop="stock" label="库存" min-width="130" show-overflow-tooltip />
-    <el-table-column prop="status" label="状态" min-width="130" show-overflow-tooltip />
+    <el-table-column prop="status" label="状态" width="90">
+      <template #default="{ row }">
+        <el-tag type="info">{{ statusLabels[String(row.status)] ?? row.status }}</el-tag>
+      </template>
+    </el-table-column>
     <el-table-column prop="summary" label="简介" min-width="130" show-overflow-tooltip />
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
@@ -211,8 +220,8 @@ async function remove(row: any): Promise<void> {
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status" clearable filterable>
-              <el-option key="1=上架" label="1=上架" value="1=上架" />
-              <el-option key="0=下架" label="0=下架" value="0=下架" />
+              <el-option key="1" label="上架" value="1" />
+              <el-option key="0" label="下架" value="0" />
           </el-select>
         </el-form-item>
         <el-form-item label="封面图" prop="cover">

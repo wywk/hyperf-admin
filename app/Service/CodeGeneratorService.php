@@ -297,6 +297,7 @@ class CodeGeneratorService
         $formDefaults = [];
         $formRules = [];
         $fillable = [];
+        $optionMaps = [];
 
         foreach ($fields as $field) {
             $name = $field['name'];
@@ -310,6 +311,7 @@ class CodeGeneratorService
                 'checkbox' => 'array',
                 'switch' => 'boolean',
                 'date' => 'date',
+                'select', 'radio' => $this->optionRule($field),
                 default => 'string|max:191',
             };
             $rules[] = "            '{$name}' => '" . ($required ? 'required|' : 'nullable|') . $ruleBody . "',";
@@ -333,23 +335,41 @@ class CodeGeneratorService
             };
 
             if (! empty($field['search'])) {
-                $isText = in_array($formType, ['input', 'textarea', 'select', 'radio'], true);
+                // 文本字段模糊搜；select/radio（下拉值）/数字/日期等精确匹配。
+                // 注意不能用 empty() 判断：字符串 '0' 也是 empty，会漏掉 status=0 这类过滤
+                $hasFilter = "isset(\$filters['{$name}']) && \$filters['{$name}'] !== null && \$filters['{$name}'] !== ''";
+                $isText = in_array($formType, ['input', 'textarea'], true)
+                    || ($formType === 'select' && ($field['options'] ?? []) === []);
                 $searchWheres[] = $isText
-                    ? "        if (! empty(\$filters['{$name}'])) {\n            \$query->where('{$name}', 'like', '%'.\$filters['{$name}'].'%');\n        }"
-                    : "        if (! empty(\$filters['{$name}'])) {\n            \$query->where('{$name}', \$filters['{$name}']);\n        }";
+                    ? "        if ({$hasFilter}) {\n            \$query->where('{$name}', 'like', '%'.\$filters['{$name}'].'%');\n        }"
+                    : "        if ({$hasFilter}) {\n            \$query->where('{$name}', \$filters['{$name}']);\n        }";
                 $searchData[] = "        '{$name}' => \$data['{$name}'] ?? null,";
                 $searchItems[] = $this->frontendFormItem($formType, $field, true);
             }
 
             if (! empty($field['list']) && $name !== 'id') {
-                // 开关列渲染成标签，其他列直接展示文本
-                $tableColumns[] = $formType === 'switch'
-                    ? "    <el-table-column prop=\"{$name}\" label=\"{$label}\" width=\"90\">\n"
+                // 开关/下拉渲染成标签，其他列直接展示文本
+                if ($formType === 'switch') {
+                    $tableColumns[] = "    <el-table-column prop=\"{$name}\" label=\"{$label}\" width=\"90\">\n"
                     . "      <template #default=\"{ row }\">\n"
                     . "        <el-tag :type=\"row.{$name} ? 'success' : 'info'\">{{ row.{$name} ? '是' : '否' }}</el-tag>\n"
                     . "      </template>\n"
-                    . "    </el-table-column>"
-                    : "    <el-table-column prop=\"{$name}\" label=\"{$label}\" min-width=\"130\" show-overflow-tooltip />";
+                    . "    </el-table-column>";
+                } elseif ($formType === 'select' && ($field['options'] ?? []) !== []) {
+                    $pairs = [];
+                    foreach ($field['options'] as $opt) {
+                        $o = self::splitOption($opt);
+                        $pairs[] = "  '{$o['value']}': '{$o['label']}',";
+                    }
+                    $optionMaps[] = "const {$name}Labels: Record<string, string> = {\n" . implode("\n", $pairs) . "\n}";
+                    $tableColumns[] = "    <el-table-column prop=\"{$name}\" label=\"{$label}\" width=\"90\">\n"
+                    . "      <template #default=\"{ row }\">\n"
+                    . "        <el-tag type=\"info\">{{ {$name}Labels[String(row.{$name})] ?? row.{$name} }}</el-tag>\n"
+                    . "      </template>\n"
+                    . "    </el-table-column>";
+                } else {
+                    $tableColumns[] = "    <el-table-column prop=\"{$name}\" label=\"{$label}\" min-width=\"130\" show-overflow-tooltip />";
+                }
             }
 
             if (! empty($field['form'])) {
@@ -379,6 +399,7 @@ class CodeGeneratorService
             'search_form' => $searchItems === [] ? '' : implode("\n", $searchItems),
             'menu_name' => $menuName,
             'form_rules' => $formRules === [] ? '{}' : "{\n" . implode("\n", $formRules) . "\n}",
+            'option_maps' => $optionMaps === [] ? '' : implode("\n\n", $optionMaps) . "\n",
             'routes_block' => $this->renderRoutesBlock($module, $studly),
             'frontend_route' => $this->renderFrontendRoute($module, $studly, $menuName),
         ];
@@ -392,17 +413,29 @@ class CodeGeneratorService
         $model = $search ? 'query' : 'form';
         $width = $search ? ' style="width: 180px"' : '';
         $options = $field['options'] ?? [];
-        $optLines = implode("\n", array_map(static fn (string $opt): string => "              <el-option key=\"{$opt}\" label=\"{$opt}\" value=\"{$opt}\" />", $options));
+        $optLines = implode("\n", array_map(static function (string $opt): string {
+            $o = self::splitOption($opt);
+
+            return "              <el-option key=\"{$o['value']}\" label=\"{$o['label']}\" value=\"{$o['value']}\" />";
+        }, $options));
 
         $body = match ($formType) {
             'textarea' => "          <el-input v-model=\"{$model}.{$name}\" type=\"textarea\" :rows=\"3\" />",
             'number' => "          <el-input-number v-model=\"{$model}.{$name}\" style=\"width: 100%\" />",
             'select' => "          <el-select v-model=\"{$model}.{$name}\" clearable filterable{$width}>\n{$optLines}\n          </el-select>",
             'radio' => "          <el-radio-group v-model=\"{$model}.{$name}\">\n"
-                . implode("\n", array_map(static fn (string $opt): string => "            <el-radio key=\"{$opt}\" value=\"{$opt}\">{$opt}</el-radio>", $options))
+                . implode("\n", array_map(static function (string $opt) use ($name, $model): string {
+                    $o = self::splitOption($opt);
+
+                    return "            <el-radio key=\"{$o['value']}\" value=\"{$o['value']}\">{$o['label']}</el-radio>";
+                }, $options))
                 . "\n          </el-radio-group>",
             'checkbox' => "          <el-checkbox-group v-model=\"{$model}.{$name}\">\n"
-                . implode("\n", array_map(static fn (string $opt): string => "            <el-checkbox key=\"{$opt}\" value=\"{$opt}\">{$opt}</el-checkbox>", $options))
+                . implode("\n", array_map(static function (string $opt) use ($name, $model): string {
+                    $o = self::splitOption($opt);
+
+                    return "            <el-checkbox key=\"{$o['value']}\" value=\"{$o['value']}\">{$o['label']}</el-checkbox>";
+                }, $options))
                 . "\n          </el-checkbox-group>",
             'switch' => "          <el-switch v-model=\"{$model}.{$name}\" />",
             'date' => "          <el-date-picker v-model=\"{$model}.{$name}\" type=\"date\" value-format=\"YYYY-MM-DD\"{$width} />",
@@ -734,6 +767,7 @@ import {
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
+{$ctx['option_maps']}
 const items = ref<any[]>([])
 const total = ref(0)
 const query = reactive<Record<string, any>>({
@@ -927,6 +961,28 @@ VUE;
                 . "      </el-form>\n";
 
         return str_replace('{{SEARCH_BLOCK}}', $searchBlock, $template);
+    }
+
+    /** 选项校验规则：有选项时按值做 in 校验（兼容数字/字符串提交），否则退回字符串 */
+    private function optionRule(array $field): string
+    {
+        $values = [];
+        foreach ($field['options'] ?? [] as $opt) {
+            $values[] = self::splitOption($opt)['value'];
+        }
+
+        return $values === [] ? 'string|max:191' : 'in:' . implode(',', $values);
+    }
+
+    /** 解析选项串："1=启用" → 值 1 / 标签 启用；无等号时值与标签相同 */
+    public static function splitOption(string $opt): array
+    {
+        $pos = strpos($opt, '=');
+        if ($pos === false) {
+            return ['value' => $opt, 'label' => $opt];
+        }
+
+        return ['value' => substr($opt, 0, $pos), 'label' => substr($opt, $pos + 1)];
     }
 
     private function assertTable(string $table): void

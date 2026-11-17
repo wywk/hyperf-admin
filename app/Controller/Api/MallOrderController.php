@@ -102,7 +102,7 @@ class MallOrderController extends AbstractController
             'receiver' => 'nullable|string|max:191',
             'phone' => 'nullable|string|max:191',
             'amount' => 'required|numeric',
-            'status' => 'nullable|string|max:191',
+            'status' => 'nullable|in:0,1,2,3,4',
             'user_id' => 'nullable|numeric',
             'address' => 'nullable|string|max:191',
             'remark' => 'nullable|string|max:2000',

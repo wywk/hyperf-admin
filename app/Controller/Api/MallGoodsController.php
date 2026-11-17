@@ -102,7 +102,7 @@ class MallGoodsController extends AbstractController
             'category_id' => 'required|numeric',
             'price' => 'required|numeric',
             'stock' => 'nullable|numeric',
-            'status' => 'nullable|string|max:191',
+            'status' => 'nullable|in:1,0',
             'cover' => 'nullable|string|max:191',
             'summary' => 'nullable|string|max:2000',
         ];

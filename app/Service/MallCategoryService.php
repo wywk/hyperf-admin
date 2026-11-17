@@ -28,7 +28,7 @@ class MallCategoryService
             $query->where('name', 'like', '%'.$filters['name'].'%');
         }
         if (! empty($filters['status'])) {
-            $query->where('status', 'like', '%'.$filters['status'].'%');
+            $query->where('status', $filters['status']);
         }
 
         $total = (clone $query)->count();

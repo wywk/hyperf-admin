@@ -13,6 +13,11 @@ import {
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
+const statusLabels: Record<string, string> = {
+  '1': '启用',
+  '0': '停用',
+}
+
 const items = ref<any[]>([])
 const total = ref(0)
 const query = reactive<Record<string, any>>({
@@ -143,8 +148,8 @@ async function remove(row: any): Promise<void> {
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="query.status" clearable filterable style="width: 180px">
-              <el-option key="1=启用" label="1=启用" value="1=启用" />
-              <el-option key="0=停用" label="0=停用" value="0=停用" />
+              <el-option key="1" label="启用" value="1" />
+              <el-option key="0" label="停用" value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -157,7 +162,11 @@ async function remove(row: any): Promise<void> {
         <el-table-column prop="id" label="ID" width="80" />
     <el-table-column prop="name" label="分类名称" min-width="130" show-overflow-tooltip />
     <el-table-column prop="sort" label="排序" min-width="130" show-overflow-tooltip />
-    <el-table-column prop="status" label="状态" min-width="130" show-overflow-tooltip />
+    <el-table-column prop="status" label="状态" width="90">
+      <template #default="{ row }">
+        <el-tag type="info">{{ statusLabels[String(row.status)] ?? row.status }}</el-tag>
+      </template>
+    </el-table-column>
     <el-table-column prop="description" label="说明" min-width="130" show-overflow-tooltip />
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
@@ -192,8 +201,8 @@ async function remove(row: any): Promise<void> {
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status" clearable filterable>
-              <el-option key="1=启用" label="1=启用" value="1=启用" />
-              <el-option key="0=停用" label="0=停用" value="0=停用" />
+              <el-option key="1" label="启用" value="1" />
+              <el-option key="0" label="停用" value="0" />
           </el-select>
         </el-form-item>
         <el-form-item label="说明" prop="description">

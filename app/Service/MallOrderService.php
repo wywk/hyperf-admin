@@ -34,7 +34,7 @@ class MallOrderService
             $query->where('phone', 'like', '%'.$filters['phone'].'%');
         }
         if (! empty($filters['status'])) {
-            $query->where('status', 'like', '%'.$filters['status'].'%');
+            $query->where('status', $filters['status']);
         }
 
         $total = (clone $query)->count();
