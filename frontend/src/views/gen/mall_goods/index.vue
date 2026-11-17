@@ -336,7 +336,8 @@ async function removeSku(row: any): Promise<void> {
           <el-input-number v-model="form.price" style="width: 100%" />
         </el-form-item>
         <el-form-item label="库存" prop="stock">
-          <el-input-number v-model="form.stock" style="width: 100%" />
+          <el-input-number v-model="form.stock" :min="0" style="width: 100%" />
+          <div class="field-tip">已配置 SKU 的商品，库存由各 SKU 库存求和自动回写</div>
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status" clearable filterable>
@@ -446,5 +447,13 @@ async function removeSku(row: any): Promise<void> {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 10px;
+}
+
+.field-tip {
+  width: 100%;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--el-text-color-secondary);
 }
 </style>
