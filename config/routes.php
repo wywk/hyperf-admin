@@ -83,3 +83,43 @@ Router::addGroup('/api', function () {
     Router::delete('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'destroy']);
 }, ['middleware' => [AuthMiddleware::class]]);
 // [gen:product] end
+
+// [gen:mall_category] start（代码生成器维护，勿手改）
+Router::addGroup('/api', function () {
+    Router::get('/mall_category', [\App\Controller\Api\MallCategoryController::class, 'index']);
+    Router::post('/mall_category', [\App\Controller\Api\MallCategoryController::class, 'store']);
+    Router::get('/mall_category/{id:\d+}', [\App\Controller\Api\MallCategoryController::class, 'show']);
+    Router::put('/mall_category/{id:\d+}', [\App\Controller\Api\MallCategoryController::class, 'update']);
+    Router::delete('/mall_category/{id:\d+}', [\App\Controller\Api\MallCategoryController::class, 'destroy']);
+}, ['middleware' => [AuthMiddleware::class]]);
+// [gen:mall_category] end
+
+// [gen:mall_goods] start（代码生成器维护，勿手改）
+Router::addGroup('/api', function () {
+    Router::get('/mall_goods', [\App\Controller\Api\MallGoodsController::class, 'index']);
+    Router::post('/mall_goods', [\App\Controller\Api\MallGoodsController::class, 'store']);
+    Router::get('/mall_goods/{id:\d+}', [\App\Controller\Api\MallGoodsController::class, 'show']);
+    Router::put('/mall_goods/{id:\d+}', [\App\Controller\Api\MallGoodsController::class, 'update']);
+    Router::delete('/mall_goods/{id:\d+}', [\App\Controller\Api\MallGoodsController::class, 'destroy']);
+}, ['middleware' => [AuthMiddleware::class]]);
+// [gen:mall_goods] end
+
+// [gen:mall_order] start（代码生成器维护，勿手改）
+Router::addGroup('/api', function () {
+    Router::get('/mall_order', [\App\Controller\Api\MallOrderController::class, 'index']);
+    Router::post('/mall_order', [\App\Controller\Api\MallOrderController::class, 'store']);
+    Router::get('/mall_order/{id:\d+}', [\App\Controller\Api\MallOrderController::class, 'show']);
+    Router::put('/mall_order/{id:\d+}', [\App\Controller\Api\MallOrderController::class, 'update']);
+    Router::delete('/mall_order/{id:\d+}', [\App\Controller\Api\MallOrderController::class, 'destroy']);
+}, ['middleware' => [AuthMiddleware::class]]);
+// [gen:mall_order] end
+
+// [gen:mall_order_item] start（代码生成器维护，勿手改）
+Router::addGroup('/api', function () {
+    Router::get('/mall_order_item', [\App\Controller\Api\MallOrderItemController::class, 'index']);
+    Router::post('/mall_order_item', [\App\Controller\Api\MallOrderItemController::class, 'store']);
+    Router::get('/mall_order_item/{id:\d+}', [\App\Controller\Api\MallOrderItemController::class, 'show']);
+    Router::put('/mall_order_item/{id:\d+}', [\App\Controller\Api\MallOrderItemController::class, 'update']);
+    Router::delete('/mall_order_item/{id:\d+}', [\App\Controller\Api\MallOrderItemController::class, 'destroy']);
+}, ['middleware' => [AuthMiddleware::class]]);
+// [gen:mall_order_item] end
