@@ -3,13 +3,14 @@
  * MallGoods 管理页（由代码生成器生成，可按需调整）。
  * 列表 / 搜索 / 新增 / 编辑 / 删除，权限码 mall_goods.view/.add/.edit/.delete。
  */
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import {
   createMallGoods,
   deleteMallGoods,
   fetchMallGoodsList,
   updateMallGoods,
 } from '@/api/gen/mall_goods'
+import { fetchMallCategoryList } from '@/api/gen/mall_category'
 import {
   createMallGoodsSku,
   deleteMallGoodsSku,
@@ -44,6 +45,26 @@ async function load(): Promise<void> {
   }
 }
 
+/* ---------------- 分类下拉（表单与搜索共用） ---------------- */
+
+const categories = ref<any[]>([])
+const categoryNameMap = computed<Record<number, string>>(() => {
+  const map: Record<number, string> = {}
+  for (const c of categories.value) {
+    map[c.id] = c.name
+  }
+  return map
+})
+
+async function loadCategories(): Promise<void> {
+  try {
+    const result = await fetchMallCategoryList({ page_size: 100, status: 1 })
+    categories.value = result.items
+  } catch {
+    // 错误提示由请求层统一处理
+  }
+}
+
 function resetQuery(): void {
   for (const key of Object.keys(query)) {
     if (key !== 'page' && key !== 'page_size') {
@@ -54,7 +75,10 @@ function resetQuery(): void {
   void load()
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  void loadCategories()
+})
 
 /* ---------------- 表单 ---------------- */
 
@@ -328,7 +352,9 @@ async function removeSku(row: any): Promise<void> {
           <el-input v-model="query.name" clearable style="width: 180px" />
         </el-form-item>
         <el-form-item label="分类" prop="category_id">
-          <el-input-number v-model="query.category_id" style="width: 100%" />
+          <el-select v-model="query.category_id" clearable filterable placeholder="全部分类" style="width: 180px">
+            <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
         </el-form-item>
         <el-form-item label="售价(元)" prop="price">
           <el-input-number v-model="query.price" style="width: 100%" />
@@ -348,7 +374,9 @@ async function removeSku(row: any): Promise<void> {
       <el-table v-loading="loading" :data="items" row-key="id">
         <el-table-column prop="id" label="ID" width="80" />
     <el-table-column prop="name" label="商品名称" min-width="130" show-overflow-tooltip />
-    <el-table-column prop="category_id" label="分类" min-width="130" show-overflow-tooltip />
+    <el-table-column label="分类" min-width="120">
+      <template #default="{ row }">{{ categoryNameMap[row.category_id] ?? row.category_id }}</template>
+    </el-table-column>
     <el-table-column prop="price" label="售价(元)" min-width="130" show-overflow-tooltip />
     <el-table-column prop="stock" label="库存" min-width="130" show-overflow-tooltip />
     <el-table-column prop="status" label="状态" width="90">
@@ -386,7 +414,9 @@ async function removeSku(row: any): Promise<void> {
           <el-input v-model="form.name" clearable />
         </el-form-item>
         <el-form-item label="分类" prop="category_id">
-          <el-input-number v-model="form.category_id" style="width: 100%" />
+          <el-select v-model="form.category_id" clearable filterable placeholder="请选择分类" style="width: 100%">
+            <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
         </el-form-item>
         <el-form-item label="售价(元)" prop="price">
           <el-input-number v-model="form.price" style="width: 100%" />
