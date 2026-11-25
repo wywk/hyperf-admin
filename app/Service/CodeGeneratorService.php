@@ -305,12 +305,21 @@ class CodeGeneratorService
         $searchParams = [];
         $formFieldSpecs = [];
         $exportColumns = [];
+        $dictLoads = [];
+        $dictChecks = [];
+        $hasDict = false;
 
         foreach ($fields as $field) {
             $name = $field['name'];
             $label = $field['label'];
             $formType = $field['form_type'];
             $required = ! empty($field['required']);
+
+            // 字典来源：options 配置 ["dict:编码"] 时，下拉选项动态取自数据字典（/api/dict/{code}）
+            $opts = $field['options'] ?? [];
+            $dictCode = in_array($formType, ['select', 'radio'], true) && count($opts) === 1 && str_starts_with($opts[0], 'dict:')
+                ? substr($opts[0], 5)
+                : '';
 
             // 字符串 max 从列长度推导，避免校验规则比数据库列还宽（导入时 DB 截断报错）
             $maxLength = (int) ($columnMeta[$name]['max_length'] ?? 0);
@@ -320,7 +329,9 @@ class CodeGeneratorService
                 'checkbox' => 'array',
                 'switch' => 'boolean',
                 'date' => 'date',
-                'select', 'radio' => $this->optionRule($field),
+                'select', 'radio' => $dictCode !== ''
+                    ? 'string|max:' . ($maxLength > 0 ? min(191, $maxLength) : 191) // 字典值动态加载，不做硬编码 in 校验
+                    : $this->optionRule($field),
                 default => 'string|max:' . ($maxLength > 0 ? min(191, $maxLength) : 191),
             };
             $rules[] = "            '{$name}' => '" . ($required ? 'required|' : 'nullable|') . $ruleBody . "',";
@@ -328,6 +339,13 @@ class CodeGeneratorService
                 $fillable[] = "        '{$name}',";
                 // 导出列：除 id 外全部业务字段（ExcelService 负责把数组/日期等转成文本）
                 $exportColumns[] = "        '{$name}' => '{$label}',";
+            }
+
+            if ($dictCode !== '' && (! empty($field['list']) || ! empty($field['search']) || ! empty($field['form']))) {
+                $hasDict = true;
+                $optionMaps[] = "const {$name}Options = ref<Array<{ label: string; value: string }>>([])";
+                $dictLoads[] = "  {$name}Options.value = (await fetchDict('{$dictCode}')).items";
+                $dictChecks[] = "        '{$name}' => '{$dictCode}',";
             }
 
             $casts[] = match ($formType) {
@@ -366,7 +384,7 @@ class CodeGeneratorService
             if (! empty($field['form'])) {
                 $formFieldSpecs[] = [
                     'name' => $name,
-                    'label' => $label,
+                    'label' => $dictCode !== '' ? $label . "（字典 {$dictCode}）" : $label,
                     'type' => match ($formType) {
                         'number' => 'number',
                         'checkbox' => 'array',
@@ -387,11 +405,16 @@ class CodeGeneratorService
                     . "    </el-table-column>";
                 } elseif ($formType === 'select' && ($field['options'] ?? []) !== []) {
                     $pairs = [];
-                    foreach ($field['options'] as $opt) {
-                        $o = self::splitOption($opt);
-                        $pairs[] = "  '{$o['value']}': '{$o['label']}',";
+                    if ($dictCode !== '') {
+                        // 字典来源：标签映射为 computed（从字典项动态构建），避免硬编码
+                        $optionMaps[] = "const {$name}Labels = computed<Record<string, string>>(() => Object.fromEntries({$name}Options.value.map((o) => [String(o.value), o.label])))";
+                    } else {
+                        foreach ($field['options'] as $opt) {
+                            $o = self::splitOption($opt);
+                            $pairs[] = "  '{$o['value']}': '{$o['label']}',";
+                        }
+                        $optionMaps[] = "const {$name}Labels: Record<string, string> = {\n" . implode("\n", $pairs) . "\n}";
                     }
-                    $optionMaps[] = "const {$name}Labels: Record<string, string> = {\n" . implode("\n", $pairs) . "\n}";
                     $tableColumns[] = "    <el-table-column prop=\"{$name}\" label=\"{$label}\" width=\"90\">\n"
                     . "      <template #default=\"{ row }\">\n"
                     . "        <el-tag type=\"info\">{{ {$name}Labels[String(row.{$name})] ?? row.{$name} }}</el-tag>\n"
@@ -413,6 +436,7 @@ class CodeGeneratorService
 
         $casts = array_values(array_filter($casts));
         $searchItems = array_values(array_filter($searchItems));
+        $dictChecksBlock = implode("\n", $dictChecks);
 
         return [
             'module' => $module,
@@ -435,6 +459,37 @@ class CodeGeneratorService
             'routes_block' => $this->renderRoutesBlock($module, $studly),
             'export_columns' => implode("\n", $exportColumns) ?: "        // 无导出字段",
             'frontend_route' => $this->renderFrontendRoute($module, $studly, $menuName, $menuPath),
+            'vue_imports' => $hasDict ? "import { computed, onMounted, reactive, ref } from 'vue'" : "import { onMounted, reactive, ref } from 'vue'",
+            'dict_import' => $hasDict ? "import { fetchDict } from '@/api/dict'" : '',
+            'dict_setup' => $hasDict
+                ? "onMounted(async () => {\n" . implode("\n", $dictLoads) . "\n  await load()\n})"
+                : 'onMounted(load)',
+            'dict_controller_uses' => $hasDict ? "use App\\Exception\\BusinessException;\nuse App\\Service\\DictService;\n" : '',
+            'dict_controller_inject' => $hasDict ? "\n    #[Inject]\n    protected DictService \$dict;" : '',
+            'dict_validate' => $hasDict ? "        \$data = \$this->validateDictValues(\$data);\n" : '',
+            'dict_checks' => implode("\n", $dictChecks),
+            'dict_method' => $hasDict ? <<<PHP
+    /** 字典字段值校验：与字典项比对（DictService 走缓存） */
+    private function validateDictValues(array \$data): array
+    {
+        \$checks = [
+{$dictChecksBlock}
+        ];
+        foreach (\$checks as \$field => \$code) {
+            \$value = \$data[\$field] ?? null;
+            if (\$value === null || \$value === '') {
+                continue;
+            }
+            \$allowed = array_column(\$this->dict->items(\$code), 'value');
+            if (! in_array((string) \$value, \$allowed, true)) {
+                throw new BusinessException(ApiCode::VALIDATION_FAILED, "{\$field} 的值不在字典 {\$code} 范围内");
+            }
+        }
+
+        return \$data;
+    }
+
+PHP : '',
         ];
     }
 
@@ -446,23 +501,34 @@ class CodeGeneratorService
         $model = $search ? 'query' : 'form';
         $width = $search ? ' style="width: 180px"' : '';
         $options = $field['options'] ?? [];
+        // 字典来源：select/radio 配置 ["dict:编码"] 时选项 v-for 动态渲染（{$name}Options 由页面脚本加载）
+        $dictCode = in_array($formType, ['select', 'radio'], true) && count($options) === 1 && str_starts_with($options[0], 'dict:')
+            ? substr($options[0], 5)
+            : '';
         $optLines = implode("\n", array_map(static function (string $opt): string {
             $o = self::splitOption($opt);
 
             return "              <el-option key=\"{$o['value']}\" label=\"{$o['label']}\" value=\"{$o['value']}\" />";
         }, $options));
+        $dictOptLines = "              <el-option v-for=\"opt in {$name}Options\" :key=\"opt.value\" :label=\"opt.label\" :value=\"opt.value\" />";
 
         $body = match ($formType) {
             'textarea' => "          <el-input v-model=\"{$model}.{$name}\" type=\"textarea\" :rows=\"3\" />",
             'number' => "          <el-input-number v-model=\"{$model}.{$name}\" style=\"width: 100%\" />",
-            'select' => "          <el-select v-model=\"{$model}.{$name}\" clearable filterable{$width}>\n{$optLines}\n          </el-select>",
-            'radio' => "          <el-radio-group v-model=\"{$model}.{$name}\">\n"
-                . implode("\n", array_map(static function (string $opt) use ($name, $model): string {
-                    $o = self::splitOption($opt);
+            'select' => "          <el-select v-model=\"{$model}.{$name}\" clearable filterable{$width}>\n"
+                . ($dictCode !== '' ? $dictOptLines : $optLines)
+                . "\n          </el-select>",
+            'radio' => $dictCode !== ''
+                ? "          <el-radio-group v-model=\"{$model}.{$name}\">\n"
+                    . "            <el-radio v-for=\"opt in {$name}Options\" :key=\"opt.value\" :value=\"opt.value\">{{ opt.label }}</el-radio>\n"
+                    . "          </el-radio-group>"
+                : "          <el-radio-group v-model=\"{$model}.{$name}\">\n"
+                    . implode("\n", array_map(static function (string $opt) use ($name, $model): string {
+                        $o = self::splitOption($opt);
 
-                    return "            <el-radio key=\"{$o['value']}\" value=\"{$o['value']}\">{$o['label']}</el-radio>";
-                }, $options))
-                . "\n          </el-radio-group>",
+                        return "            <el-radio key=\"{$o['value']}\" value=\"{$o['value']}\">{$o['label']}</el-radio>";
+                    }, $options))
+                    . "\n          </el-radio-group>",
             'checkbox' => "          <el-checkbox-group v-model=\"{$model}.{$name}\">\n"
                 . implode("\n", array_map(static function (string $opt) use ($name, $model): string {
                     $o = self::splitOption($opt);
@@ -755,7 +821,7 @@ use App\\Common\\ApiResponse;
 use App\\Controller\\AbstractController;
 use App\\Controller\\Concerns\\AuthorizesRequests;
 use App\\Model\\{$ctx['studly']};
-use App\\Service\\{$ctx['studly']}Service;
+{$ctx['dict_controller_uses']}use App\\Service\\{$ctx['studly']}Service;
 use App\\Service\\Excel\\ExcelService;
 use App\\Swagger\\Attributes\\SwBody;
 use App\\Swagger\\Attributes\\SwDelete;
@@ -784,7 +850,7 @@ class {$ctx['studly']}Controller extends AbstractController
 
     #[Inject]
     protected ExcelService \$excel;
-
+{$ctx['dict_controller_inject']}
     public function __construct(protected {$ctx['studly']}Service \$service)
     {
     }
@@ -828,7 +894,7 @@ class {$ctx['studly']}Controller extends AbstractController
         \$this->authorize('{$ctx['module']}.add');
 
         \$data = \$this->validatorFactory->make(\$this->request->all(), \$this->rules())->validate();
-
+{$ctx['dict_validate']}
         return ApiResponse::success(['id' => (int) \$this->service->create(\$data)->id], '创建成功');
     }
 
@@ -838,7 +904,7 @@ class {$ctx['studly']}Controller extends AbstractController
         \$this->authorize('{$ctx['module']}.edit');
 
         \$data = \$this->validatorFactory->make(\$this->request->all(), \$this->rulesForUpdate())->validate();
-        \$this->service->update(\$id, \$data);
+{$ctx['dict_validate']}        \$this->service->update(\$id, \$data);
 
         return ApiResponse::success(['id' => \$id], '保存成功');
     }
@@ -917,6 +983,7 @@ class {$ctx['studly']}Controller extends AbstractController
         ], \$failed === [] ? '导入完成' : '导入完成（部分行校验失败）');
     }
 
+{$ctx['dict_method']}
     private function rules(): array
     {
         return [
@@ -1033,7 +1100,7 @@ TS;
  * {$studly} 管理页（由代码生成器生成，可按需调整）。
  * 列表 / 搜索 / 新增 / 编辑 / 删除，权限码 {$module}.view/.add/.edit/.delete。
  */
-import { onMounted, reactive, ref } from 'vue'
+{$ctx['vue_imports']}
 import {
   create{$studly},
   delete{$studly},
@@ -1043,6 +1110,7 @@ import {
   update{$studly},
 } from '@/api/gen/{$module}'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
+{$ctx['dict_import']}
 
 const loading = ref(false)
 const exporting = ref(false)
@@ -1104,7 +1172,7 @@ function downloadBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(link.href)
 }
 
-onMounted(load)
+{$ctx['dict_setup']}
 
 /* ---------------- 表单 ---------------- */
 
@@ -1343,8 +1411,13 @@ VUE;
     /** 选项校验规则：有选项时按值做 in 校验（兼容数字/字符串提交），否则退回字符串 */
     private function optionRule(array $field): string
     {
+        $opts = $field['options'] ?? [];
+        // 字典来源：选项值动态加载，不做硬编码 in 校验
+        if (count($opts) === 1 && str_starts_with($opts[0], 'dict:')) {
+            return 'string|max:191';
+        }
         $values = [];
-        foreach ($field['options'] ?? [] as $opt) {
+        foreach ($opts as $opt) {
             $values[] = self::splitOption($opt)['value'];
         }
 
