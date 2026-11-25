@@ -174,6 +174,7 @@ Router::addGroup('/api', function () {
 // [gen:product] start（代码生成器维护，勿手改）
 Router::addGroup('/api', function () {
     Router::get('/product', [\App\Controller\Api\ProductController::class, 'index']);
+    Router::get('/product/export', [\App\Controller\Api\ProductController::class, 'export']);
     Router::post('/product', [\App\Controller\Api\ProductController::class, 'store']);
     Router::get('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'show']);
     Router::put('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'update']);

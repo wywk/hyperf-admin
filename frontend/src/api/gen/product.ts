@@ -1,4 +1,4 @@
-import { http } from '@/api/http'
+import { downloadFile, http } from '@/api/http'
 
 export interface ProductItem {
   id: number
@@ -23,4 +23,9 @@ export function updateProduct(id: number, data: Partial<ProductItem>) {
 
 export function deleteProduct(id: number) {
   return http.delete<null>(`/product/${id}`)
+}
+
+/** 导出 Excel（xlsx Blob），与列表共用搜索参数 */
+export function exportProductExcel(params?: Record<string, unknown>): Promise<Blob> {
+  return downloadFile('/product/export', params)
 }

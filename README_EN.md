@@ -30,6 +30,7 @@ English | [简体中文](README.md)
 | ⚙️ Code generator | Pick a table + configure fields → generates **backend** (Model / Service / Controller / route block / validation) + **frontend** (api module / list page / form dialog) + auto-registers menus and button permissions |
 | 📁 File management | Storage driver abstraction (local driver out of the box; implement `DriverInterface` for OSS/S3/COS), upload whitelist + size limit + real MIME sniffing, public URLs, thumbnail preview |
 | 📚 Data dictionary | Two-level dict types + items; business reads select options via `/api/dict/{code}` / `/api/dict/batch` (Redis-cached, invalidated on writes) |
+| 📊 Excel export | Generic export service (openspout streaming writer, memory-independent of data size); the code generator adds an `/export` endpoint + frontend export button to every module, supporting full-dataset export with current filters |
 | 📖 API docs | Zero-dependency OpenAPI 3.0 doc page (`/api/docs`), maintained alongside code via lightweight `Sw*` attributes |
 | 🐳 Deployment | Production Dockerfile (layered caching / health check / auto-migration on boot) + `docker-compose.prod.yml` one-command stack |
 

@@ -7,12 +7,14 @@ import { onMounted, reactive, ref } from 'vue'
 import {
   createProduct,
   deleteProduct,
+  exportProductExcel,
   fetchProductList,
   updateProduct,
 } from '@/api/gen/product'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
+const exporting = ref(false)
 const statusLabels: Record<string, string> = {
   '1': '上架',
   '0': '下架',
@@ -48,6 +50,33 @@ function resetQuery(): void {
   void load()
 }
 
+/** 按当前搜索条件导出全量 Excel */
+async function exportExcel(): Promise<void> {
+  exporting.value = true
+  try {
+    const filters: Record<string, unknown> = {}
+    for (const key of Object.keys(query)) {
+      if (key !== 'page' && key !== 'page_size') {
+        filters[key] = query[key]
+      }
+    }
+    const blob = await exportProductExcel(filters)
+    downloadBlob(blob, 'product.xlsx')
+  } catch {
+    // 错误提示由请求层统一处理
+  } finally {
+    exporting.value = false
+  }
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
 onMounted(load)
 
 /* ---------------- 表单 ---------------- */
@@ -58,7 +87,7 @@ const editingId = ref(0)
 const formRef = ref()
 const form = reactive<Record<string, any>>({})
 const rules: Record<string, unknown> = {
-  name: [{ required: true, message: '请填写商品名称', trigger: 'blur' }],
+  name: [{ required: true, message: '请填写名称', trigger: 'blur' }],
   price: [{ required: true, message: '请填写价格', trigger: 'blur' }],
 }
 const emptyForm: Record<string, any> = {
@@ -139,12 +168,15 @@ async function remove(row: any): Promise<void> {
   <div class="page">
     <div class="page-header">
       <h2 class="page-title">示例商品管理</h2>
-      <el-button v-permission="'product.add'" type="primary" @click="openCreate">新增</el-button>
+      <div class="header-actions">
+        <el-button :loading="exporting" @click="exportExcel">导出 Excel</el-button>
+        <el-button v-permission="'product.add'" type="primary" @click="openCreate">新增</el-button>
+      </div>
     </div>
 
     <el-card shadow="never">
       <el-form inline class="filters" @submit.prevent>
-        <el-form-item label="商品名称" prop="name">
+        <el-form-item label="名称" prop="name">
           <el-input v-model="query.name" clearable style="width: 180px" />
         </el-form-item>
         <el-form-item label="价格" prop="price">
@@ -164,7 +196,7 @@ async function remove(row: any): Promise<void> {
 
       <el-table v-loading="loading" :data="items" row-key="id">
         <el-table-column prop="id" label="ID" width="80" />
-    <el-table-column prop="name" label="商品名称" min-width="130" show-overflow-tooltip />
+    <el-table-column prop="name" label="名称" min-width="130" show-overflow-tooltip />
     <el-table-column prop="price" label="价格" min-width="130" show-overflow-tooltip />
     <el-table-column prop="stock" label="库存" min-width="130" show-overflow-tooltip />
     <el-table-column prop="status" label="状态" width="90">
@@ -197,7 +229,7 @@ async function remove(row: any): Promise<void> {
 
     <el-dialog v-model="dialogVisible" :title="editingId > 0 ? '编辑' : '新增'" width="560px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item label="商品名称" prop="name">
+        <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" clearable />
         </el-form-item>
         <el-form-item label="价格" prop="price">
@@ -232,6 +264,11 @@ async function remove(row: any): Promise<void> {
 .page-title {
   margin: 0;
   font-size: 20px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .filters {

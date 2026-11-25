@@ -80,6 +80,30 @@ class GeneratorTest extends TestCase
         $this->assertStringNotContainsString('OpenApi\\Attributes as OA', $controller);
     }
 
+    public function testGeneratedExportPieces(): void
+    {
+        $result = $this->gen->generate($this->config(), dryRun: true);
+        $controller = $result['files']['app/Controller/Api/GenTestItemsController.php'];
+        $service = $result['files']['app/Service/GenTestItemsService.php'];
+        $api = $result['files']['frontend/src/api/gen/gen_test_items.ts'];
+        $page = $result['files']['frontend/src/views/gen/gen_test_items/index.vue'];
+
+        // 控制器：导出端点 + 导出列
+        $this->assertStringContainsString("path: '/api/gen_test_items/export'", $controller);
+        $this->assertStringContainsString('public function export(): ResponseInterface', $controller);
+        $this->assertStringContainsString("'name' => '名称',", $controller);
+        $this->assertStringContainsString("'status' => '状态',", $controller);
+
+        // Service：流式导出
+        $this->assertStringContainsString('public function exportRows(array $filters): \Generator', $service);
+        $this->assertStringContainsString('forPage($page, 500)', $service);
+
+        // 前端：下载 API + 导出按钮
+        $this->assertStringContainsString('exportGenTestItemsExcel', $api);
+        $this->assertStringContainsString('downloadFile', $api);
+        $this->assertStringContainsString('导出 Excel', $page);
+    }
+
     public function testGeneratedModelUsesBareTableName(): void
     {
         $result = $this->gen->generate($this->config(), dryRun: true);
