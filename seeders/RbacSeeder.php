@@ -58,6 +58,12 @@ class RbacSeeder extends Seeder
         'file.upload' => ['file', 'button', '上传文件', '', '', 20],
         'file.delete' => ['file', 'button', '删除文件', '', '', 30],
 
+        'dict' => ['system', 'menu', '数据字典', 'system/dicts', 'Collection', 50],
+        'dict.view' => ['dict', 'button', '查看字典', '', '', 10],
+        'dict.add' => ['dict', 'button', '新增字典', '', '', 20],
+        'dict.edit' => ['dict', 'button', '编辑字典', '', '', 30],
+        'dict.delete' => ['dict', 'button', '删除字典', '', '', 40],
+
         'tool' => ['', 'menu', '工具开发', 'tool', 'SetUp', 40],
 
         'form' => ['tool', 'menu', '表单管理', 'tool/forms', 'EditPen', 10],

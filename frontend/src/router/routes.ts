@@ -39,6 +39,12 @@ export const layoutRoutes: RouteRecordRaw[] = [
     meta: { title: '文件管理', permission: 'file' },
   },
   {
+    path: 'system/dicts',
+    name: 'dicts',
+    component: () => import('@/views/system/dict/index.vue'),
+    meta: { title: '数据字典', permission: 'dict' },
+  },
+  {
     path: 'tool/forms',
     name: 'forms',
     component: () => import('@/views/tool/forms/index.vue'),
