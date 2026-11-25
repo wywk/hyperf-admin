@@ -251,6 +251,259 @@
                 }
             }
         },
+        "/api/files/upload": {
+            "post": {
+                "tags": [
+                    "文件管理"
+                ],
+                "summary": "上传文件",
+                "description": "multipart/form-data 上传单个文件；超过大小限制或扩展名不在允许范围时返回 422。",
+                "operationId": "fileUpload",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "file": {
+                                        "description": "待上传的文件",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "上传成功，返回文件元数据与公开 URL",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "name": {
+                                                    "description": "原始文件名",
+                                                    "type": "string"
+                                                },
+                                                "url": {
+                                                    "description": "公开访问 URL",
+                                                    "type": "string"
+                                                },
+                                                "size": {
+                                                    "description": "字节",
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/files": {
+            "get": {
+                "tags": [
+                    "文件管理"
+                ],
+                "summary": "文件列表",
+                "operationId": "fileIndex",
+                "parameters": [
+                    {
+                        "name": "keyword",
+                        "in": "query",
+                        "description": "按原始文件名模糊搜索",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "ext",
+                        "in": "query",
+                        "description": "按扩展名过滤，如 png",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "按上传者过滤",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分页结果：{total, page, page_size, items[]}，item 含 name/url/size/mime/ext/is_image",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "items": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            },
+                                            "example": null,
+                                            "nullable": false
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/files/{id}": {
+            "delete": {
+                "tags": [
+                    "文件管理"
+                ],
+                "summary": "删除文件",
+                "description": "删除物理文件与记录；物理文件已丢失时仅删记录。",
+                "operationId": "fileDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/files/{id}/download": {
+            "get": {
+                "tags": [
+                    "文件管理"
+                ],
+                "summary": "下载文件",
+                "description": "按原始文件名输出文件内容（attachment），需要登录。",
+                "operationId": "fileDownload",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/forms": {
             "get": {
                 "tags": [
@@ -4031,6 +4284,10 @@
         {
             "name": "文档",
             "description": "文档"
+        },
+        {
+            "name": "文件管理",
+            "description": "文件管理"
         },
         {
             "name": "表单管理",
