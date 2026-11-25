@@ -73,6 +73,46 @@ export const layoutRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/error/403.vue'),
     meta: { title: '无权访问' },
   },
+  // [gen:mall_category] start（代码生成器维护，勿手改）
+  {
+    path: 'mall/category',
+    name: 'gen-mall_category',
+    component: () => import('@/views/gen/mall_category/index.vue'),
+    meta: { title: '分类管理', permission: 'mall_category' },
+  },
+  // [gen:mall_category] end
+  // [gen:mall_goods] start（代码生成器维护，勿手改）
+  {
+    path: 'mall/goods',
+    name: 'gen-mall_goods',
+    component: () => import('@/views/gen/mall_goods/index.vue'),
+    meta: { title: '商品管理', permission: 'mall_goods' },
+  },
+  // [gen:mall_goods] end
+  // [gen:mall_goods_sku] start（代码生成器维护，勿手改）
+  {
+    path: 'mall/sku',
+    name: 'gen-mall_goods_sku',
+    component: () => import('@/views/gen/mall_goods_sku/index.vue'),
+    meta: { title: 'SKU管理', permission: 'mall_goods_sku' },
+  },
+  // [gen:mall_goods_sku] end
+  // [gen:mall_order] start（代码生成器维护，勿手改）
+  {
+    path: 'mall/order',
+    name: 'gen-mall_order',
+    component: () => import('@/views/gen/mall_order/index.vue'),
+    meta: { title: '订单管理', permission: 'mall_order' },
+  },
+  // [gen:mall_order] end
+  // [gen:mall_order_item] start（代码生成器维护，勿手改）
+  {
+    path: 'mall/order-item',
+    name: 'gen-mall_order_item',
+    component: () => import('@/views/gen/mall_order_item/index.vue'),
+    meta: { title: '订单明细', permission: 'mall_order_item' },
+  },
+  // [gen:mall_order_item] end
   // [gen:product] start（代码生成器维护，勿手改）
   {
     path: 'product',
@@ -95,6 +135,13 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/layout/AppLayout.vue'),
     redirect: '/dashboard',
     children: layoutRoutes,
+  },
+  {
+    // 手机商城 demo（H5 风格，需登录后访问，接口走后台鉴权）
+    path: '/shop',
+    name: 'shop',
+    component: () => import('@/views/shop/index.vue'),
+    meta: { title: '精选商城' },
   },
   {
     path: '/:pathMatch(.*)*',

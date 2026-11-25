@@ -9,6 +9,32 @@ jobs:
   backend:
     name: Backend (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7.41
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: hyperf_admin_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.2
+        ports:
+          - 6379:6379
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: hyperf_admin_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      DB_PREFIX: ha_
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
     strategy:
       matrix:
         php: ['8.1']
@@ -39,6 +65,16 @@ jobs:
           else
             echo "php-cs-fixer not installed, skip"
           fi
+
+      - name: Prepare test database
+        run: |
+          mysql -h 127.0.0.1 -uroot -proot -e \
+            "CREATE DATABASE IF NOT EXISTS hyperf_admin_test DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          php bin/hyperf.php migrate --force
+          php bin/hyperf.php db:seed --force
+
+      - name: Run tests (phpunit via test/run.php)
+        run: php test/run.php
 
   frontend:
     name: Frontend (type check + build)

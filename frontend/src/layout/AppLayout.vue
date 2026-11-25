@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
-import { CaretBottom, Document, Expand, Fold } from '@element-plus/icons-vue'
+import { CaretBottom, Document, Expand, Fold, ShoppingCart } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import SidebarItem from '@/layout/SidebarItem.vue'
 import { API_BASE_URL } from '@/api/http'
@@ -86,6 +86,11 @@ async function onCommand(command: string): Promise<void> {
         </div>
 
         <div class="header-right">
+          <a class="doc-link" href="/shop" target="_blank" rel="noreferrer">
+            <el-icon><ShoppingCart /></el-icon>
+            <span>手机商城</span>
+          </a>
+
           <a class="doc-link" href="/api/docs" target="_blank" rel="noreferrer">
             <el-icon><Document /></el-icon>
             <span>接口文档</span>

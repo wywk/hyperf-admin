@@ -6,6 +6,14 @@
 
 树形 RBAC（菜单权限 + 按钮权限） · JWT 双 Token 认证 · 登录审计 · 表单设计器 · 全栈 CRUD 代码生成器
 
+[![CI](https://github.com/wywk/hyperf-admin/actions/workflows/ci.yml/badge.svg)](https://github.com/wywk/hyperf-admin/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4.svg)](https://www.php.net/)
+[![Hyperf](https://img.shields.io/badge/Hyperf-3.1-3B82F6.svg)](https://www.hyperf.io/)
+[![Vue](https://img.shields.io/badge/Vue-3.5-42B883.svg)](https://vuejs.org/)
+
+[English](README_EN.md) | 简体中文
+
 </div>
 
 ---
@@ -27,7 +35,24 @@
 
 ## 快速开始
 
-### Docker Compose（推荐）
+### Docker Compose 一键开发环境（推荐）
+
+```bash
+git clone https://github.com/wywk/hyperf-admin.git
+cd hyperf-admin
+cp .env.example .env
+
+# 一条命令拉起 后端 + MySQL + Redis + 前端（代码热更新）
+docker compose -f docker-compose.dev.yml up -d
+
+# 首次启动：建表 + 基础数据（等 app 容器就绪后）
+docker compose -f docker-compose.dev.yml exec app php bin/hyperf.php migrate
+docker compose -f docker-compose.dev.yml exec app php bin/hyperf.php db:seed
+```
+
+- 后端 API：http://127.0.0.1:9501 · 前端页面：http://127.0.0.1:5173
+
+### 生产部署
 
 ```bash
 git clone https://github.com/wywk/hyperf-admin.git
@@ -151,6 +176,12 @@ DB_PREFIX=ha_
 ```bash
 # 后端语法检查
 find app -name "*.php" | xargs -n1 php -l
+
+# 测试（使用独立的 hyperf_admin_test 库，见 phpunit.xml.dist）
+mysql -h <host> -u root -p -e "CREATE DATABASE IF NOT EXISTS hyperf_admin_test DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+DB_DATABASE=hyperf_admin_test php bin/hyperf.php migrate --force
+DB_DATABASE=hyperf_admin_test php bin/hyperf.php db:seed --force
+php test/run.php
 
 # 前端类型检查 + 构建
 cd frontend

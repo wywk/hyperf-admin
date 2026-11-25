@@ -25,7 +25,13 @@ require BASE_PATH . '/vendor/autoload.php';
 
 ! defined('SWOOLE_HOOK_FLAGS') && define('SWOOLE_HOOK_FLAGS', DefaultOption::hookFlags());
 
-ClassLoader::init();
+/**
+ * 注解扫描已由 test/run.php 在协程外完成时跳过：
+ * 协程内 pcntl_fork 不可用，重复扫描会触发 Swoole\ExitException。
+ */
+if (! defined('HYPERF_SCAN_DONE')) {
+    ClassLoader::init();
+}
 
 $container = require BASE_PATH . '/config/container.php';
 

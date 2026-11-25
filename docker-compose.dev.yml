@@ -1,0 +1,101 @@
+# 本地开发编排：一条命令拉起 后端 + MySQL + Redis + 前端 热更新环境。
+#
+# 使用方式：
+#   cp .env.example .env
+#   docker compose -f docker-compose.dev.yml up -d
+#   # 首次启动（数据库就绪后）建表 + 基础数据：
+#   docker compose -f docker-compose.dev.yml exec app php bin/hyperf.php migrate
+#   docker compose -f docker-compose.dev.yml exec app php bin/hyperf.php db:seed
+#
+# 端口：
+#   - 后端 API   http://127.0.0.1:9501
+#   - 前端 Dev   http://127.0.0.1:5173 （/api 自动代理到后端）
+#   - MySQL      宿主 127.0.0.1:3306（容器内 3306）
+#
+# 前端依赖需在宿主机安装一次：cd frontend && npm install
+
+name: hyperf-admin-dev
+
+services:
+  app:
+    build:
+      dockerfile: dev.Dockerfile
+      args:
+        UID: 1000
+        GID: 1000
+    container_name: hyperf-admin-dev
+    restart: unless-stopped
+    command: php bin/hyperf.php start
+    working_dir: /opt/www
+    volumes:
+      - ./:/opt/www
+    ports:
+      - "${APP_PORT:-9501}:9501"
+    environment:
+      APP_ENV: dev
+      SCAN_CACHEABLE: "false"
+      TZ: Asia/Shanghai
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-hyperf_admin}
+      DB_USERNAME: ${DB_USERNAME:-hyperf}
+      DB_PASSWORD: ${DB_PASSWORD:-hyperf123456}
+      DB_PREFIX: ${DB_PREFIX:-ha_}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-dev_secret_change_me_in_production_32b}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  mysql:
+    image: mysql:5.7.41
+    container_name: hyperf-admin-dev-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123456}
+      MYSQL_DATABASE: ${DB_DATABASE:-hyperf_admin}
+      MYSQL_USER: ${DB_USERNAME:-hyperf}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-hyperf123456}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_connections=500
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - dev-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root123456}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.2
+    container_name: hyperf-admin-dev-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - dev-redis-data:/data
+
+  frontend:
+    image: node:20-alpine
+    container_name: hyperf-admin-dev-frontend
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      - app
+
+volumes:
+  dev-mysql-data:
+  dev-redis-data:
+  frontend-node-modules:

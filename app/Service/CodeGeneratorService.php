@@ -123,7 +123,7 @@ class CodeGeneratorService
             }
         }
 
-        $ctx = $this->buildContext($module, $studly, $bare, $fields, (string) ($config['menu']['name'] ?? '') ?: $studly);
+        $ctx = $this->buildContext($module, $studly, $bare, $fields, (string) ($config['menu']['name'] ?? '') ?: $studly, (string) ($config['menu']['path'] ?? ''));
 
         $files = [
             "app/Model/{$studly}.php" => $this->renderModel($ctx),
@@ -284,7 +284,7 @@ class CodeGeneratorService
         return str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $value)));
     }
 
-    private function buildContext(string $module, string $studly, string $table, array $fields, string $menuName): array
+    private function buildContext(string $module, string $studly, string $table, array $fields, string $menuName, string $menuPath): array
     {
         $rules = [];
         $casts = [];
@@ -297,6 +297,9 @@ class CodeGeneratorService
         $formDefaults = [];
         $formRules = [];
         $fillable = [];
+        $optionMaps = [];
+        $searchParams = [];
+        $formFieldSpecs = [];
 
         foreach ($fields as $field) {
             $name = $field['name'];
@@ -310,6 +313,7 @@ class CodeGeneratorService
                 'checkbox' => 'array',
                 'switch' => 'boolean',
                 'date' => 'date',
+                'select', 'radio' => $this->optionRule($field),
                 default => 'string|max:191',
             };
             $rules[] = "            '{$name}' => '" . ($required ? 'required|' : 'nullable|') . $ruleBody . "',";
@@ -333,23 +337,60 @@ class CodeGeneratorService
             };
 
             if (! empty($field['search'])) {
-                $isText = in_array($formType, ['input', 'textarea', 'select', 'radio'], true);
+                // 文本字段模糊搜；select/radio（下拉值）/数字/日期等精确匹配。
+                // 注意不能用 empty() 判断：字符串 '0' 也是 empty，会漏掉 status=0 这类过滤
+                $hasFilter = "isset(\$filters['{$name}']) && \$filters['{$name}'] !== null && \$filters['{$name}'] !== ''";
+                $isText = in_array($formType, ['input', 'textarea'], true)
+                    || ($formType === 'select' && ($field['options'] ?? []) === []);
                 $searchWheres[] = $isText
-                    ? "        if (! empty(\$filters['{$name}'])) {\n            \$query->where('{$name}', 'like', '%'.\$filters['{$name}'].'%');\n        }"
-                    : "        if (! empty(\$filters['{$name}'])) {\n            \$query->where('{$name}', \$filters['{$name}']);\n        }";
+                    ? "        if ({$hasFilter}) {\n            \$query->where('{$name}', 'like', '%'.\$filters['{$name}'].'%');\n        }"
+                    : "        if ({$hasFilter}) {\n            \$query->where('{$name}', \$filters['{$name}']);\n        }";
                 $searchData[] = "        '{$name}' => \$data['{$name}'] ?? null,";
                 $searchItems[] = $this->frontendFormItem($formType, $field, true);
+                $searchParams[] = [
+                    'name' => $name,
+                    'label' => $label,
+                    'type' => $formType === 'number' ? 'number' : 'string',
+                ];
+            }
+
+            if (! empty($field['form'])) {
+                $formFieldSpecs[] = [
+                    'name' => $name,
+                    'label' => $label,
+                    'type' => match ($formType) {
+                        'number' => 'number',
+                        'checkbox' => 'array',
+                        'switch' => 'boolean',
+                        default => 'string',
+                    },
+                    'required' => $required,
+                ];
             }
 
             if (! empty($field['list']) && $name !== 'id') {
-                // 开关列渲染成标签，其他列直接展示文本
-                $tableColumns[] = $formType === 'switch'
-                    ? "    <el-table-column prop=\"{$name}\" label=\"{$label}\" width=\"90\">\n"
+                // 开关/下拉渲染成标签，其他列直接展示文本
+                if ($formType === 'switch') {
+                    $tableColumns[] = "    <el-table-column prop=\"{$name}\" label=\"{$label}\" width=\"90\">\n"
                     . "      <template #default=\"{ row }\">\n"
                     . "        <el-tag :type=\"row.{$name} ? 'success' : 'info'\">{{ row.{$name} ? '是' : '否' }}</el-tag>\n"
                     . "      </template>\n"
-                    . "    </el-table-column>"
-                    : "    <el-table-column prop=\"{$name}\" label=\"{$label}\" min-width=\"130\" show-overflow-tooltip />";
+                    . "    </el-table-column>";
+                } elseif ($formType === 'select' && ($field['options'] ?? []) !== []) {
+                    $pairs = [];
+                    foreach ($field['options'] as $opt) {
+                        $o = self::splitOption($opt);
+                        $pairs[] = "  '{$o['value']}': '{$o['label']}',";
+                    }
+                    $optionMaps[] = "const {$name}Labels: Record<string, string> = {\n" . implode("\n", $pairs) . "\n}";
+                    $tableColumns[] = "    <el-table-column prop=\"{$name}\" label=\"{$label}\" width=\"90\">\n"
+                    . "      <template #default=\"{ row }\">\n"
+                    . "        <el-tag type=\"info\">{{ {$name}Labels[String(row.{$name})] ?? row.{$name} }}</el-tag>\n"
+                    . "      </template>\n"
+                    . "    </el-table-column>";
+                } else {
+                    $tableColumns[] = "    <el-table-column prop=\"{$name}\" label=\"{$label}\" min-width=\"130\" show-overflow-tooltip />";
+                }
             }
 
             if (! empty($field['form'])) {
@@ -373,14 +414,17 @@ class CodeGeneratorService
             'fillable' => implode("\n", $fillable) ?: '        // 无业务字段',
             'search_wheres' => implode("\n", $searchWheres) ?: '        // 未配置搜索字段',
             'search_data' => implode("\n", $searchData) ?: '',
+            'search_params' => $searchParams,
+            'form_fields' => $formFieldSpecs,
             'table_columns' => implode("\n", $tableColumns) ?: '    <!-- 未配置列表字段 -->',
             'form_items' => implode("\n", $formItems) ?: '        <!-- 未配置表单字段 -->',
             'form_defaults' => "{\n" . implode("\n", $formDefaults) . "\n}",
             'search_form' => $searchItems === [] ? '' : implode("\n", $searchItems),
             'menu_name' => $menuName,
             'form_rules' => $formRules === [] ? '{}' : "{\n" . implode("\n", $formRules) . "\n}",
+            'option_maps' => $optionMaps === [] ? '' : implode("\n\n", $optionMaps) . "\n",
             'routes_block' => $this->renderRoutesBlock($module, $studly),
-            'frontend_route' => $this->renderFrontendRoute($module, $studly, $menuName),
+            'frontend_route' => $this->renderFrontendRoute($module, $studly, $menuName, $menuPath),
         ];
     }
 
@@ -392,17 +436,29 @@ class CodeGeneratorService
         $model = $search ? 'query' : 'form';
         $width = $search ? ' style="width: 180px"' : '';
         $options = $field['options'] ?? [];
-        $optLines = implode("\n", array_map(static fn (string $opt): string => "              <el-option key=\"{$opt}\" label=\"{$opt}\" value=\"{$opt}\" />", $options));
+        $optLines = implode("\n", array_map(static function (string $opt): string {
+            $o = self::splitOption($opt);
+
+            return "              <el-option key=\"{$o['value']}\" label=\"{$o['label']}\" value=\"{$o['value']}\" />";
+        }, $options));
 
         $body = match ($formType) {
             'textarea' => "          <el-input v-model=\"{$model}.{$name}\" type=\"textarea\" :rows=\"3\" />",
             'number' => "          <el-input-number v-model=\"{$model}.{$name}\" style=\"width: 100%\" />",
             'select' => "          <el-select v-model=\"{$model}.{$name}\" clearable filterable{$width}>\n{$optLines}\n          </el-select>",
             'radio' => "          <el-radio-group v-model=\"{$model}.{$name}\">\n"
-                . implode("\n", array_map(static fn (string $opt): string => "            <el-radio key=\"{$opt}\" value=\"{$opt}\">{$opt}</el-radio>", $options))
+                . implode("\n", array_map(static function (string $opt) use ($name, $model): string {
+                    $o = self::splitOption($opt);
+
+                    return "            <el-radio key=\"{$o['value']}\" value=\"{$o['value']}\">{$o['label']}</el-radio>";
+                }, $options))
                 . "\n          </el-radio-group>",
             'checkbox' => "          <el-checkbox-group v-model=\"{$model}.{$name}\">\n"
-                . implode("\n", array_map(static fn (string $opt): string => "            <el-checkbox key=\"{$opt}\" value=\"{$opt}\">{$opt}</el-checkbox>", $options))
+                . implode("\n", array_map(static function (string $opt) use ($name, $model): string {
+                    $o = self::splitOption($opt);
+
+                    return "            <el-checkbox key=\"{$o['value']}\" value=\"{$o['value']}\">{$o['label']}</el-checkbox>";
+                }, $options))
                 . "\n          </el-checkbox-group>",
             'switch' => "          <el-switch v-model=\"{$model}.{$name}\" />",
             'date' => "          <el-date-picker v-model=\"{$model}.{$name}\" type=\"date\" value-format=\"YYYY-MM-DD\"{$width} />",
@@ -430,11 +486,13 @@ class CodeGeneratorService
             . "}, ['middleware' => [AuthMiddleware::class]]);";
     }
 
-    private function renderFrontendRoute(string $module, string $studly, string $menuName): string
+    private function renderFrontendRoute(string $module, string $studly, string $menuName, string $menuPath): string
     {
+        // 路由 path 必须与权限表里菜单的 path 一致（侧边栏按它跳转），未配置时回退模块名
+        $routePath = $menuPath !== '' ? $menuPath : $module;
 
         return "  {\n"
-            . "    path: '{$module}',\n"
+            . "    path: '{$routePath}',\n"
             . "    name: 'gen-{$module}',\n"
             . "    component: () => import('@/views/gen/{$module}/index.vue'),\n"
             . "    meta: { title: '{$menuName}', permission: '{$module}' },\n"
@@ -546,6 +604,62 @@ PHP;
     private function renderController(array $ctx): string
     {
         $searchData = $ctx['search_data'];
+        $module = $ctx['module'];
+        $tag = $ctx['menu_name'];
+
+        // Sw* 注解片段（每个方法一段；默认值由 App\Swagger\Attributes 提供）
+        $searchParamLines = implode("\n", array_map(
+            static fn (array $p): string => "        new SwQuery('{$p['name']}', type: '{$p['type']}', desc: '{$p['label']}'),",
+            $ctx['search_params']
+        ));
+        $formPropertyLines = implode("\n", array_map(
+            static fn (array $f): string => "            new SwProp('{$f['name']}', type: '{$f['type']}', desc: '{$f['label']}'),",
+            $ctx['form_fields']
+        ));
+        $requiredProps = implode(', ', array_map(
+            static fn (array $f): string => "'{$f['name']}'",
+            array_values(array_filter($ctx['form_fields'], static fn (array $f): bool => (bool) $f['required']))
+        ));
+        $requiredPropsLine = $requiredProps !== '' ? "\n            requiredProps: [{$requiredProps}]," : '';
+
+        $swIndex = <<<PHP
+    #[SwGet(path: '/api/{$module}', operationId: '{$module}Index', summary: '{$tag}列表', tag: '{$tag}', page: true,
+        params: [
+{$searchParamLines}
+        ],
+    )]
+PHP;
+        $swShow = <<<PHP
+    #[SwGet(path: '/api/{$module}/{id}', operationId: '{$module}Show', summary: '{$tag}详情', tag: '{$tag}',
+        params: [new SwId()],
+    )]
+PHP;
+        $swStore = <<<PHP
+    #[SwPost(path: '/api/{$module}', operationId: '{$module}Store', summary: '新增{$tag}', tag: '{$tag}',
+        body: new SwBody(
+            props: [
+{$formPropertyLines}
+            ],{$requiredPropsLine}
+        ),
+    )]
+PHP;
+        $swUpdate = <<<PHP
+    #[SwPut(path: '/api/{$module}/{id}', operationId: '{$module}Update', summary: '更新{$tag}', tag: '{$tag}',
+        desc: '支持部分字段更新（传哪些改哪些）。',
+        params: [new SwId()],
+        body: new SwBody(
+            props: [
+{$formPropertyLines}
+            ],
+            required: false,
+        ),
+    )]
+PHP;
+        $swDestroy = <<<PHP
+    #[SwDelete(path: '/api/{$module}/{id}', operationId: '{$module}Destroy', summary: '删除{$tag}', tag: '{$tag}',
+        params: [new SwId()],
+    )]
+PHP;
 
         return <<<PHP
 <?php
@@ -565,6 +679,14 @@ use App\\Controller\\AbstractController;
 use App\\Controller\\Concerns\\AuthorizesRequests;
 use App\\Model\\{$ctx['studly']};
 use App\\Service\\{$ctx['studly']}Service;
+use App\\Swagger\\Attributes\\SwBody;
+use App\\Swagger\\Attributes\\SwDelete;
+use App\\Swagger\\Attributes\\SwGet;
+use App\\Swagger\\Attributes\\SwId;
+use App\\Swagger\\Attributes\\SwPost;
+use App\\Swagger\\Attributes\\SwProp;
+use App\\Swagger\\Attributes\\SwPut;
+use App\\Swagger\\Attributes\\SwQuery;
 use Hyperf\\Di\\Annotation\\Inject;
 use Hyperf\\Validation\\Contract\\ValidatorFactoryInterface;
 use Psr\\Http\\Message\\ResponseInterface;
@@ -586,6 +708,7 @@ class {$ctx['studly']}Controller extends AbstractController
     {
     }
 
+{$swIndex}
     public function index(): ResponseInterface
     {
         \$this->authorize('{$ctx['module']}.view');
@@ -605,6 +728,7 @@ class {$ctx['studly']}Controller extends AbstractController
         ));
     }
 
+{$swShow}
     public function show(int \$id): ResponseInterface
     {
         \$this->authorize('{$ctx['module']}.view');
@@ -617,6 +741,7 @@ class {$ctx['studly']}Controller extends AbstractController
         return ApiResponse::success(\$model);
     }
 
+{$swStore}
     public function store(): ResponseInterface
     {
         \$this->authorize('{$ctx['module']}.add');
@@ -626,16 +751,18 @@ class {$ctx['studly']}Controller extends AbstractController
         return ApiResponse::success(['id' => (int) \$this->service->create(\$data)->id], '创建成功');
     }
 
+{$swUpdate}
     public function update(int \$id): ResponseInterface
     {
         \$this->authorize('{$ctx['module']}.edit');
 
-        \$data = \$this->validatorFactory->make(\$this->request->all(), \$this->rules())->validate();
+        \$data = \$this->validatorFactory->make(\$this->request->all(), \$this->rulesForUpdate())->validate();
         \$this->service->update(\$id, \$data);
 
         return ApiResponse::success(['id' => \$id], '保存成功');
     }
 
+{$swDestroy}
     public function destroy(int \$id): ResponseInterface
     {
         \$this->authorize('{$ctx['module']}.delete');
@@ -650,6 +777,15 @@ class {$ctx['studly']}Controller extends AbstractController
         return [
 {$ctx['rules']}
         ];
+    }
+
+    /** 更新支持部分字段提交：required 放宽为 nullable，传了才校验 */
+    private function rulesForUpdate(): array
+    {
+        return array_map(
+            static fn (string \$rule): string => str_replace('required', 'nullable', \$rule),
+            \$this->rules()
+        );
     }
 
     /** 搜索字段的校验规则（生成器按配置展开；这里全部放宽为 nullable） */
@@ -734,6 +870,7 @@ import {
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
+{$ctx['option_maps']}
 const items = ref<any[]>([])
 const total = ref(0)
 const query = reactive<Record<string, any>>({
@@ -927,6 +1064,28 @@ VUE;
                 . "      </el-form>\n";
 
         return str_replace('{{SEARCH_BLOCK}}', $searchBlock, $template);
+    }
+
+    /** 选项校验规则：有选项时按值做 in 校验（兼容数字/字符串提交），否则退回字符串 */
+    private function optionRule(array $field): string
+    {
+        $values = [];
+        foreach ($field['options'] ?? [] as $opt) {
+            $values[] = self::splitOption($opt)['value'];
+        }
+
+        return $values === [] ? 'string|max:191' : 'in:' . implode(',', $values);
+    }
+
+    /** 解析选项串："1=启用" → 值 1 / 标签 启用；无等号时值与标签相同 */
+    public static function splitOption(string $opt): array
+    {
+        $pos = strpos($opt, '=');
+        if ($pos === false) {
+            return ['value' => $opt, 'label' => $opt];
+        }
+
+        return ['value' => substr($opt, 0, $pos), 'label' => substr($opt, $pos + 1)];
     }
 
     private function assertTable(string $table): void
