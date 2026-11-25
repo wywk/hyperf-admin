@@ -11,6 +11,7 @@ declare(strict_types=1);
  */
 use App\Controller\Api\AuthController;
 use App\Controller\Api\DocsController;
+use App\Controller\Api\FileController;
 use App\Controller\Api\FormController;
 use App\Controller\Api\GenController;
 use App\Controller\Api\LoginLogController;
@@ -72,7 +73,16 @@ Router::addGroup('/api', function () {
     Router::get('/gen/tables/{table:[a-zA-Z_][a-zA-Z0-9_]*}/fields', [GenController::class, 'fields']);
     Router::post('/gen/preview', [GenController::class, 'preview']);
     Router::post('/gen/generate', [GenController::class, 'generate']);
+
+    // 文件管理（接口内部做 file.* 权限校验）
+    Router::post('/files/upload', [FileController::class, 'upload']);
+    Router::get('/files', [FileController::class, 'index']);
+    Router::delete('/files/{id:\d+}', [FileController::class, 'destroy']);
+    Router::get('/files/{id:\d+}/download', [FileController::class, 'download']);
 }, ['middleware' => [AuthMiddleware::class]]);
+
+// 本地上传文件的公开访问（文件名为随机 UUID，路径由 LocalDriver::absolute 校验防穿越）
+Router::get('/uploads/{path:.*}', [\App\Controller\UploadServeController::class, 'show']);
 
 
 

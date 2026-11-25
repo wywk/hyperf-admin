@@ -53,6 +53,11 @@ class RbacSeeder extends Seeder
         'audit' => ['system', 'menu', '登录审计', 'audit', 'Tickets', 30],
         'audit.view' => ['audit', 'button', '查看审计日志', '', '', 10],
 
+        'file' => ['system', 'menu', '文件管理', 'system/files', 'Files', 40],
+        'file.view' => ['file', 'button', '查看文件', '', '', 10],
+        'file.upload' => ['file', 'button', '上传文件', '', '', 20],
+        'file.delete' => ['file', 'button', '删除文件', '', '', 30],
+
         'tool' => ['', 'menu', '工具开发', 'tool', 'SetUp', 40],
 
         'form' => ['tool', 'menu', '表单管理', 'tool/forms', 'EditPen', 10],

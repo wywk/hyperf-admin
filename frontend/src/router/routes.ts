@@ -33,6 +33,12 @@ export const layoutRoutes: RouteRecordRaw[] = [
     meta: { title: '角色管理', permission: 'role' },
   },
   {
+    path: 'system/files',
+    name: 'files',
+    component: () => import('@/views/system/files/index.vue'),
+    meta: { title: '文件管理', permission: 'file' },
+  },
+  {
     path: 'tool/forms',
     name: 'forms',
     component: () => import('@/views/tool/forms/index.vue'),
