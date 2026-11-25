@@ -73,14 +73,6 @@ export const layoutRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/error/403.vue'),
     meta: { title: '无权访问' },
   },
-  // [gen:product] start（代码生成器维护，勿手改）
-  {
-    path: 'product',
-    name: 'gen-product',
-    component: () => import('@/views/gen/product/index.vue'),
-    meta: { title: '示例商品', permission: 'product' },
-  },
-  // [gen:product] end
   // [gen:mall_category] start（代码生成器维护，勿手改）
   {
     path: 'mall/category',
@@ -97,6 +89,14 @@ export const layoutRoutes: RouteRecordRaw[] = [
     meta: { title: '商品管理', permission: 'mall_goods' },
   },
   // [gen:mall_goods] end
+  // [gen:mall_goods_sku] start（代码生成器维护，勿手改）
+  {
+    path: 'mall/sku',
+    name: 'gen-mall_goods_sku',
+    component: () => import('@/views/gen/mall_goods_sku/index.vue'),
+    meta: { title: 'SKU管理', permission: 'mall_goods_sku' },
+  },
+  // [gen:mall_goods_sku] end
   // [gen:mall_order] start（代码生成器维护，勿手改）
   {
     path: 'mall/order',
@@ -113,6 +113,14 @@ export const layoutRoutes: RouteRecordRaw[] = [
     meta: { title: '订单明细', permission: 'mall_order_item' },
   },
   // [gen:mall_order_item] end
+  // [gen:product] start（代码生成器维护，勿手改）
+  {
+    path: 'product',
+    name: 'gen-product',
+    component: () => import('@/views/gen/product/index.vue'),
+    meta: { title: '示例商品', permission: 'product' },
+  },
+  // [gen:product] end
 ]
 
 export const routes: RouteRecordRaw[] = [

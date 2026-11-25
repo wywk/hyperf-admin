@@ -20,6 +20,7 @@ use App\Model\FormSubmission;
 use App\Support\ClientIp;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -40,6 +41,26 @@ class FormController extends AbstractController
     /**
      * GET /api/forms 表单列表。
      */
+    #[OA\Get(
+        path: '/api/forms',
+        operationId: 'formIndex',
+        summary: '表单列表',
+        description: '表单定义分页列表（不含 schema 大字段）。需要 form.view 权限。',
+        tags: ['表单管理'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)),
+            new OA\Parameter(name: 'page_size', in: 'query', required: false, schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)),
+            new OA\Parameter(name: 'keyword', in: 'query', required: false, description: '按名称/标识模糊搜索', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'status', in: 'query', required: false, description: '1=已发布 0=停用',
+                schema: new OA\Schema(type: 'integer', enum: [0, 1])),
+        ],
+        responses: [
+            new OA\Response(response: '200', description: '分页结果：{total, page, page_size, items[]}'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+        ]
+    )]
     public function index(): ResponseInterface
     {
         $this->authorize('form.view');
@@ -78,6 +99,23 @@ class FormController extends AbstractController
     /**
      * GET /api/forms/{id} 表单详情（含 Schema）。
      */
+    #[OA\Get(
+        path: '/api/forms/{id}',
+        operationId: 'formShow',
+        summary: '表单详情',
+        description: '返回表单定义，含完整 JSON Schema（设计器回显用）。需要 form.view 权限。',
+        tags: ['表单管理'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: '200', description: '表单定义（含 schema.fields 字段数组）'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+        ]
+    )]
     public function show(int $id): ResponseInterface
     {
         $this->authorize('form.view');
@@ -93,6 +131,36 @@ class FormController extends AbstractController
     /**
      * POST /api/forms 新增表单。
      */
+    #[OA\Post(
+        path: '/api/forms',
+        operationId: 'formStore',
+        summary: '创建表单',
+        description: 'schema 结构：{fields: [{field, label, type, required?, min?, max?, options?}]}，type 支持 input/textarea/number/select/radio/checkbox/date/switch。需要 form.add 权限。',
+        tags: ['表单管理'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'code', 'schema'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: '客户报名'),
+                    new OA\Property(property: 'code', type: 'string', example: 'customer_signup', description: '公开提交接口用它定位'),
+                    new OA\Property(property: 'description', type: 'string'),
+                    new OA\Property(property: 'schema', type: 'object',
+                        properties: [
+                            new OA\Property(property: 'fields', type: 'array', items: new OA\Items(type: 'object'),
+                                description: '字段定义数组，每项含 field/label/type'),
+                        ]),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: '200', description: '返回新表单 id'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
+        ]
+    )]
     public function store(): ResponseInterface
     {
         $this->authorize('form.add');
@@ -113,6 +181,37 @@ class FormController extends AbstractController
     /**
      * PUT /api/forms/{id} 更新表单。
      */
+    #[OA\Put(
+        path: '/api/forms/{id}',
+        operationId: 'formUpdate',
+        summary: '更新表单',
+        description: '全量覆盖 name/code/schema/description，可选更新 status。需要 form.edit 权限。',
+        tags: ['表单管理'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'code', 'schema'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'code', type: 'string'),
+                    new OA\Property(property: 'description', type: 'string'),
+                    new OA\Property(property: 'status', type: 'integer', enum: [0, 1]),
+                    new OA\Property(property: 'schema', type: 'object'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: '200', description: '返回表单 id'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
+        ]
+    )]
     public function update(int $id): ResponseInterface
     {
         $this->authorize('form.edit');
@@ -138,6 +237,23 @@ class FormController extends AbstractController
     /**
      * DELETE /api/forms/{id} 删除表单（连同提交数据）。
      */
+    #[OA\Delete(
+        path: '/api/forms/{id}',
+        operationId: 'formDestroy',
+        summary: '删除表单',
+        description: '连同该表单的全部提交数据一并删除。需要 form.delete 权限。',
+        tags: ['表单管理'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: '200', description: '已删除'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+        ]
+    )]
     public function destroy(int $id): ResponseInterface
     {
         $this->authorize('form.delete');
@@ -156,6 +272,25 @@ class FormController extends AbstractController
     /**
      * GET /api/forms/{id}/submissions 提交数据列表。
      */
+    #[OA\Get(
+        path: '/api/forms/{id}/submissions',
+        operationId: 'formSubmissions',
+        summary: '表单提交数据分页',
+        description: '返回 form 元信息（含 schema，用于渲染列）与提交数据分页。需要 form.view 权限。',
+        tags: ['表单管理'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)),
+            new OA\Parameter(name: 'page_size', in: 'query', required: false, schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)),
+        ],
+        responses: [
+            new OA\Response(response: '200', description: '{form, total, page, page_size, items[]}'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+        ]
+    )]
     public function submissions(int $id): ResponseInterface
     {
         $this->authorize('form.view');
@@ -186,6 +321,34 @@ class FormController extends AbstractController
     /**
      * GET /api/form/{code} 公开：按标识取已发布的表单 Schema（渲染用）。
      */
+    #[OA\Get(
+        path: '/api/form/{code}',
+        operationId: 'formPublicSchema',
+        summary: '【公开】按标识取表单 Schema',
+        description: '无需登录；只返回已发布（status=1）的表单，供任意渲染方（H5/静态页）拉取字段定义。',
+        tags: ['表单（公开）'],
+        parameters: [
+            new OA\Parameter(name: 'code', in: 'path', required: true, description: '表单标识',
+                schema: new OA\Schema(type: 'string', example: 'customer_signup')),
+        ],
+        responses: [
+            new OA\Response(
+                response: '200',
+                description: '{id, name, description, schema}',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data', type: 'object',
+                            properties: [
+                                new OA\Property(property: 'id', type: 'integer'),
+                                new OA\Property(property: 'name', type: 'string'),
+                                new OA\Property(property: 'schema', type: 'object'),
+                            ]),
+                    ]
+                )
+            ),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+        ]
+    )]
     public function publicSchema(string $code): ResponseInterface
     {
         $form = Form::query()->where('code', $code)->where('status', 1)->first();
@@ -204,6 +367,32 @@ class FormController extends AbstractController
     /**
      * POST /api/form/{code}/submit 公开：提交表单数据（按 Schema 做基础校验）。
      */
+    #[OA\Post(
+        path: '/api/form/{code}/submit',
+        operationId: 'formPublicSubmit',
+        summary: '【公开】提交表单数据',
+        description: '无需登录；按表单 Schema 校验必填/类型/数值范围后入库，并记录提交者 IP。',
+        tags: ['表单（公开）'],
+        parameters: [
+            new OA\Parameter(name: 'code', in: 'path', required: true, description: '表单标识',
+                schema: new OA\Schema(type: 'string', example: 'customer_signup')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                example: ['name' => '张三', 'phone' => '13800000000', 'age' => 28],
+                properties: [
+                    new OA\Property(property: 'data', type: 'object',
+                        description: '按 schema.fields 的 field 名作为 key 提交'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: '200', description: '提交成功'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
+        ]
+    )]
     public function submit(string $code): ResponseInterface
     {
         $form = Form::query()->where('code', $code)->where('status', 1)->first();

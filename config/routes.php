@@ -74,15 +74,11 @@ Router::addGroup('/api', function () {
     Router::post('/gen/generate', [GenController::class, 'generate']);
 }, ['middleware' => [AuthMiddleware::class]]);
 
-// [gen:product] start（代码生成器维护，勿手改）
-Router::addGroup('/api', function () {
-    Router::get('/product', [\App\Controller\Api\ProductController::class, 'index']);
-    Router::post('/product', [\App\Controller\Api\ProductController::class, 'store']);
-    Router::get('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'show']);
-    Router::put('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'update']);
-    Router::delete('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'destroy']);
-}, ['middleware' => [AuthMiddleware::class]]);
-// [gen:product] end
+
+
+
+
+
 
 
 
@@ -150,3 +146,13 @@ Router::addGroup('/api', function () {
     Router::delete('/mall_order_item/{id:\d+}', [\App\Controller\Api\MallOrderItemController::class, 'destroy']);
 }, ['middleware' => [AuthMiddleware::class]]);
 // [gen:mall_order_item] end
+
+// [gen:product] start（代码生成器维护，勿手改）
+Router::addGroup('/api', function () {
+    Router::get('/product', [\App\Controller\Api\ProductController::class, 'index']);
+    Router::post('/product', [\App\Controller\Api\ProductController::class, 'store']);
+    Router::get('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'show']);
+    Router::put('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'update']);
+    Router::delete('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'destroy']);
+}, ['middleware' => [AuthMiddleware::class]]);
+// [gen:product] end

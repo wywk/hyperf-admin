@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Controller\AbstractController;
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
 
@@ -29,6 +30,16 @@ class DocsController extends AbstractController
     /**
      * GET /api/docs：自带样式的文档页.
      */
+    #[OA\Get(
+        path: '/api/docs',
+        operationId: 'docsIndex',
+        summary: '【公开】接口文档页',
+        description: '离线可用的 Swagger UI 文档页（数据源为 /api/docs/openapi.json）。',
+        tags: ['文档'],
+        responses: [
+            new OA\Response(response: '200', description: 'HTML 文档页'),
+        ]
+    )]
     public function index(): ResponseInterface
     {
         $page = @file_get_contents(self::PAGE_FILE);
@@ -42,6 +53,16 @@ class DocsController extends AbstractController
     /**
      * GET /api/docs/openapi.json：OpenAPI 3.0 规范.
      */
+    #[OA\Get(
+        path: '/api/docs/openapi.json',
+        operationId: 'docsJson',
+        summary: '【公开】OpenAPI 3.0 规范 JSON',
+        description: '由 `php bin/hyperf.php swagger:export` 扫描控制器 Attributes 生成；可直接导入 Swagger UI / Postman / Apifox。',
+        tags: ['文档'],
+        responses: [
+            new OA\Response(response: '200', description: 'OpenAPI 3.0 JSON'),
+        ]
+    )]
     public function json(): ResponseInterface
     {
         $raw = @file_get_contents(self::SPEC_FILE);

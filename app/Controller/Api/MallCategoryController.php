@@ -17,6 +17,7 @@ use App\Model\MallCategory;
 use App\Service\MallCategoryService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -36,6 +37,28 @@ class MallCategoryController extends AbstractController
     {
     }
 
+    #[OA\Get(
+        path: '/api/mall_category',
+        operationId: 'mall_categoryIndex',
+        summary: '分类管理列表',
+        tags: ['分类管理'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'page', in: 'query', required: false, description: '页码，默认 1',
+                schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)),
+            new OA\Parameter(name: 'page_size', in: 'query', required: false, description: '每页条数，默认 20',
+                schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)),
+            new OA\Parameter(name: 'name', in: 'query', required: false, description: '分类名称',
+                schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'status', in: 'query', required: false, description: '状态',
+                schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+                        new OA\Response(response: '200', description: '成功'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+        ]
+    )]
     public function index(): ResponseInterface
     {
         $this->authorize('mall_category.view');
@@ -55,6 +78,22 @@ class MallCategoryController extends AbstractController
         ));
     }
 
+    #[OA\Get(
+        path: '/api/mall_category/{id}',
+        operationId: 'mall_categoryShow',
+        summary: '分类管理详情',
+        tags: ['分类管理'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+                        new OA\Response(response: '200', description: '成功'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+        ]
+    )]
     public function show(int $id): ResponseInterface
     {
         $this->authorize('mall_category.view');
@@ -67,6 +106,30 @@ class MallCategoryController extends AbstractController
         return ApiResponse::success($model);
     }
 
+    #[OA\Post(
+        path: '/api/mall_category',
+        operationId: 'mall_categoryStore',
+        summary: '新增分类管理',
+        tags: ['分类管理'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', description: '分类名称'),
+                    new OA\Property(property: 'sort', type: 'number', nullable: true, description: '排序'),
+                    new OA\Property(property: 'status', type: 'string', nullable: true, description: '状态'),
+                    new OA\Property(property: 'description', type: 'string', nullable: true, description: '说明'),
+                ]
+            )
+        ),
+        responses: [
+                        new OA\Response(response: '200', description: '成功'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
+        ]
+    )]
     public function store(): ResponseInterface
     {
         $this->authorize('mall_category.add');
@@ -76,6 +139,35 @@ class MallCategoryController extends AbstractController
         return ApiResponse::success(['id' => (int) $this->service->create($data)->id], '创建成功');
     }
 
+    #[OA\Put(
+        path: '/api/mall_category/{id}',
+        operationId: 'mall_categoryUpdate',
+        summary: '更新分类管理',
+        description: '支持部分字段更新（传哪些改哪些）。',
+        tags: ['分类管理'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', description: '分类名称'),
+                    new OA\Property(property: 'sort', type: 'number', nullable: true, description: '排序'),
+                    new OA\Property(property: 'status', type: 'string', nullable: true, description: '状态'),
+                    new OA\Property(property: 'description', type: 'string', nullable: true, description: '说明'),
+                ]
+            )
+        ),
+        responses: [
+                        new OA\Response(response: '200', description: '成功'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
+        ]
+    )]
     public function update(int $id): ResponseInterface
     {
         $this->authorize('mall_category.edit');
@@ -86,6 +178,22 @@ class MallCategoryController extends AbstractController
         return ApiResponse::success(['id' => $id], '保存成功');
     }
 
+    #[OA\Delete(
+        path: '/api/mall_category/{id}',
+        operationId: 'mall_categoryDestroy',
+        summary: '删除分类管理',
+        tags: ['分类管理'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+                        new OA\Response(response: '200', description: '成功'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+        ]
+    )]
     public function destroy(int $id): ResponseInterface
     {
         $this->authorize('mall_category.delete');

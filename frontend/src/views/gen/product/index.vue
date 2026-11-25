@@ -13,6 +13,11 @@ import {
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
+const statusLabels: Record<string, string> = {
+  '1': '上架',
+  '0': '下架',
+}
+
 const items = ref<any[]>([])
 const total = ref(0)
 const query = reactive<Record<string, any>>({
@@ -54,17 +59,13 @@ const formRef = ref()
 const form = reactive<Record<string, any>>({})
 const rules: Record<string, unknown> = {
   name: [{ required: true, message: '请填写商品名称', trigger: 'blur' }],
-  category: [{ required: true, message: '请填写分类', trigger: 'change' }],
   price: [{ required: true, message: '请填写价格', trigger: 'blur' }],
 }
 const emptyForm: Record<string, any> = {
-  id: null,
   name: '',
-  category: '',
   price: null,
   stock: null,
-  status: false,
-  description: '',
+  status: '',
 }
 
 function openCreate(): void {
@@ -146,11 +147,13 @@ async function remove(row: any): Promise<void> {
         <el-form-item label="商品名称" prop="name">
           <el-input v-model="query.name" clearable style="width: 180px" />
         </el-form-item>
-        <el-form-item label="分类" prop="category">
-          <el-select v-model="query.category" clearable filterable style="width: 180px">
-              <el-option key="数码" label="数码" value="数码" />
-              <el-option key="家居" label="家居" value="家居" />
-              <el-option key="食品" label="食品" value="食品" />
+        <el-form-item label="价格" prop="price">
+          <el-input-number v-model="query.price" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="query.status" clearable filterable style="width: 180px">
+              <el-option key="1" label="上架" value="1" />
+              <el-option key="0" label="下架" value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -162,12 +165,11 @@ async function remove(row: any): Promise<void> {
       <el-table v-loading="loading" :data="items" row-key="id">
         <el-table-column prop="id" label="ID" width="80" />
     <el-table-column prop="name" label="商品名称" min-width="130" show-overflow-tooltip />
-    <el-table-column prop="category" label="分类" min-width="130" show-overflow-tooltip />
     <el-table-column prop="price" label="价格" min-width="130" show-overflow-tooltip />
     <el-table-column prop="stock" label="库存" min-width="130" show-overflow-tooltip />
-    <el-table-column prop="status" label="上架" width="90">
+    <el-table-column prop="status" label="状态" width="90">
       <template #default="{ row }">
-        <el-tag :type="row.status ? 'success' : 'info'">{{ row.status ? '是' : '否' }}</el-tag>
+        <el-tag type="info">{{ statusLabels[String(row.status)] ?? row.status }}</el-tag>
       </template>
     </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
@@ -198,24 +200,17 @@ async function remove(row: any): Promise<void> {
         <el-form-item label="商品名称" prop="name">
           <el-input v-model="form.name" clearable />
         </el-form-item>
-        <el-form-item label="分类" prop="category">
-          <el-select v-model="form.category" clearable filterable>
-              <el-option key="数码" label="数码" value="数码" />
-              <el-option key="家居" label="家居" value="家居" />
-              <el-option key="食品" label="食品" value="食品" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="价格" prop="price">
           <el-input-number v-model="form.price" style="width: 100%" />
         </el-form-item>
         <el-form-item label="库存" prop="stock">
           <el-input-number v-model="form.stock" style="width: 100%" />
         </el-form-item>
-        <el-form-item label="上架" prop="status">
-          <el-switch v-model="form.status" />
-        </el-form-item>
-        <el-form-item label="描述" prop="description">
-          <el-input v-model="form.description" type="textarea" :rows="3" />
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="form.status" clearable filterable>
+              <el-option key="1" label="上架" value="1" />
+              <el-option key="0" label="下架" value="0" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>

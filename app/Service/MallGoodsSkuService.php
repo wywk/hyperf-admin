@@ -9,7 +9,6 @@ declare(strict_types=1);
  */
 namespace App\Service;
 
-use App\Model\MallGoods;
 use App\Model\MallGoodsSku;
 use Hyperf\DbConnection\Db;
 
@@ -47,10 +46,7 @@ class MallGoodsSkuService
 
     public function create(array $data): MallGoodsSku
     {
-        $model = MallGoodsSku::query()->create($data);
-        $this->syncGoodsStock((int) $model->goods_id);
-
-        return $model;
+        return MallGoodsSku::query()->create($data);
     }
 
     public function update(int $id, array $data): MallGoodsSku
@@ -58,27 +54,12 @@ class MallGoodsSkuService
         /** @var MallGoodsSku $model */
         $model = MallGoodsSku::query()->findOrFail($id);
         $model->fill($data)->save();
-        $this->syncGoodsStock((int) $model->goods_id);
 
         return $model;
     }
 
     public function delete(int $id): void
     {
-        /** @var MallGoodsSku|null $model */
-        $model = MallGoodsSku::query()->find($id);
         MallGoodsSku::query()->where('id', $id)->delete();
-        if ($model !== null) {
-            $this->syncGoodsStock((int) $model->goods_id);
-        }
-    }
-
-    /**
-     * 商品库存 = 其 SKU 库存之和；SKU 任何增删改后回写商品表。
-     */
-    private function syncGoodsStock(int $goodsId): void
-    {
-        $sum = (int) MallGoodsSku::query()->where('goods_id', $goodsId)->sum('stock');
-        MallGoods::query()->where('id', $goodsId)->update(['stock' => $sum]);
     }
 }

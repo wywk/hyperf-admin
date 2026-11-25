@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Model\MallGoods;
-use App\Model\MallGoodsSku;
 use Hyperf\DbConnection\Db;
 
 /**
@@ -58,7 +57,6 @@ class MallGoodsService
         /** @var MallGoods $model */
         $model = MallGoods::query()->findOrFail($id);
         $model->fill($data)->save();
-        $this->syncStockFromSkus($id);
 
         return $model;
     }
@@ -66,16 +64,5 @@ class MallGoodsService
     public function delete(int $id): void
     {
         MallGoods::query()->where('id', $id)->delete();
-    }
-
-    /**
-     * 已配置 SKU 的商品，库存以 SKU 汇总为准（覆盖手动传入的 stock）。
-     */
-    private function syncStockFromSkus(int $goodsId): void
-    {
-        $sum = (int) MallGoodsSku::query()->where('goods_id', $goodsId)->sum('stock');
-        if ($sum > 0) {
-            MallGoods::query()->where('id', $goodsId)->update(['stock' => $sum]);
-        }
     }
 }

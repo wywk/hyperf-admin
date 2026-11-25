@@ -20,18 +20,14 @@ class Product extends Model
 
     protected array $fillable = [
         'name',
-        'category',
         'price',
         'stock',
         'status',
-        'description',
     ];
 
     protected array $casts = [
-        'id' => 'float',
         'price' => 'float',
         'stock' => 'float',
-        'status' => 'boolean',
         'id' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

@@ -24,11 +24,14 @@ class ProductService
     {
         $query = Product::query()->orderByDesc('id');
 
-        if (! empty($filters['name'])) {
+        if (isset($filters['name']) && $filters['name'] !== null && $filters['name'] !== '') {
             $query->where('name', 'like', '%'.$filters['name'].'%');
         }
-        if (! empty($filters['category'])) {
-            $query->where('category', 'like', '%'.$filters['category'].'%');
+        if (isset($filters['price']) && $filters['price'] !== null && $filters['price'] !== '') {
+            $query->where('price', $filters['price']);
+        }
+        if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
+            $query->where('status', $filters['status']);
         }
 
         $total = (clone $query)->count();

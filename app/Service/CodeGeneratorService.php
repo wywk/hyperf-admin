@@ -298,6 +298,8 @@ class CodeGeneratorService
         $formRules = [];
         $fillable = [];
         $optionMaps = [];
+        $searchParams = [];
+        $formFieldSpecs = [];
 
         foreach ($fields as $field) {
             $name = $field['name'];
@@ -345,6 +347,25 @@ class CodeGeneratorService
                     : "        if ({$hasFilter}) {\n            \$query->where('{$name}', \$filters['{$name}']);\n        }";
                 $searchData[] = "        '{$name}' => \$data['{$name}'] ?? null,";
                 $searchItems[] = $this->frontendFormItem($formType, $field, true);
+                $searchParams[] = [
+                    'name' => $name,
+                    'label' => $label,
+                    'type' => $formType === 'number' ? 'number' : 'string',
+                ];
+            }
+
+            if (! empty($field['form'])) {
+                $formFieldSpecs[] = [
+                    'name' => $name,
+                    'label' => $label,
+                    'type' => match ($formType) {
+                        'number' => 'number',
+                        'checkbox' => 'array',
+                        'switch' => 'boolean',
+                        default => 'string',
+                    },
+                    'required' => $required,
+                ];
             }
 
             if (! empty($field['list']) && $name !== 'id') {
@@ -393,6 +414,8 @@ class CodeGeneratorService
             'fillable' => implode("\n", $fillable) ?: '        // 无业务字段',
             'search_wheres' => implode("\n", $searchWheres) ?: '        // 未配置搜索字段',
             'search_data' => implode("\n", $searchData) ?: '',
+            'search_params' => $searchParams,
+            'form_fields' => $formFieldSpecs,
             'table_columns' => implode("\n", $tableColumns) ?: '    <!-- 未配置列表字段 -->',
             'form_items' => implode("\n", $formItems) ?: '        <!-- 未配置表单字段 -->',
             'form_defaults' => "{\n" . implode("\n", $formDefaults) . "\n}",
@@ -581,6 +604,135 @@ PHP;
     private function renderController(array $ctx): string
     {
         $searchData = $ctx['search_data'];
+        $module = $ctx['module'];
+        $tag = $ctx['menu_name'];
+
+        // OpenAPI 属性块（每个方法一段）
+        $pageParams = <<<'PHP'
+            new OA\Parameter(name: 'page', in: 'query', required: false, description: '页码，默认 1',
+                schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)),
+            new OA\Parameter(name: 'page_size', in: 'query', required: false, description: '每页条数，默认 20',
+                schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)),
+PHP;
+        $searchParamLines = implode("\n", array_map(
+            static fn (array $p): string => "            new OA\\Parameter(name: '{$p['name']}', in: 'query', required: false, description: '{$p['label']}',\n"
+                . "                schema: new OA\\Schema(type: '{$p['type']}')),",
+            $ctx['search_params']
+        ));
+        $formPropertyLines = implode("\n", array_map(
+            static fn (array $f): string => "                    new OA\\Property(property: '{$f['name']}', type: '{$f['type']}'"
+                . ($f['required'] ? '' : ', nullable: true') . ", description: '{$f['label']}'),",
+            $ctx['form_fields']
+        ));
+        $idParam = "            new OA\\Parameter(name: 'id', in: 'path', required: true, schema: new OA\\Schema(type: 'integer')),";
+        $auth = "        security: [['bearerAuth' => []]],";
+        $ok = "            new OA\Response(response: '200', description: '成功'),";
+
+        $oaIndex = <<<PHP
+    #[OA\Get(
+        path: '/api/{$module}',
+        operationId: '{$module}Index',
+        summary: '{$tag}列表',
+        tags: ['{$tag}'],
+{$auth}
+        parameters: [
+{$pageParams}
+{$searchParamLines}
+        ],
+        responses: [
+            {$ok}
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+        ]
+    )]
+PHP;
+        $oaShow = <<<PHP
+    #[OA\Get(
+        path: '/api/{$module}/{id}',
+        operationId: '{$module}Show',
+        summary: '{$tag}详情',
+        tags: ['{$tag}'],
+{$auth}
+        parameters: [
+{$idParam}
+        ],
+        responses: [
+            {$ok}
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+        ]
+    )]
+PHP;
+        $oaStore = <<<PHP
+    #[OA\Post(
+        path: '/api/{$module}',
+        operationId: '{$module}Store',
+        summary: '新增{$tag}',
+        tags: ['{$tag}'],
+{$auth}
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+{$formPropertyLines}
+                ]
+            )
+        ),
+        responses: [
+            {$ok}
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
+        ]
+    )]
+PHP;
+        $oaUpdate = <<<PHP
+    #[OA\Put(
+        path: '/api/{$module}/{id}',
+        operationId: '{$module}Update',
+        summary: '更新{$tag}',
+        description: '支持部分字段更新（传哪些改哪些）。',
+        tags: ['{$tag}'],
+{$auth}
+        parameters: [
+{$idParam}
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+{$formPropertyLines}
+                ]
+            )
+        ),
+        responses: [
+            {$ok}
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
+        ]
+    )]
+PHP;
+        $oaDestroy = <<<PHP
+    #[OA\Delete(
+        path: '/api/{$module}/{id}',
+        operationId: '{$module}Destroy',
+        summary: '删除{$tag}',
+        tags: ['{$tag}'],
+{$auth}
+        parameters: [
+{$idParam}
+        ],
+        responses: [
+            {$ok}
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+        ]
+    )]
+PHP;
 
         return <<<PHP
 <?php
@@ -602,6 +754,7 @@ use App\\Model\\{$ctx['studly']};
 use App\\Service\\{$ctx['studly']}Service;
 use Hyperf\\Di\\Annotation\\Inject;
 use Hyperf\\Validation\\Contract\\ValidatorFactoryInterface;
+use OpenApi\\Attributes as OA;
 use Psr\\Http\\Message\\ResponseInterface;
 
 /**
@@ -621,6 +774,7 @@ class {$ctx['studly']}Controller extends AbstractController
     {
     }
 
+{$oaIndex}
     public function index(): ResponseInterface
     {
         \$this->authorize('{$ctx['module']}.view');
@@ -640,6 +794,7 @@ class {$ctx['studly']}Controller extends AbstractController
         ));
     }
 
+{$oaShow}
     public function show(int \$id): ResponseInterface
     {
         \$this->authorize('{$ctx['module']}.view');
@@ -652,6 +807,7 @@ class {$ctx['studly']}Controller extends AbstractController
         return ApiResponse::success(\$model);
     }
 
+{$oaStore}
     public function store(): ResponseInterface
     {
         \$this->authorize('{$ctx['module']}.add');
@@ -661,6 +817,7 @@ class {$ctx['studly']}Controller extends AbstractController
         return ApiResponse::success(['id' => (int) \$this->service->create(\$data)->id], '创建成功');
     }
 
+{$oaUpdate}
     public function update(int \$id): ResponseInterface
     {
         \$this->authorize('{$ctx['module']}.edit');
@@ -671,6 +828,7 @@ class {$ctx['studly']}Controller extends AbstractController
         return ApiResponse::success(['id' => \$id], '保存成功');
     }
 
+{$oaDestroy}
     public function destroy(int \$id): ResponseInterface
     {
         \$this->authorize('{$ctx['module']}.delete');

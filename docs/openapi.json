@@ -1,1071 +1,3748 @@
 {
-  "openapi": "3.0.3",
-  "info": {
-    "title": "Hyperf Skeleton API",
-    "version": "1.0.0",
-    "description": "Hyperf 3.1 骨架的认证接口。所有接口返回统一结构 {\"code\": 0, \"message\": \"ok\", \"data\": ...}；失败时 code 与 HTTP 状态码一致（401/403/404/422/429/500），前端只需判断 code。"
-  },
-  "servers": [
-    {
-      "url": "http://127.0.0.1:9501",
-      "description": "本地开发环境"
-    }
-  ],
-  "tags": [
-    {
-      "name": "认证",
-      "description": "登录、刷新、登出、当前用户"
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Hyperf Admin API",
+        "description": "Hyperf Admin 后台管理接口文档：认证、RBAC（树形菜单+按钮权限）、登录审计、表单设计器、代码生成器与商城演示模块。",
+        "version": "1.0.0"
     },
-    {
-      "name": "审计",
-      "description": "登录审计日志查询"
-    },
-    {
-      "name": "系统",
-      "description": "连通性检查"
-    },
-    {
-      "name": "权限管理",
-      "description": "权限与角色的增删改查、角色授权（需对应权限码）"
-    },
-    {
-      "name": "权限管理",
-      "description": "权限树（菜单+按钮）与角色的增删改查、角色授权（需对应权限码）"
-    }
-  ],
-  "paths": {
-    "/": {
-      "get": {
-        "tags": [
-          "系统"
-        ],
-        "summary": "连通性检查",
-        "description": "返回请求方法与问候语，用于确认服务是否存活。",
-        "parameters": [
-          {
-            "name": "user",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "Hyperf"
-            },
-            "description": "要问候的名字"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "服务正常",
-            "content": {
-              "application/json": {
-                "example": {
-                  "method": "GET",
-                  "message": "Hello Hyperf."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/login": {
-      "post": {
-        "tags": [
-          "认证"
-        ],
-        "summary": "登录",
-        "description": "账号密码登录。同一 IP + 用户名连续失败 5 次后锁定 15 分钟（返回 429）。登录成功返回 access token（2 小时）与 refresh token（7 天）。",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              },
-              "example": {
-                "username": "admin",
-                "password": "admin123456"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "登录成功",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "登录成功",
-                  "data": {
-                    "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-                    "token_type": "Bearer",
-                    "expires_in": 7200,
-                    "expires_at": "2026-11-12 18:31:00",
-                    "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-                    "refresh_expires_in": 604800,
-                    "refresh_expires_at": "2026-11-19 16:31:00",
-                    "user": {
-                      "id": 1,
-                      "username": "admin",
-                      "nickname": "管理员",
-                      "email": "admin@example.com",
-                      "status": 1,
-                      "role": "admin",
-                      "roles": [
-                        "admin"
-                      ],
-                      "permissions": [
-                        "dashboard.view",
-                        "profile.view",
-                        "audit.view",
-                        "user.manage"
-                      ],
-                      "last_login_at": "2026-11-12 16:30:59",
-                      "created_at": "2026-11-12 16:02:50"
+    "paths": {
+        "/api/auth/login": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "登录获取双 Token",
+                "description": "校验用户名密码，签发 access_token（2 小时）与 refresh_token（30 天，含旋转与家族吊销）。",
+                "operationId": "authLogin",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "username",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "username": {
+                                        "description": "用户名（3-64 字符）",
+                                        "type": "string",
+                                        "example": "admin"
+                                    },
+                                    "password": {
+                                        "description": "密码（6-64 字符）",
+                                        "type": "string",
+                                        "example": "admin123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
                     }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "用户名或密码错误",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 401,
-                  "message": "用户名或密码错误",
-                  "data": null
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "账号已被禁用",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 403,
-                  "message": "账号已被禁用",
-                  "data": null
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "参数校验失败",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 422,
-                  "message": "参数校验失败",
-                  "data": {
-                    "password": [
-                      "请输入密码"
-                    ]
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "登录失败次数过多，已锁定",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 429,
-                  "message": "登录失败次数过多，请 900 秒后再试",
-                  "data": {
-                    "retry_after": 900
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/refresh": {
-      "post": {
-        "tags": [
-          "认证"
-        ],
-        "summary": "刷新 token",
-        "description": "用 refresh token 换取新的 token 对，旧 refresh token 立即作废（旋转）。若同一个 refresh token 被第二次使用，视为凭证泄露：整条登录链（含当前 access token）立即吊销，必须重新登录。",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "refresh_token"
-                ],
-                "properties": {
-                  "refresh_token": {
-                    "type": "string",
-                    "description": "登录时返回的 refresh_token"
-                  }
-                }
-              },
-              "example": {
-                "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "刷新成功，结构与登录返回一致（不含 user 时可忽略）",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "刷新成功",
-                  "data": {
-                    "access_token": "eyJ...",
-                    "token_type": "Bearer",
-                    "expires_in": 7200,
-                    "expires_at": "2026-11-12 18:31:00",
-                    "refresh_token": "eyJ...",
-                    "refresh_expires_in": 604800,
-                    "refresh_expires_at": "2026-11-19 16:31:00"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "refresh token 无效、过期、已使用或整条链已吊销",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 401,
-                  "message": "检测到刷新凭证被重复使用，为保护账号安全已注销本次登录，请重新登录",
-                  "data": null
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/logout": {
-      "post": {
-        "tags": [
-          "认证"
-        ],
-        "summary": "退出登录",
-        "description": "吊销当前 access token 及其所属的整条凭证链，refresh token 同步失效。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "已退出",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "已退出登录",
-                  "data": null
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未登录或登录已失效",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 401,
-                  "message": "未登录，请先登录",
-                  "data": null
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/me": {
-      "get": {
-        "tags": [
-          "认证"
-        ],
-        "summary": "当前登录用户",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "当前用户信息",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "ok",
-                  "data": {
-                    "id": 1,
-                    "username": "admin",
-                    "nickname": "管理员",
-                    "email": "admin@example.com",
-                    "status": 1,
-                    "role": "admin",
-                    "roles": [
-                      "admin"
-                    ],
-                    "permissions": [
-                      "dashboard.view",
-                      "profile.view",
-                      "audit.view",
-                      "user.manage"
-                    ],
-                    "last_login_at": "2026-11-12 16:30:59",
-                    "created_at": "2026-11-12 16:02:50"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未携带 token、token 过期或已吊销",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 401,
-                  "message": "登录状态无效或已过期，请重新登录",
-                  "data": null
-                }
-              }
-            }
-          }
-        },
-        "description": "返回 permissions（按钮+菜单码）与 menus（按角色过滤的菜单树，前端侧边栏直接渲染）。"
-      }
-    },
-    "/api/auth/login-logs": {
-      "get": {
-        "tags": [
-          "审计"
-        ],
-        "summary": "登录审计日志",
-        "description": "分页倒序返回登录相关事件：登录成功、密码错误、触发限流、账号禁用、退出登录、刷新凭证重放。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
-          },
-          {
-            "name": "page_size",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20
-            }
-          },
-          {
-            "name": "event",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "login_success",
-                "login_failed",
-                "login_locked",
-                "login_disabled",
-                "logout",
-                "refresh_replay"
-              ]
-            }
-          },
-          {
-            "name": "username",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "user_id",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "ip",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "日志列表",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "ok",
-                  "data": {
-                    "total": 2,
-                    "page": 1,
-                    "page_size": 20,
-                    "items": [
-                      {
-                        "id": 2,
-                        "user_id": 1,
-                        "username": "admin",
-                        "event": "login_success",
-                        "event_text": "登录成功",
-                        "ip": "172.18.0.1",
-                        "user_agent": "curl/8.4.0",
-                        "message": "登录成功",
-                        "created_at": "2026-11-12 16:31:00"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/permissions": {
-      "get": {
-        "tags": [
-          "权限管理"
-        ],
-        "summary": "权限树",
-        "description": "返回整棵权限树（type=menu 菜单/目录，type=button 按钮，parent_id 组成层级）。带 keyword 时返回平铺的过滤结果。需要 `permission.view` 或 `role.view`（角色授权弹窗复用）。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "keyword",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "description": "按权限码/名称模糊匹配，非空时返回平铺列表"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "权限树",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "ok",
-                  "data": {
-                    "flat": false,
-                    "items": [
-                      {
-                        "id": 3,
-                        "parent_id": 0,
-                        "type": "menu",
-                        "code": "system",
-                        "name": "系统管理",
-                        "path": "system",
-                        "icon": "Setting",
-                        "visible": 1,
-                        "is_system": 1,
-                        "sort": 30,
-                        "description": "",
-                        "role_count": 1,
-                        "children": [
-                          {
-                            "id": 4,
-                            "parent_id": 3,
-                            "type": "menu",
-                            "code": "permission",
-                            "name": "权限管理",
-                            "path": "system/permissions",
-                            "children": [
-                              {
-                                "id": 5,
-                                "parent_id": 4,
-                                "type": "button",
-                                "code": "permission.view",
-                                "name": "查看权限",
-                                "path": "",
-                                "children": []
-                              }
-                            ]
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "权限管理"
-        ],
-        "summary": "新增权限节点",
-        "description": "需要 `permission.add`。按钮必须挂在菜单下；创建后自动授予系统角色。重复权限码返回 422。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "type",
-                  "code",
-                  "name"
-                ],
-                "properties": {
-                  "parent_id": {
-                    "type": "integer",
-                    "description": "上级节点，0=一级菜单；按钮必填且必须是菜单"
-                  },
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "menu",
-                      "button"
-                    ]
-                  },
-                  "code": {
-                    "type": "string",
-                    "pattern": "^[a-z][a-z0-9_.]*$",
-                    "example": "report.export"
-                  },
-                  "name": {
-                    "type": "string",
-                    "example": "导出报表"
-                  },
-                  "path": {
-                    "type": "string",
-                    "description": "路由路径，仅菜单；目录可留空"
-                  },
-                  "icon": {
-                    "type": "string",
-                    "description": "菜单图标（Element Plus 图标名）"
-                  },
-                  "visible": {
-                    "type": "integer",
-                    "enum": [
-                      0,
-                      1
-                    ],
-                    "description": "是否显示在侧边栏，仅菜单"
-                  },
-                  "sort": {
-                    "type": "integer"
-                  },
-                  "description": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "创建成功",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "创建成功"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/permissions/{id}": {
-      "put": {
-        "tags": [
-          "权限管理"
-        ],
-        "summary": "更新权限节点",
-        "description": "需要 `permission.edit`。类型不可改；内置节点不可改权限码；移动节点会做成环检测。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "parent_id": {
-                    "type": "integer"
-                  },
-                  "code": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "path": {
-                    "type": "string"
-                  },
-                  "icon": {
-                    "type": "string"
-                  },
-                  "visible": {
-                    "type": "integer"
-                  },
-                  "sort": {
-                    "type": "integer"
-                  },
-                  "description": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "保存成功",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "保存成功"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "权限管理"
-        ],
-        "summary": "删除权限节点",
-        "description": "需要 `permission.delete`。内置节点不可删除；有子节点时需先删除子节点；删除时同步移除所有角色的授权。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "已删除",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "已删除"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/roles": {
-      "get": {
-        "tags": [
-          "权限管理"
-        ],
-        "summary": "角色列表",
-        "description": "需要 `role.view`。附用户数与权限数。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "角色列表",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "ok",
-                  "data": {
-                    "total": 2,
-                    "items": [
-                      {
-                        "id": 1,
-                        "code": "admin",
-                        "name": "管理员",
-                        "description": "拥有全部权限，内置角色不可删除",
-                        "is_system": 1,
-                        "sort": 10,
-                        "user_count": 1,
-                        "permission_count": 8,
-                        "created_at": "2026-11-12 18:08:54"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "权限管理"
-        ],
-        "summary": "新增角色",
-        "description": "需要 `role.add`。重复角色标识返回 422。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "code",
-                  "name"
-                ],
-                "properties": {
-                  "code": {
-                    "type": "string",
-                    "pattern": "^[a-z][a-z0-9_-]*$",
-                    "maxLength": 32,
-                    "example": "auditor"
-                  },
-                  "name": {
-                    "type": "string",
-                    "maxLength": 64,
-                    "example": "审计员"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "sort": {
-                    "type": "integer",
-                    "default": 0
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "创建成功",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "创建成功",
-                  "data": {
-                    "id": 3
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/roles/{id}": {
-      "put": {
-        "tags": [
-          "权限管理"
-        ],
-        "summary": "更新角色",
-        "description": "需要 `role.edit`。修改角色标识会同步更新 `users.role`；内置角色标识不可改。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "code": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "sort": {
-                    "type": "integer"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "保存成功",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "保存成功",
-                  "data": {
-                    "id": 3
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "权限管理"
-        ],
-        "summary": "删除角色",
-        "description": "需要 `role.delete`。内置角色不可删除；角色下仍有用户时返回 400 提示先转移。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "已删除",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "已删除",
-                  "data": null
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/roles/{id}/permissions": {
-      "get": {
-        "tags": [
-          "权限管理"
-        ],
-        "summary": "角色已授权限 ID",
-        "description": "需要 `role.view`。返回该角色持有的全部权限节点 ID（含菜单与按钮）。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "授权明细",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "ok",
-                  "data": {
-                    "permission_ids": [
-                      1,
-                      2
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "权限管理"
-        ],
-        "summary": "保存角色授权（覆盖式）",
-        "description": "需要 `role.assign`。前端提交勾选+半选的全部节点 ID，覆盖式保存；系统角色的内置权限会被服务端补齐。",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "permission_ids"
-                ],
-                "properties": {
-                  "permission_ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer"
+                },
+                "responses": {
+                    "200": {
+                        "description": "登录成功，返回 token 对与用户信息",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 0
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "登录成功"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "access_token": {
+                                                    "type": "string"
+                                                },
+                                                "refresh_token": {
+                                                    "type": "string"
+                                                },
+                                                "expires_in": {
+                                                    "type": "integer",
+                                                    "example": 7200
+                                                },
+                                                "user": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
-                    "example": [
-                      1,
-                      2,
-                      3
-                    ]
-                  }
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
                 }
-              }
             }
-          }
+        },
+        "/api/auth/refresh": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "刷新 access_token",
+                "description": "用 refresh_token 换新 token 对；旧 refresh_token 被重放会触发整个家族吊销。",
+                "operationId": "authRefresh",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "refresh_token"
+                                ],
+                                "properties": {
+                                    "refresh_token": {
+                                        "description": "登录时返回的刷新令牌",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "返回新的 token 对"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                }
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "退出登录",
+                "description": "将当前 access_token（jti）加入黑名单。",
+                "operationId": "authLogout",
+                "responses": {
+                    "200": {
+                        "description": "已退出登录"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/me": {
+            "get": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "当前用户信息",
+                "description": "返回用户资料、角色、权限码集合与菜单树（侧边栏数据源）。",
+                "operationId": "authMe",
+                "responses": {
+                    "200": {
+                        "description": "用户信息",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "type": "object"
+                                                },
+                                                "roles": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "permissions": {
+                                                    "description": "权限码集合，如 mall_goods.edit",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "menus": {
+                                                    "description": "菜单树（type=menu 节点）",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/docs": {
+            "get": {
+                "tags": [
+                    "文档"
+                ],
+                "summary": "【公开】接口文档页",
+                "description": "离线可用的 Swagger UI 文档页（数据源为 /api/docs/openapi.json）。",
+                "operationId": "docsIndex",
+                "responses": {
+                    "200": {
+                        "description": "HTML 文档页"
+                    }
+                }
+            }
+        },
+        "/api/docs/openapi.json": {
+            "get": {
+                "tags": [
+                    "文档"
+                ],
+                "summary": "【公开】OpenAPI 3.0 规范 JSON",
+                "description": "由 `php bin/hyperf.php swagger:export` 扫描控制器 Attributes 生成；可直接导入 Swagger UI / Postman / Apifox。",
+                "operationId": "docsJson",
+                "responses": {
+                    "200": {
+                        "description": "OpenAPI 3.0 JSON"
+                    }
+                }
+            }
+        },
+        "/api/forms": {
+            "get": {
+                "tags": [
+                    "表单管理"
+                ],
+                "summary": "表单列表",
+                "description": "表单定义分页列表（不含 schema 大字段）。需要 form.view 权限。",
+                "operationId": "formIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "keyword",
+                        "in": "query",
+                        "description": "按名称/标识模糊搜索",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "1=已发布 0=停用",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分页结果：{total, page, page_size, items[]}"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "表单管理"
+                ],
+                "summary": "创建表单",
+                "description": "schema 结构：{fields: [{field, label, type, required?, min?, max?, options?}]}，type 支持 input/textarea/number/select/radio/checkbox/date/switch。需要 form.add 权限。",
+                "operationId": "formStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "code",
+                                    "schema"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "客户报名"
+                                    },
+                                    "code": {
+                                        "description": "公开提交接口用它定位",
+                                        "type": "string",
+                                        "example": "customer_signup"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "schema": {
+                                        "properties": {
+                                            "fields": {
+                                                "description": "字段定义数组，每项含 field/label/type",
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "object"
+                                                }
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "返回新表单 id"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/forms/{id}": {
+            "get": {
+                "tags": [
+                    "表单管理"
+                ],
+                "summary": "表单详情",
+                "description": "返回表单定义，含完整 JSON Schema（设计器回显用）。需要 form.view 权限。",
+                "operationId": "formShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "表单定义（含 schema.fields 字段数组）"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "表单管理"
+                ],
+                "summary": "更新表单",
+                "description": "全量覆盖 name/code/schema/description，可选更新 status。需要 form.edit 权限。",
+                "operationId": "formUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "code",
+                                    "schema"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "status": {
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ]
+                                    },
+                                    "schema": {
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "返回表单 id"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "表单管理"
+                ],
+                "summary": "删除表单",
+                "description": "连同该表单的全部提交数据一并删除。需要 form.delete 权限。",
+                "operationId": "formDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "已删除"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/forms/{id}/submissions": {
+            "get": {
+                "tags": [
+                    "表单管理"
+                ],
+                "summary": "表单提交数据分页",
+                "description": "返回 form 元信息（含 schema，用于渲染列）与提交数据分页。需要 form.view 权限。",
+                "operationId": "formSubmissions",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{form, total, page, page_size, items[]}"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/form/{code}": {
+            "get": {
+                "tags": [
+                    "表单（公开）"
+                ],
+                "summary": "【公开】按标识取表单 Schema",
+                "description": "无需登录；只返回已发布（status=1）的表单，供任意渲染方（H5/静态页）拉取字段定义。",
+                "operationId": "formPublicSchema",
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "description": "表单标识",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "customer_signup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{id, name, description, schema}",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "schema": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                }
+            }
+        },
+        "/api/form/{code}/submit": {
+            "post": {
+                "tags": [
+                    "表单（公开）"
+                ],
+                "summary": "【公开】提交表单数据",
+                "description": "无需登录；按表单 Schema 校验必填/类型/数值范围后入库，并记录提交者 IP。",
+                "operationId": "formPublicSubmit",
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "description": "表单标识",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "customer_signup"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "data": {
+                                        "description": "按 schema.fields 的 field 名作为 key 提交",
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": {
+                                "name": "张三",
+                                "phone": "13800000000",
+                                "age": 28
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "提交成功"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                }
+            }
+        },
+        "/api/gen/tables": {
+            "get": {
+                "tags": [
+                    "代码生成器"
+                ],
+                "summary": "可选的业务表列表",
+                "description": "读取当前库 information_schema，返回带注释与行数估算的表清单；框架表标记 is_system 不可生成。需要 gen.view 权限。",
+                "operationId": "genTables",
+                "responses": {
+                    "200": {
+                        "description": "表清单",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "name": {
+                                                                "type": "string",
+                                                                "example": "ha_mall_goods"
+                                                            },
+                                                            "comment": {
+                                                                "type": "string"
+                                                            },
+                                                            "approx_rows": {
+                                                                "type": "integer"
+                                                            },
+                                                            "is_system": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "no_prefix": {
+                                                                "description": "不符合统一前缀规范时为 true",
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/gen/tables/{table}/fields": {
+            "get": {
+                "tags": [
+                    "代码生成器"
+                ],
+                "summary": "表字段信息",
+                "description": "读取 information_schema.columns，返回字段名/类型/注释/是否必填等，供前端配置控件。需要 gen.view 权限。",
+                "operationId": "genFields",
+                "parameters": [
+                    {
+                        "name": "table",
+                        "in": "path",
+                        "description": "物理表名",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "ha_mall_goods"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{items: [{name, type, comment, ...}]}"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/gen/preview": {
+            "post": {
+                "tags": [
+                    "代码生成器"
+                ],
+                "summary": "预览生成代码",
+                "description": "dryRun：返回将生成的文件内容映射（文件路径 → 代码文本），不写文件、不注册权限。需要 gen.create 权限。",
+                "operationId": "genPreview",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "table": {
+                                        "description": "物理表名",
+                                        "type": "string",
+                                        "example": "ha_mall_goods"
+                                    },
+                                    "module": {
+                                        "description": "模块标识（路由/权限码/前端文件名）",
+                                        "type": "string",
+                                        "example": "mall_goods"
+                                    },
+                                    "controller": {
+                                        "description": "类名前缀，缺省按模块名 StudlyCase",
+                                        "type": "string",
+                                        "example": "MallGoods"
+                                    },
+                                    "menu": {
+                                        "properties": {
+                                            "parent_id": {
+                                                "description": "菜单父节点 ID",
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string",
+                                                "example": "商品管理"
+                                            },
+                                            "path": {
+                                                "description": "前端路由 path（与菜单一致）",
+                                                "type": "string",
+                                                "example": "mall/goods"
+                                            },
+                                            "icon": {
+                                                "type": "string"
+                                            },
+                                            "sort": {
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "fields": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "name"
+                                                },
+                                                "label": {
+                                                    "type": "string",
+                                                    "example": "商品名称"
+                                                },
+                                                "form_type": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "input",
+                                                        "textarea",
+                                                        "number",
+                                                        "select",
+                                                        "radio",
+                                                        "checkbox",
+                                                        "switch",
+                                                        "date"
+                                                    ]
+                                                },
+                                                "required": {
+                                                    "type": "boolean"
+                                                },
+                                                "list": {
+                                                    "description": "是否出现在列表",
+                                                    "type": "boolean"
+                                                },
+                                                "search": {
+                                                    "description": "是否作为搜索条件",
+                                                    "type": "boolean"
+                                                },
+                                                "form": {
+                                                    "description": "是否出现在表单",
+                                                    "type": "boolean"
+                                                },
+                                                "options": {
+                                                    "description": "select/radio 选项，支持 \"1=上架\" 值=标签写法",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "{files: {路径: 内容}, permissions: []}"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/gen/generate": {
+            "post": {
+                "tags": [
+                    "代码生成器"
+                ],
+                "summary": "执行代码生成",
+                "description": "写入 Model/Service/Controller 与前端 api/页面，补丁路由文件，注册菜单与 view/add/edit/delete 按钮权限并授予系统角色；幂等可重复执行。仅开发环境使用。需要 gen.create 权限。",
+                "operationId": "genGenerate",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenConfig"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "{files: [生成文件路径列表], permissions: {权限码: id}}",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "files": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "permissions": {
+                                                    "type": "object",
+                                                    "additionalProperties": {
+                                                        "type": "integer"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/login-logs": {
+            "get": {
+                "tags": [
+                    "登录审计"
+                ],
+                "summary": "登录审计日志分页",
+                "description": "登录成功/失败/退出等审计事件流水，支持多条件过滤。",
+                "operationId": "loginLogIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "event",
+                        "in": "query",
+                        "description": "事件类型，如 login/logout/login_failed",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "用户名（模糊匹配）",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "用户 ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "ip",
+                        "in": "query",
+                        "description": "登录 IP（精确匹配）",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分页结果：{total, page, page_size, items[]}，item 含 user_id/username/event/ip/user_agent/created_at",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/mall_category": {
+            "get": {
+                "tags": [
+                    "分类管理"
+                ],
+                "summary": "分类管理列表",
+                "operationId": "mall_categoryIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "分类名称",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "状态",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "分类管理"
+                ],
+                "summary": "新增分类管理",
+                "operationId": "mall_categoryStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "分类名称",
+                                        "type": "string"
+                                    },
+                                    "sort": {
+                                        "description": "排序",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "description": "状态",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "description": "说明",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/mall_category/{id}": {
+            "get": {
+                "tags": [
+                    "分类管理"
+                ],
+                "summary": "分类管理详情",
+                "operationId": "mall_categoryShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "分类管理"
+                ],
+                "summary": "更新分类管理",
+                "description": "支持部分字段更新（传哪些改哪些）。",
+                "operationId": "mall_categoryUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "分类名称",
+                                        "type": "string"
+                                    },
+                                    "sort": {
+                                        "description": "排序",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "description": "状态",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "description": "说明",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "分类管理"
+                ],
+                "summary": "删除分类管理",
+                "operationId": "mall_categoryDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/mall_goods": {
+            "get": {
+                "tags": [
+                    "商品管理"
+                ],
+                "summary": "商品管理列表",
+                "operationId": "mall_goodsIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "商品名称",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "description": "分类",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "in": "query",
+                        "description": "售价(元)",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "状态",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "商品管理"
+                ],
+                "summary": "新增商品管理",
+                "operationId": "mall_goodsStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "商品名称",
+                                        "type": "string"
+                                    },
+                                    "category_id": {
+                                        "description": "分类",
+                                        "type": "number"
+                                    },
+                                    "price": {
+                                        "description": "售价(元)",
+                                        "type": "number"
+                                    },
+                                    "stock": {
+                                        "description": "库存",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "description": "状态",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "cover": {
+                                        "description": "封面图",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "summary": {
+                                        "description": "简介",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/mall_goods/{id}": {
+            "get": {
+                "tags": [
+                    "商品管理"
+                ],
+                "summary": "商品管理详情",
+                "operationId": "mall_goodsShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "商品管理"
+                ],
+                "summary": "更新商品管理",
+                "description": "支持部分字段更新（传哪些改哪些）。",
+                "operationId": "mall_goodsUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "商品名称",
+                                        "type": "string"
+                                    },
+                                    "category_id": {
+                                        "description": "分类",
+                                        "type": "number"
+                                    },
+                                    "price": {
+                                        "description": "售价(元)",
+                                        "type": "number"
+                                    },
+                                    "stock": {
+                                        "description": "库存",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "description": "状态",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "cover": {
+                                        "description": "封面图",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "summary": {
+                                        "description": "简介",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "商品管理"
+                ],
+                "summary": "删除商品管理",
+                "operationId": "mall_goodsDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/mall_goods_sku": {
+            "get": {
+                "tags": [
+                    "SKU管理"
+                ],
+                "summary": "SKU管理列表",
+                "operationId": "mall_goods_skuIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "goods_id",
+                        "in": "query",
+                        "description": "商品ID",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "sku_code",
+                        "in": "query",
+                        "description": "SKU编码",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "状态",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "SKU管理"
+                ],
+                "summary": "新增SKU管理",
+                "operationId": "mall_goods_skuStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "goods_id": {
+                                        "description": "商品ID",
+                                        "type": "number"
+                                    },
+                                    "sku_code": {
+                                        "description": "SKU编码",
+                                        "type": "string"
+                                    },
+                                    "specs": {
+                                        "description": "规格",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "price": {
+                                        "description": "售价(元)",
+                                        "type": "number"
+                                    },
+                                    "stock": {
+                                        "description": "库存",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "description": "状态",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/mall_goods_sku/{id}": {
+            "get": {
+                "tags": [
+                    "SKU管理"
+                ],
+                "summary": "SKU管理详情",
+                "operationId": "mall_goods_skuShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "SKU管理"
+                ],
+                "summary": "更新SKU管理",
+                "description": "支持部分字段更新（传哪些改哪些）。",
+                "operationId": "mall_goods_skuUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "goods_id": {
+                                        "description": "商品ID",
+                                        "type": "number"
+                                    },
+                                    "sku_code": {
+                                        "description": "SKU编码",
+                                        "type": "string"
+                                    },
+                                    "specs": {
+                                        "description": "规格",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "price": {
+                                        "description": "售价(元)",
+                                        "type": "number"
+                                    },
+                                    "stock": {
+                                        "description": "库存",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "description": "状态",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "SKU管理"
+                ],
+                "summary": "删除SKU管理",
+                "operationId": "mall_goods_skuDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/mall_order": {
+            "get": {
+                "tags": [
+                    "订单管理"
+                ],
+                "summary": "订单管理列表",
+                "operationId": "mall_orderIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "order_no",
+                        "in": "query",
+                        "description": "订单号",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "receiver",
+                        "in": "query",
+                        "description": "收货人",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "phone",
+                        "in": "query",
+                        "description": "联系电话",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "订单状态",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "订单管理"
+                ],
+                "summary": "新增订单管理",
+                "operationId": "mall_orderStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "order_no": {
+                                        "description": "订单号",
+                                        "type": "string"
+                                    },
+                                    "receiver": {
+                                        "description": "收货人",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "phone": {
+                                        "description": "联系电话",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "amount": {
+                                        "description": "金额(元)",
+                                        "type": "number"
+                                    },
+                                    "status": {
+                                        "description": "订单状态",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "user_id": {
+                                        "description": "用户ID",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "address": {
+                                        "description": "收货地址",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "remark": {
+                                        "description": "备注",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/mall_order/{id}": {
+            "get": {
+                "tags": [
+                    "订单管理"
+                ],
+                "summary": "订单管理详情",
+                "operationId": "mall_orderShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "订单管理"
+                ],
+                "summary": "更新订单管理",
+                "description": "支持部分字段更新（传哪些改哪些）。",
+                "operationId": "mall_orderUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "order_no": {
+                                        "description": "订单号",
+                                        "type": "string"
+                                    },
+                                    "receiver": {
+                                        "description": "收货人",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "phone": {
+                                        "description": "联系电话",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "amount": {
+                                        "description": "金额(元)",
+                                        "type": "number"
+                                    },
+                                    "status": {
+                                        "description": "订单状态",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "user_id": {
+                                        "description": "用户ID",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "address": {
+                                        "description": "收货地址",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "remark": {
+                                        "description": "备注",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "订单管理"
+                ],
+                "summary": "删除订单管理",
+                "operationId": "mall_orderDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/mall_order_item": {
+            "get": {
+                "tags": [
+                    "订单明细"
+                ],
+                "summary": "订单明细列表",
+                "operationId": "mall_order_itemIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "order_id",
+                        "in": "query",
+                        "description": "订单ID",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "goods_name",
+                        "in": "query",
+                        "description": "商品名称",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "订单明细"
+                ],
+                "summary": "新增订单明细",
+                "operationId": "mall_order_itemStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "order_id": {
+                                        "description": "订单ID",
+                                        "type": "number"
+                                    },
+                                    "goods_id": {
+                                        "description": "商品ID",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "goods_name": {
+                                        "description": "商品名称",
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "description": "单价(元)",
+                                        "type": "number"
+                                    },
+                                    "quantity": {
+                                        "description": "数量",
+                                        "type": "number"
+                                    },
+                                    "amount": {
+                                        "description": "小计(元)",
+                                        "type": "number"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/mall_order_item/{id}": {
+            "get": {
+                "tags": [
+                    "订单明细"
+                ],
+                "summary": "订单明细详情",
+                "operationId": "mall_order_itemShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "订单明细"
+                ],
+                "summary": "更新订单明细",
+                "description": "支持部分字段更新（传哪些改哪些）。",
+                "operationId": "mall_order_itemUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "order_id": {
+                                        "description": "订单ID",
+                                        "type": "number"
+                                    },
+                                    "goods_id": {
+                                        "description": "商品ID",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "goods_name": {
+                                        "description": "商品名称",
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "description": "单价(元)",
+                                        "type": "number"
+                                    },
+                                    "quantity": {
+                                        "description": "数量",
+                                        "type": "number"
+                                    },
+                                    "amount": {
+                                        "description": "小计(元)",
+                                        "type": "number"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "订单明细"
+                ],
+                "summary": "删除订单明细",
+                "operationId": "mall_order_itemDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/permissions": {
+            "get": {
+                "tags": [
+                    "权限管理"
+                ],
+                "summary": "权限树查询",
+                "description": "返回整棵权限树（menu/button 节点带 children）；带 keyword 时返回平铺的过滤结果。需要 permission.view 或 role.view 权限。",
+                "operationId": "permissionIndex",
+                "parameters": [
+                    {
+                        "name": "keyword",
+                        "in": "query",
+                        "description": "按名称/权限码过滤（返回平铺列表）",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "权限树或平铺列表",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "parent_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "type": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "menu",
+                                                            "button"
+                                                        ]
+                                                    },
+                                                    "code": {
+                                                        "type": "string",
+                                                        "example": "mall_goods.edit"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "path": {
+                                                        "description": "菜单路由路径（仅 menu）",
+                                                        "type": "string"
+                                                    },
+                                                    "children": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "object"
+                                                        }
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "权限管理"
+                ],
+                "summary": "创建权限节点",
+                "description": "创建菜单或按钮权限；按钮只能挂在菜单下；创建后自动授予全部系统角色。需要 permission.add 权限。",
+                "operationId": "permissionStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "type",
+                                    "code",
+                                    "name"
+                                ],
+                                "properties": {
+                                    "parent_id": {
+                                        "description": "父节点 ID，0 为顶级",
+                                        "type": "integer",
+                                        "example": 41
+                                    },
+                                    "type": {
+                                        "description": "节点类型",
+                                        "type": "string",
+                                        "enum": [
+                                            "menu",
+                                            "button"
+                                        ]
+                                    },
+                                    "code": {
+                                        "description": "权限码，小写字母开头的 a-z0-9_.",
+                                        "type": "string",
+                                        "example": "mall_goods.export"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "商品导出"
+                                    },
+                                    "path": {
+                                        "description": "菜单路由路径（仅 menu 需要）",
+                                        "type": "string",
+                                        "example": "mall/goods"
+                                    },
+                                    "icon": {
+                                        "description": "菜单图标名（仅 menu）",
+                                        "type": "string",
+                                        "example": "Goods"
+                                    },
+                                    "visible": {
+                                        "description": "侧边栏是否可见，默认 1",
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ]
+                                    },
+                                    "sort": {
+                                        "description": "排序值，越小越靠前",
+                                        "type": "integer"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "返回创建的权限节点"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/permissions/{id}": {
+            "put": {
+                "tags": [
+                    "权限管理"
+                ],
+                "summary": "更新权限节点",
+                "description": "按「传哪些改哪些」处理部分更新；type 创建后不可改；内置节点（is_system）不允许改权限码。需要 permission.edit 权限。",
+                "operationId": "permissionUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parent_id": {
+                                        "type": "integer"
+                                    },
+                                    "code": {
+                                        "description": "权限码（内置节点不可改）",
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "path": {
+                                        "type": "string"
+                                    },
+                                    "icon": {
+                                        "type": "string"
+                                    },
+                                    "visible": {
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ]
+                                    },
+                                    "sort": {
+                                        "type": "integer"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "返回更新后的权限节点"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "权限管理"
+                ],
+                "summary": "删除权限节点",
+                "description": "有子节点或为内置节点（is_system）时拒绝删除。需要 permission.delete 权限。",
+                "operationId": "permissionDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "已删除"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/product": {
+            "get": {
+                "tags": [
+                    "示例商品"
+                ],
+                "summary": "示例商品列表",
+                "operationId": "productIndex",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "商品名称",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "in": "query",
+                        "description": "价格",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "状态",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "示例商品"
+                ],
+                "summary": "新增示例商品",
+                "operationId": "productStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "商品名称",
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "description": "价格",
+                                        "type": "number"
+                                    },
+                                    "stock": {
+                                        "description": "库存",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "description": "状态",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/product/{id}": {
+            "get": {
+                "tags": [
+                    "示例商品"
+                ],
+                "summary": "示例商品详情",
+                "operationId": "productShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "示例商品"
+                ],
+                "summary": "更新示例商品",
+                "description": "支持部分字段更新（传哪些改哪些）。",
+                "operationId": "productUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "商品名称",
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "description": "价格",
+                                        "type": "number"
+                                    },
+                                    "stock": {
+                                        "description": "库存",
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "description": "状态",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "示例商品"
+                ],
+                "summary": "删除示例商品",
+                "operationId": "productDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/roles": {
+            "get": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "角色列表",
+                "description": "返回全部角色（平铺，不分页），含 is_system 标记与权限数量。",
+                "operationId": "roleIndex",
+                "responses": {
+                    "200": {
+                        "description": "角色列表",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "code": {
+                                                        "type": "string",
+                                                        "example": "admin"
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "超级管理员"
+                                                    },
+                                                    "is_system": {
+                                                        "description": "系统内置角色不可删除",
+                                                        "type": "integer"
+                                                    },
+                                                    "permission_count": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "创建角色",
+                "description": "需要 role.add 权限。",
+                "operationId": "roleStore",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code",
+                                    "name"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "description": "角色标识，小写开头的 a-z0-9_-",
+                                        "type": "string",
+                                        "example": "operator"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "运营人员"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "sort": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "返回创建的角色"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/roles/{id}": {
+            "put": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "更新角色",
+                "description": "部分更新：传哪些改哪些；内置角色不允许改标识。需要 role.edit 权限。",
+                "operationId": "roleUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "sort": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "返回更新后的角色"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "删除角色",
+                "description": "内置角色（is_system）不可删除；有用户绑定时拒绝删除。需要 role.delete 权限。",
+                "operationId": "roleDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "已删除"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/roles/{id}/permissions": {
+            "get": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "角色已授权的权限 ID",
+                "description": "用于角色授权弹窗回显（前端只需勾选叶子节点）。需要 role.view 权限。",
+                "operationId": "rolePermissionIds",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "权限 ID 集合",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "permission_ids": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "integer"
+                                                    },
+                                                    "example": [
+                                                        41,
+                                                        42,
+                                                        47,
+                                                        68
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "覆盖式保存角色授权",
+                "description": "全量覆盖该角色的权限；系统角色会强制补回 is_system 权限防止锁死。保存后 Redis 权限缓存立即失效。需要 role.assign 权限。",
+                "operationId": "roleSyncPermissions",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "permission_ids"
+                                ],
+                                "properties": {
+                                    "permission_ids": {
+                                        "description": "全量权限 ID 列表（可为空数组）",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2,
+                                            41,
+                                            47
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "返回实际生效的权限 ID 集合"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "GenConfig": {
+                "title": "代码生成配置",
+                "required": [
+                    "table",
+                    "module",
+                    "fields"
+                ],
+                "properties": {
+                    "table": {
+                        "description": "物理表名",
+                        "type": "string",
+                        "example": "ha_mall_goods"
+                    },
+                    "module": {
+                        "description": "模块标识（路由/权限码/前端文件名）",
+                        "type": "string",
+                        "example": "mall_goods"
+                    },
+                    "controller": {
+                        "description": "类名前缀，缺省按模块名 StudlyCase",
+                        "type": "string",
+                        "example": "MallGoods"
+                    },
+                    "menu": {
+                        "properties": {
+                            "parent_id": {
+                                "description": "菜单父节点 ID，0 为顶级目录",
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "商品管理"
+                            },
+                            "path": {
+                                "description": "前端路由 path（建议与菜单一致）",
+                                "type": "string",
+                                "example": "mall/goods"
+                            },
+                            "icon": {
+                                "type": "string",
+                                "example": "Goods"
+                            },
+                            "sort": {
+                                "type": "integer"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "fields": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "name",
+                                "label",
+                                "form_type"
+                            ],
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "example": "name"
+                                },
+                                "label": {
+                                    "type": "string",
+                                    "example": "商品名称"
+                                },
+                                "form_type": {
+                                    "type": "string",
+                                    "enum": [
+                                        "input",
+                                        "textarea",
+                                        "number",
+                                        "select",
+                                        "radio",
+                                        "checkbox",
+                                        "switch",
+                                        "date"
+                                    ]
+                                },
+                                "required": {
+                                    "type": "boolean"
+                                },
+                                "list": {
+                                    "description": "是否出现在列表",
+                                    "type": "boolean"
+                                },
+                                "search": {
+                                    "description": "是否作为搜索条件",
+                                    "type": "boolean"
+                                },
+                                "form": {
+                                    "description": "是否出现在表单",
+                                    "type": "boolean"
+                                },
+                                "options": {
+                                    "description": "select/radio 选项，支持 \"1=上架\" 值=标签写法",
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            }
         },
         "responses": {
-          "200": {
-            "description": "授权已保存",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 0,
-                  "message": "授权已保存",
-                  "data": {
-                    "permission_ids": [
-                      1,
-                      2,
-                      3
-                    ]
-                  }
+            "Unauthorized": {
+                "description": "未登录或 token 已失效",
+                "content": {
+                    "application/json": {
+                        "schema": {},
+                        "example": {
+                            "code": 401,
+                            "message": "未登录或登录已过期",
+                            "data": null
+                        }
+                    }
                 }
-              }
+            },
+            "Forbidden": {
+                "description": "无权限（当前账号缺少对应按钮权限）",
+                "content": {
+                    "application/json": {
+                        "schema": {},
+                        "example": {
+                            "code": 403,
+                            "message": "无权限访问",
+                            "data": null
+                        }
+                    }
+                }
+            },
+            "NotFound": {
+                "description": "资源不存在",
+                "content": {
+                    "application/json": {
+                        "schema": {},
+                        "example": {
+                            "code": 404,
+                            "message": "记录不存在",
+                            "data": null
+                        }
+                    }
+                }
+            },
+            "ValidationError": {
+                "description": "参数校验失败",
+                "content": {
+                    "application/json": {
+                        "schema": {},
+                        "example": {
+                            "code": 422,
+                            "message": "参数错误：xxx",
+                            "data": null
+                        }
+                    }
+                }
             }
-          }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "通过 /api/auth/login 获取 access_token，请求头携带 `Authorization: Bearer {token}`",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
         }
-      }
-    }
-  },
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "登录后拿到的 access_token，放在 Authorization: Bearer <token>"
-      }
     },
-    "schemas": {
-      "LoginRequest": {
-        "type": "object",
-        "required": [
-          "username",
-          "password"
-        ],
-        "properties": {
-          "username": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 64,
-            "example": "admin"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 6,
-            "maxLength": 64,
-            "example": "admin123456"
-          }
+    "tags": [
+        {
+            "name": "认证",
+            "description": "认证"
+        },
+        {
+            "name": "文档",
+            "description": "文档"
+        },
+        {
+            "name": "表单管理",
+            "description": "表单管理"
+        },
+        {
+            "name": "表单（公开）",
+            "description": "表单（公开）"
+        },
+        {
+            "name": "代码生成器",
+            "description": "代码生成器"
+        },
+        {
+            "name": "登录审计",
+            "description": "登录审计"
+        },
+        {
+            "name": "分类管理",
+            "description": "分类管理"
+        },
+        {
+            "name": "商品管理",
+            "description": "商品管理"
+        },
+        {
+            "name": "SKU管理",
+            "description": "SKU管理"
+        },
+        {
+            "name": "订单管理",
+            "description": "订单管理"
+        },
+        {
+            "name": "订单明细",
+            "description": "订单明细"
+        },
+        {
+            "name": "权限管理",
+            "description": "权限管理"
+        },
+        {
+            "name": "示例商品",
+            "description": "示例商品"
+        },
+        {
+            "name": "角色管理",
+            "description": "角色管理"
         }
-      }
-    }
-  }
+    ]
 }

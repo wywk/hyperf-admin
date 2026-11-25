@@ -16,6 +16,7 @@ use App\Controller\Concerns\AuthorizesRequests;
 use App\Service\CodeGeneratorService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -38,6 +39,37 @@ class GenController extends AbstractController
     /**
      * GET /api/gen/tables 可选的业务表列表。
      */
+    #[OA\Get(
+        path: '/api/gen/tables',
+        operationId: 'genTables',
+        summary: '可选的业务表列表',
+        description: '读取当前库 information_schema，返回带注释与行数估算的表清单；框架表标记 is_system 不可生成。需要 gen.view 权限。',
+        tags: ['代码生成器'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(
+                response: '200',
+                description: '表清单',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data', type: 'object', properties: [
+                            new OA\Property(property: 'items', type: 'array', items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'name', type: 'string', example: 'ha_mall_goods'),
+                                    new OA\Property(property: 'comment', type: 'string'),
+                                    new OA\Property(property: 'approx_rows', type: 'integer'),
+                                    new OA\Property(property: 'is_system', type: 'boolean'),
+                                    new OA\Property(property: 'no_prefix', type: 'boolean', description: '不符合统一前缀规范时为 true'),
+                                ]
+                            )),
+                        ]),
+                    ]
+                )
+            ),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+        ]
+    )]
     public function tables(): ResponseInterface
     {
         $this->authorize('gen.view');
@@ -48,6 +80,24 @@ class GenController extends AbstractController
     /**
      * GET /api/gen/tables/{table}/fields 表字段信息（供前端配置）。
      */
+    #[OA\Get(
+        path: '/api/gen/tables/{table}/fields',
+        operationId: 'genFields',
+        summary: '表字段信息',
+        description: '读取 information_schema.columns，返回字段名/类型/注释/是否必填等，供前端配置控件。需要 gen.view 权限。',
+        tags: ['代码生成器'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'table', in: 'path', required: true, description: '物理表名',
+                schema: new OA\Schema(type: 'string', example: 'ha_mall_goods')),
+        ],
+        responses: [
+            new OA\Response(response: '200', description: '{items: [{name, type, comment, ...}]}'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
+        ]
+    )]
     public function fields(string $table): ResponseInterface
     {
         $this->authorize('gen.view');
@@ -58,6 +108,52 @@ class GenController extends AbstractController
     /**
      * POST /api/gen/preview 预览生成代码（不写文件、不注册权限）。
      */
+    #[OA\Post(
+        path: '/api/gen/preview',
+        operationId: 'genPreview',
+        summary: '预览生成代码',
+        description: 'dryRun：返回将生成的文件内容映射（文件路径 → 代码文本），不写文件、不注册权限。需要 gen.create 权限。',
+        tags: ['代码生成器'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'table', type: 'string', example: 'ha_mall_goods', description: '物理表名'),
+                    new OA\Property(property: 'module', type: 'string', example: 'mall_goods', description: '模块标识（路由/权限码/前端文件名）'),
+                    new OA\Property(property: 'controller', type: 'string', example: 'MallGoods', description: '类名前缀，缺省按模块名 StudlyCase'),
+                    new OA\Property(property: 'menu', type: 'object',
+                        properties: [
+                            new OA\Property(property: 'parent_id', type: 'integer', description: '菜单父节点 ID'),
+                            new OA\Property(property: 'name', type: 'string', example: '商品管理'),
+                            new OA\Property(property: 'path', type: 'string', example: 'mall/goods', description: '前端路由 path（与菜单一致）'),
+                            new OA\Property(property: 'icon', type: 'string'),
+                            new OA\Property(property: 'sort', type: 'integer'),
+                        ]),
+                    new OA\Property(property: 'fields', type: 'array', items: new OA\Items(
+                        properties: [
+                            new OA\Property(property: 'name', type: 'string', example: 'name'),
+                            new OA\Property(property: 'label', type: 'string', example: '商品名称'),
+                            new OA\Property(property: 'form_type', type: 'string',
+                                enum: ['input', 'textarea', 'number', 'select', 'radio', 'checkbox', 'switch', 'date']),
+                            new OA\Property(property: 'required', type: 'boolean'),
+                            new OA\Property(property: 'list', type: 'boolean', description: '是否出现在列表'),
+                            new OA\Property(property: 'search', type: 'boolean', description: '是否作为搜索条件'),
+                            new OA\Property(property: 'form', type: 'boolean', description: '是否出现在表单'),
+                            new OA\Property(property: 'options', type: 'array', items: new OA\Items(type: 'string'),
+                                description: 'select/radio 选项，支持 "1=上架" 值=标签写法'),
+                        ]
+                    )),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: '200', description: '{files: {路径: 内容}, permissions: []}'),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
+        ]
+    )]
     public function preview(): ResponseInterface
     {
         $this->authorize('gen.create');
@@ -70,6 +166,36 @@ class GenController extends AbstractController
     /**
      * POST /api/gen/generate 执行生成（写文件 + 注册菜单权限）。
      */
+    #[OA\Post(
+        path: '/api/gen/generate',
+        operationId: 'genGenerate',
+        summary: '执行代码生成',
+        description: '写入 Model/Service/Controller 与前端 api/页面，补丁路由文件，注册菜单与 view/add/edit/delete 按钮权限并授予系统角色；幂等可重复执行。仅开发环境使用。需要 gen.create 权限。',
+        tags: ['代码生成器'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/GenConfig')
+        ),
+        responses: [
+            new OA\Response(
+                response: '200',
+                description: '{files: [生成文件路径列表], permissions: {权限码: id}}',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data', type: 'object', properties: [
+                            new OA\Property(property: 'files', type: 'array', items: new OA\Items(type: 'string')),
+                            new OA\Property(property: 'permissions', type: 'object',
+                                additionalProperties: new OA\AdditionalProperties(type: 'integer')),
+                        ]),
+                    ]
+                )
+            ),
+            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
+            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
+        ]
+    )]
     public function generate(): ResponseInterface
     {
         $this->authorize('gen.create');
