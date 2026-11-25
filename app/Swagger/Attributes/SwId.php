@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+/**
+ * This file is part of hyperf-admin.
+ *
+ * @link     https://github.com/your-name/hyperf-admin
+ * @license  MIT
+ */
+namespace App\Swagger\Attributes;
+
+use OpenApi\Attributes as OA;
+
+/**
+ * 路径参数（{id}）。
+ *
+ * new SwId()  —— 默认 name=id、integer
+ * new SwId('code', type: 'string', desc: '编码')
+ */
+#[\Attribute(\Attribute::TARGET_METHOD)]
+class SwId extends OA\Parameter
+{
+    public function __construct(
+        string $name = 'id',
+        string $type = 'integer',
+        string $desc = 'ID',
+    ) {
+        parent::__construct(
+            name: $name,
+            in: 'path',
+            required: true,
+            description: $desc !== '' ? $desc : null,
+            schema: new OA\Schema(type: $type),
+        );
+    }
+}
