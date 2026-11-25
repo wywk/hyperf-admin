@@ -9,7 +9,10 @@ declare(strict_types=1);
  */
 namespace App\Service;
 
+use App\Common\ApiCode;
+use App\Exception\BusinessException;
 use App\Model\Product;
+use Hyperf\Database\Exception\QueryException;
 use Hyperf\DbConnection\Db;
 
 /**
@@ -74,6 +77,30 @@ class ProductService
     public function create(array $data): Product
     {
         return Product::query()->create($data);
+    }
+
+    /**
+     * Excel 导入批量落库：已在控制器逐行校验通过的行，统一在事务内插入。
+     *
+     * @param array<int, array<string, mixed>> $rows 字段 => 值
+     * @return int 成功插入的行数
+     */
+    public function insertRows(array $rows): int
+    {
+        $count = 0;
+        try {
+            Db::transaction(function () use ($rows, &$count): void {
+                foreach ($rows as $row) {
+                    Product::query()->create($row);
+                    ++$count;
+                }
+            });
+        } catch (QueryException $e) {
+            // 逐行校验覆盖不到的数据库层错误（列超长/非空约束等），转成可读的业务异常
+            throw new BusinessException(ApiCode::FAILED, '导入失败：部分数据与表结构不匹配（' . $e->getMessage() . '）');
+        }
+
+        return $count;
     }
 
     public function update(int $id, array $data): Product

@@ -29,3 +29,18 @@ export function deleteProduct(id: number) {
 export function exportProductExcel(params?: Record<string, unknown>): Promise<Blob> {
   return downloadFile('/product/export', params)
 }
+
+/** 导入 Excel：返回总数 / 成功数 / 失败行明细 */
+export interface ProductImportResult {
+  total: number
+  success: number
+  failed: Array<{ row: number; errors: string[] }>
+}
+
+export function importProductExcel(file: File): Promise<ProductImportResult> {
+  const form = new FormData()
+  form.append('file', file, file.name)
+  return http.post<ProductImportResult>('/product/import', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}

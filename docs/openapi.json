@@ -4436,6 +4436,59 @@
                 ]
             }
         },
+        "/api/product/import": {
+            "post": {
+                "tags": [
+                    "示例商品"
+                ],
+                "summary": "导入示例商品 Excel",
+                "description": "上传 xlsx（multipart，字段 file；表头与导出列一致），逐行校验后批量入库，返回成功数与失败行明细。",
+                "operationId": "productImport",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "file"
+                                ],
+                                "properties": {
+                                    "file": {
+                                        "description": "xlsx 文件",
+                                        "type": "string",
+                                        "format": "binary",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/roles": {
             "get": {
                 "tags": [
