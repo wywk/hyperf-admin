@@ -29,6 +29,7 @@ class SwProp extends OA\Property
         array $enum = [],
         mixed $example = null,
         ?OA\Items $items = null,
+        string $format = '',
     ) {
         parent::__construct(
             property: $name,
@@ -38,6 +39,7 @@ class SwProp extends OA\Property
             enum: $enum !== [] ? $enum : null,
             example: $example,
             items: $items,
+            format: $format !== '' ? $format : null,
         );
     }
 }

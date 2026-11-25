@@ -170,10 +170,63 @@ class ProductController extends AbstractController
             ->withHeader('Content-Disposition', 'attachment; filename="product.xlsx"');
     }
 
+    #[SwPost(path: '/api/product/import', operationId: 'productImport', summary: '导入示例商品 Excel', tag: '示例商品',
+        desc: '上传 xlsx（multipart，字段 file；表头与导出列一致），逐行校验后批量入库，返回成功数与失败行明细。',
+        body: new SwBody(
+            props: [
+                new SwProp('file', type: 'string', format: 'binary', desc: 'xlsx 文件'),
+            ],
+            requiredProps: ['file'],
+        ),
+    )]
+    public function import(): ResponseInterface
+    {
+        $this->authorize('product.add');
+
+        $uploaded = $this->request->getUploadedFiles()['file'] ?? null;
+        if ($uploaded === null) {
+            return ApiResponse::fail(ApiCode::VALIDATION_FAILED, '缺少上传字段 file（multipart/form-data）');
+        }
+        if (! str_ends_with(strtolower((string) $uploaded->getClientFilename()), '.xlsx')) {
+            return ApiResponse::fail(ApiCode::VALIDATION_FAILED, '仅支持 .xlsx 文件');
+        }
+
+        // 表头文本 => 字段名（与导出列一致：导出的表格填上数据即可直接回导）
+        $headerMap = array_flip($this->exportColumns());
+
+        $rows = $this->excel->parse((string) $uploaded->getStream()->getContents());
+        $failed = [];
+        $valid = [];
+        foreach ($rows as $index => $parsed) {
+            $row = [];
+            foreach ($parsed as $header => $value) {
+                $field = $headerMap[$header] ?? null;
+                if ($field !== null) {
+                    $row[$field] = $value;
+                }
+            }
+
+            $validator = $this->validatorFactory->make($row, $this->rules());
+            if ($validator->fails()) {
+                $failed[] = ['row' => $index + 2, 'errors' => $validator->errors()->all()];
+                continue;
+            }
+            $valid[] = $validator->validated();
+        }
+
+        $success = $valid === [] ? 0 : $this->service->insertRows($valid);
+
+        return ApiResponse::success([
+            'total' => count($rows),
+            'success' => $success,
+            'failed' => $failed,
+        ], $failed === [] ? '导入完成' : '导入完成（部分行校验失败）');
+    }
+
     private function rules(): array
     {
         return [
-            'name' => 'required|string|max:191',
+            'name' => 'required|string|max:64',
             'price' => 'required|numeric',
             'stock' => 'nullable|numeric',
             'status' => 'nullable|in:1,0',

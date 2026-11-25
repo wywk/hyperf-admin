@@ -175,6 +175,7 @@ Router::addGroup('/api', function () {
 Router::addGroup('/api', function () {
     Router::get('/product', [\App\Controller\Api\ProductController::class, 'index']);
     Router::get('/product/export', [\App\Controller\Api\ProductController::class, 'export']);
+    Router::post('/product/import', [\App\Controller\Api\ProductController::class, 'import']);
     Router::post('/product', [\App\Controller\Api\ProductController::class, 'store']);
     Router::get('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'show']);
     Router::put('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'update']);

@@ -9,6 +9,7 @@ import {
   deleteProduct,
   exportProductExcel,
   fetchProductList,
+  importProductExcel,
   updateProduct,
 } from '@/api/gen/product'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
@@ -162,6 +163,42 @@ async function remove(row: any): Promise<void> {
     // 错误提示由请求层统一处理
   }
 }
+
+/* ---------------- 导入 Excel ---------------- */
+
+const importing = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+const importResult = reactive<{ visible: boolean; success: number; failed: Array<{ row: number; errors: string[] }> }>({
+  visible: false,
+  success: 0,
+  failed: [],
+})
+
+function triggerImport(): void {
+  fileInput.value?.click()
+}
+
+async function onImportFile(e: Event): Promise<void> {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  target.value = ''
+  if (!file) {
+    return
+  }
+
+  importing.value = true
+  try {
+    const result = await importProductExcel(file)
+    importResult.success = result.success
+    importResult.failed = result.failed
+    importResult.visible = true
+    await load()
+  } catch {
+    // 错误提示由请求层统一处理
+  } finally {
+    importing.value = false
+  }
+}
 </script>
 
 <template>
@@ -170,6 +207,8 @@ async function remove(row: any): Promise<void> {
       <h2 class="page-title">示例商品管理</h2>
       <div class="header-actions">
         <el-button :loading="exporting" @click="exportExcel">导出 Excel</el-button>
+        <el-button v-permission="'product.add'" :loading="importing" @click="triggerImport">导入 Excel</el-button>
+        <input ref="fileInput" type="file" accept=".xlsx" class="hidden-import-input" @change="onImportFile" />
         <el-button v-permission="'product.add'" type="primary" @click="openCreate">新增</el-button>
       </div>
     </div>
@@ -250,6 +289,27 @@ async function remove(row: any): Promise<void> {
         <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="importResult.visible" title="导入结果" width="520px">
+      <p>
+        共处理 {{ importResult.success + importResult.failed.length }} 行：
+        <el-tag type="success">成功 {{ importResult.success }} 行</el-tag>
+        <el-tag v-if="importResult.failed.length > 0" type="danger" style="margin-left: 8px">
+          失败 {{ importResult.failed.length }} 行
+        </el-tag>
+      </p>
+      <el-table v-if="importResult.failed.length > 0" :data="importResult.failed" size="small" max-height="280">
+        <el-table-column prop="row" label="行号（含表头）" width="140" />
+        <el-table-column label="失败原因">
+          <template #default="{ row }">
+            {{ row.errors.join('；') }}
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button type="primary" @click="importResult.visible = false">知道了</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -269,6 +329,10 @@ async function remove(row: any): Promise<void> {
 .header-actions {
   display: flex;
   gap: 8px;
+}
+
+.hidden-import-input {
+  display: none;
 }
 
 .filters {

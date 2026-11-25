@@ -116,14 +116,18 @@ class CodeGeneratorService
             throw new BusinessException(ApiCode::VALIDATION_FAILED, '至少配置一个字段');
         }
 
-        $columns = array_column($this->fields($table), 'name');
+        $columns = $this->fields($table);
+        $columnMeta = [];
+        foreach ($columns as $meta) {
+            $columnMeta[$meta['name']] = $meta;
+        }
         foreach ($fields as $field) {
-            if (! in_array($field['name'], $columns, true)) {
+            if (! in_array($field['name'], array_keys($columnMeta), true)) {
                 throw new BusinessException(ApiCode::VALIDATION_FAILED, "字段 {$field['name']} 不在表 {$table} 里");
             }
         }
 
-        $ctx = $this->buildContext($module, $studly, $bare, $fields, (string) ($config['menu']['name'] ?? '') ?: $studly, (string) ($config['menu']['path'] ?? ''));
+        $ctx = $this->buildContext($module, $studly, $bare, $fields, (string) ($config['menu']['name'] ?? '') ?: $studly, (string) ($config['menu']['path'] ?? ''), $columnMeta);
 
         $files = [
             "app/Model/{$studly}.php" => $this->renderModel($ctx),
@@ -284,7 +288,7 @@ class CodeGeneratorService
         return str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $value)));
     }
 
-    private function buildContext(string $module, string $studly, string $table, array $fields, string $menuName, string $menuPath): array
+    private function buildContext(string $module, string $studly, string $table, array $fields, string $menuName, string $menuPath, array $columnMeta = []): array
     {
         $rules = [];
         $casts = [];
@@ -308,14 +312,16 @@ class CodeGeneratorService
             $formType = $field['form_type'];
             $required = ! empty($field['required']);
 
+            // 字符串 max 从列长度推导，避免校验规则比数据库列还宽（导入时 DB 截断报错）
+            $maxLength = (int) ($columnMeta[$name]['max_length'] ?? 0);
             $ruleBody = match ($formType) {
-                'textarea' => 'string|max:2000',
+                'textarea' => 'string|max:' . ($maxLength > 0 ? min(2000, $maxLength) : 2000),
                 'number' => 'numeric',
                 'checkbox' => 'array',
                 'switch' => 'boolean',
                 'date' => 'date',
                 'select', 'radio' => $this->optionRule($field),
-                default => 'string|max:191',
+                default => 'string|max:' . ($maxLength > 0 ? min(191, $maxLength) : 191),
             };
             $rules[] = "            '{$name}' => '" . ($required ? 'required|' : 'nullable|') . $ruleBody . "',";
             if ($name !== 'id') {
@@ -484,6 +490,7 @@ class CodeGeneratorService
         return "Router::addGroup('/api', function () {\n"
             . "    Router::get('/{$module}', [{$c}, 'index']);\n"
             . "    Router::get('/{$module}/export', [{$c}, 'export']);\n"
+            . "    Router::post('/{$module}/import', [{$c}, 'import']);\n"
             . "    Router::post('/{$module}', [{$c}, 'store']);\n"
             . "    Router::get('/{$module}/{id:\\d+}', [{$c}, 'show']);\n"
             . "    Router::put('/{$module}/{id:\\d+}', [{$c}, 'update']);\n"
@@ -556,7 +563,10 @@ declare(strict_types=1);
  */
 namespace App\Service;
 
+use App\Common\\ApiCode;
+use App\\Exception\\BusinessException;
 use App\Model\\{$ctx['studly']};
+use Hyperf\Database\\Exception\\QueryException;
 use Hyperf\DbConnection\Db;
 
 /**
@@ -605,6 +615,30 @@ class {$ctx['studly']}Service
     public function create(array \$data): {$ctx['studly']}
     {
         return {$ctx['studly']}::query()->create(\$data);
+    }
+
+    /**
+     * Excel 导入批量落库：已在控制器逐行校验通过的行，统一在事务内插入。
+     *
+     * @param array<int, array<string, mixed>> \$rows 字段 => 值
+     * @return int 成功插入的行数
+     */
+    public function insertRows(array \$rows): int
+    {
+        \$count = 0;
+        try {
+            Db::transaction(function () use (\$rows, &\$count): void {
+                foreach (\$rows as \$row) {
+                    {$ctx['studly']}::query()->create(\$row);
+                    ++\$count;
+                }
+            });
+        } catch (QueryException \$e) {
+            // 逐行校验覆盖不到的数据库层错误（列超长/非空约束等），转成可读的业务异常
+            throw new BusinessException(ApiCode::FAILED, '导入失败：部分数据与表结构不匹配（' . \$e->getMessage() . '）');
+        }
+
+        return \$count;
     }
 
     public function update(int \$id, array \$data): {$ctx['studly']}
@@ -690,6 +724,17 @@ PHP;
         params: [
 {$searchParamLines}
         ],
+    )]
+PHP;
+        $swImport = <<<PHP
+    #[SwPost(path: '/api/{$module}/import', operationId: '{$module}Import', summary: '导入{$tag} Excel', tag: '{$tag}',
+        desc: '上传 xlsx（multipart，字段 file；表头与导出列一致），逐行校验后批量入库，返回成功数与失败行明细。',
+        body: new SwBody(
+            props: [
+                new SwProp('file', type: 'string', format: 'binary', desc: 'xlsx 文件'),
+            ],
+            requiredProps: ['file'],
+        ),
     )]
 PHP;
 
@@ -827,6 +872,51 @@ class {$ctx['studly']}Controller extends AbstractController
             ->withHeader('Content-Disposition', 'attachment; filename="{$ctx['module']}.xlsx"');
     }
 
+{$swImport}
+    public function import(): ResponseInterface
+    {
+        \$this->authorize('{$ctx['module']}.add');
+
+        \$uploaded = \$this->request->getUploadedFiles()['file'] ?? null;
+        if (\$uploaded === null) {
+            return ApiResponse::fail(ApiCode::VALIDATION_FAILED, '缺少上传字段 file（multipart/form-data）');
+        }
+        if (! str_ends_with(strtolower((string) \$uploaded->getClientFilename()), '.xlsx')) {
+            return ApiResponse::fail(ApiCode::VALIDATION_FAILED, '仅支持 .xlsx 文件');
+        }
+
+        // 表头文本 => 字段名（与导出列一致：导出的表格填上数据即可直接回导）
+        \$headerMap = array_flip(\$this->exportColumns());
+
+        \$rows = \$this->excel->parse((string) \$uploaded->getStream()->getContents());
+        \$failed = [];
+        \$valid = [];
+        foreach (\$rows as \$index => \$parsed) {
+            \$row = [];
+            foreach (\$parsed as \$header => \$value) {
+                \$field = \$headerMap[\$header] ?? null;
+                if (\$field !== null) {
+                    \$row[\$field] = \$value;
+                }
+            }
+
+            \$validator = \$this->validatorFactory->make(\$row, \$this->rules());
+            if (\$validator->fails()) {
+                \$failed[] = ['row' => \$index + 2, 'errors' => \$validator->errors()->all()];
+                continue;
+            }
+            \$valid[] = \$validator->validated();
+        }
+
+        \$success = \$valid === [] ? 0 : \$this->service->insertRows(\$valid);
+
+        return ApiResponse::success([
+            'total' => count(\$rows),
+            'success' => \$success,
+            'failed' => \$failed,
+        ], \$failed === [] ? '导入完成' : '导入完成（部分行校验失败）');
+    }
+
     private function rules(): array
     {
         return [
@@ -914,6 +1004,21 @@ export function export{$ctx['studly']}Excel(params?: Record<string, unknown>): P
   return downloadFile('/{$ctx['module']}/export', params)
 }
 
+/** 导入 Excel：返回总数 / 成功数 / 失败行明细 */
+export interface {$ctx['studly']}ImportResult {
+  total: number
+  success: number
+  failed: Array<{ row: number; errors: string[] }>
+}
+
+export function import{$ctx['studly']}Excel(file: File): Promise<{$ctx['studly']}ImportResult> {
+  const form = new FormData()
+  form.append('file', file, file.name)
+  return http.post<{$ctx['studly']}ImportResult>('/{$ctx['module']}/import', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
 TS;
     }
 
@@ -934,6 +1039,7 @@ import {
   delete{$studly},
   export{$studly}Excel,
   fetch{$studly}List,
+  import{$studly}Excel,
   update{$studly},
 } from '@/api/gen/{$module}'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
@@ -1075,6 +1181,42 @@ async function remove(row: any): Promise<void> {
     // 错误提示由请求层统一处理
   }
 }
+
+/* ---------------- 导入 Excel ---------------- */
+
+const importing = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+const importResult = reactive<{ visible: boolean; success: number; failed: Array<{ row: number; errors: string[] }> }>({
+  visible: false,
+  success: 0,
+  failed: [],
+})
+
+function triggerImport(): void {
+  fileInput.value?.click()
+}
+
+async function onImportFile(e: Event): Promise<void> {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  target.value = ''
+  if (!file) {
+    return
+  }
+
+  importing.value = true
+  try {
+    const result = await import{$studly}Excel(file)
+    importResult.success = result.success
+    importResult.failed = result.failed
+    importResult.visible = true
+    await load()
+  } catch {
+    // 错误提示由请求层统一处理
+  } finally {
+    importing.value = false
+  }
+}
 </script>
 
 <template>
@@ -1083,6 +1225,8 @@ async function remove(row: any): Promise<void> {
       <h2 class="page-title">{$ctx['menu_name']}管理</h2>
       <div class="header-actions">
         <el-button :loading="exporting" @click="exportExcel">导出 Excel</el-button>
+        <el-button v-permission="'{$module}.add'" :loading="importing" @click="triggerImport">导入 Excel</el-button>
+        <input ref="fileInput" type="file" accept=".xlsx" class="hidden-import-input" @change="onImportFile" />
         <el-button v-permission="'{$module}.add'" type="primary" @click="openCreate">新增</el-button>
       </div>
     </div>
@@ -1124,6 +1268,27 @@ async function remove(row: any): Promise<void> {
         <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="importResult.visible" title="导入结果" width="520px">
+      <p>
+        共处理 {{ importResult.success + importResult.failed.length }} 行：
+        <el-tag type="success">成功 {{ importResult.success }} 行</el-tag>
+        <el-tag v-if="importResult.failed.length > 0" type="danger" style="margin-left: 8px">
+          失败 {{ importResult.failed.length }} 行
+        </el-tag>
+      </p>
+      <el-table v-if="importResult.failed.length > 0" :data="importResult.failed" size="small" max-height="280">
+        <el-table-column prop="row" label="行号（含表头）" width="140" />
+        <el-table-column label="失败原因">
+          <template #default="{ row }">
+            {{ row.errors.join('；') }}
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button type="primary" @click="importResult.visible = false">知道了</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -1143,6 +1308,10 @@ async function remove(row: any): Promise<void> {
 .header-actions {
   display: flex;
   gap: 8px;
+}
+
+.hidden-import-input {
+  display: none;
 }
 
 .filters {

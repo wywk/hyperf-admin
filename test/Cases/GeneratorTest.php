@@ -104,6 +104,33 @@ class GeneratorTest extends TestCase
         $this->assertStringContainsString('导出 Excel', $page);
     }
 
+    public function testGeneratedImportPieces(): void
+    {
+        $result = $this->gen->generate($this->config(), dryRun: true);
+        $controller = $result['files']['app/Controller/Api/GenTestItemsController.php'];
+        $service = $result['files']['app/Service/GenTestItemsService.php'];
+        $api = $result['files']['frontend/src/api/gen/gen_test_items.ts'];
+        $page = $result['files']['frontend/src/views/gen/gen_test_items/index.vue'];
+
+        // 控制器：导入端点 + 逐行校验 + 表头映射
+        $this->assertStringContainsString("path: '/api/gen_test_items/import'", $controller);
+        $this->assertStringContainsString('public function import(): ResponseInterface', $controller);
+        $this->assertStringContainsString("format: 'binary'", $controller);
+        $this->assertStringContainsString('array_flip($this->exportColumns())', $controller);
+        $this->assertStringContainsString("['row' => \$index + 2", $controller);
+
+        // Service：事务批量插入
+        $this->assertStringContainsString('public function insertRows(array $rows): int', $service);
+        $this->assertStringContainsString('Db::transaction', $service);
+
+        // 前端：导入 API + 导入按钮 + 结果弹窗
+        $this->assertStringContainsString('importGenTestItemsExcel', $api);
+        $this->assertStringContainsString('FormData', $api);
+        $this->assertStringContainsString('导入 Excel', $page);
+        $this->assertStringContainsString('导入结果', $page);
+        $this->assertStringContainsString('accept=".xlsx"', $page);
+    }
+
     public function testGeneratedModelUsesBareTableName(): void
     {
         $result = $this->gen->generate($this->config(), dryRun: true);
