@@ -27,6 +27,8 @@ class SwProp extends OA\Property
         string $desc = '',
         bool $nullable = false,
         array $enum = [],
+        mixed $example = null,
+        ?OA\Items $items = null,
     ) {
         parent::__construct(
             property: $name,
@@ -34,6 +36,8 @@ class SwProp extends OA\Property
             description: $desc !== '' ? $desc : null,
             nullable: $nullable,
             enum: $enum !== [] ? $enum : null,
+            example: $example,
+            items: $items,
         );
     }
 }

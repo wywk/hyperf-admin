@@ -27,6 +27,8 @@ class SwBody extends OA\RequestBody
         array $requiredProps = [],
         bool $required = true,
         string $desc = '',
+        mixed $example = null,
+        ?string $ref = null,
     ) {
         parent::__construct(
             required: $required,
@@ -34,6 +36,8 @@ class SwBody extends OA\RequestBody
             content: new OA\JsonContent(
                 required: $requiredProps !== [] ? $requiredProps : null,
                 properties: $props !== [] ? $props : null,
+                example: $example,
+                ref: $ref,
             ),
         );
     }

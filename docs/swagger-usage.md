@@ -131,7 +131,9 @@ docker exec hyperf php bin/hyperf.php swagger:export
 2. **同一个 `tag` 值归为一组**——Swagger UI 左侧按 tag 折叠展示，手写接口与生成器生成的接口可以用同一个 tag 合并展示。
 3. **一个类一个文件**——Sw* 封装类遵循 PSR-4，请勿把多个注解类合并进一个文件，否则 Composer 自动加载失败，swagger-php 会静默跳过（导出的接口凭空消失）。
 4. **`responses` 里不要重复传 200**——`SwResp` 本身是 200，传入会覆盖默认值；如果想再追加其他响应（如 404 自定义文案），直接放在 `responses` 数组里即可。
-5. 项目里现成示例：`app/Controller/Api/DocsController.php`（公开接口 `auth: false, errors: []` 的写法）。
+5. **复杂嵌套结构可与 `OA\Property` 混用**——`SwResp` / `SwBody` 的 `props` 数组里可以同时放 `SwProp`（平铺字段）和原生 `OA\Property`（带嵌套 properties/items 的复杂结构），如项目里的 AuthController、GenController。
+6. **部分字段更新的接口**——`SwBody` 传 `required: false`（PUT 默认错误码含 404），如 PermissionController 的 update。
+7. 项目里现成示例：`app/Controller/Api/DocsController.php`（公开接口 `auth: false, errors: []` 的写法）；项目内全部控制器已统一使用 Sw* 注解。
 
 ## 七、完整示例（改造前后对比）
 

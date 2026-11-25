@@ -17,7 +17,14 @@ use App\Model\MallOrder;
 use App\Service\MallOrderService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
-use OpenApi\Attributes as OA;
+use App\Swagger\Attributes\SwBody;
+use App\Swagger\Attributes\SwDelete;
+use App\Swagger\Attributes\SwGet;
+use App\Swagger\Attributes\SwId;
+use App\Swagger\Attributes\SwPost;
+use App\Swagger\Attributes\SwProp;
+use App\Swagger\Attributes\SwPut;
+use App\Swagger\Attributes\SwQuery;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -37,33 +44,14 @@ class MallOrderController extends AbstractController
     {
     }
 
-    #[OA\Get(
-        path: '/api/mall_order',
-        operationId: 'mall_orderIndex',
-        summary: '订单管理列表',
-        tags: ['订单管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'page', in: 'query', required: false, description: '页码，默认 1',
-                schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)),
-            new OA\Parameter(name: 'page_size', in: 'query', required: false, description: '每页条数，默认 20',
-                schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)),
-            new OA\Parameter(name: 'order_no', in: 'query', required: false, description: '订单号',
-                schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'receiver', in: 'query', required: false, description: '收货人',
-                schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'phone', in: 'query', required: false, description: '联系电话',
-                schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'status', in: 'query', required: false, description: '订单状态',
-                schema: new OA\Schema(type: 'string')),
-        ],
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-        ]
-    )]
-    public function index(): ResponseInterface
+    #[SwGet(path: '/api/mall_order', operationId: 'mall_orderIndex', summary: '订单管理列表', tag: '订单管理', page: true,
+    params: [
+        new SwQuery('order_no', type: 'string', desc: '订单号'),
+        new SwQuery('receiver', type: 'string', desc: '收货人'),
+        new SwQuery('phone', type: 'string', desc: '联系电话'),
+        new SwQuery('status', type: 'string', desc: '订单状态'),
+    ],
+)]    public function index(): ResponseInterface
     {
         $this->authorize('mall_order.view');
 
@@ -82,23 +70,9 @@ class MallOrderController extends AbstractController
         ));
     }
 
-    #[OA\Get(
-        path: '/api/mall_order/{id}',
-        operationId: 'mall_orderShow',
-        summary: '订单管理详情',
-        tags: ['订单管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
-    )]
-    public function show(int $id): ResponseInterface
+    #[SwGet(path: '/api/mall_order/{id}', operationId: 'mall_orderShow', summary: '订单管理详情', tag: '订单管理',
+    params: [new SwId()],
+)]    public function show(int $id): ResponseInterface
     {
         $this->authorize('mall_order.view');
 
@@ -110,35 +84,21 @@ class MallOrderController extends AbstractController
         return ApiResponse::success($model);
     }
 
-    #[OA\Post(
-        path: '/api/mall_order',
-        operationId: 'mall_orderStore',
-        summary: '新增订单管理',
-        tags: ['订单管理'],
-        security: [['bearerAuth' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'order_no', type: 'string', description: '订单号'),
-                    new OA\Property(property: 'receiver', type: 'string', nullable: true, description: '收货人'),
-                    new OA\Property(property: 'phone', type: 'string', nullable: true, description: '联系电话'),
-                    new OA\Property(property: 'amount', type: 'number', description: '金额(元)'),
-                    new OA\Property(property: 'status', type: 'string', nullable: true, description: '订单状态'),
-                    new OA\Property(property: 'user_id', type: 'number', nullable: true, description: '用户ID'),
-                    new OA\Property(property: 'address', type: 'string', nullable: true, description: '收货地址'),
-                    new OA\Property(property: 'remark', type: 'string', nullable: true, description: '备注'),
-                ]
-            )
-        ),
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
-    )]
-    public function store(): ResponseInterface
+    #[SwPost(path: '/api/mall_order', operationId: 'mall_orderStore', summary: '新增订单管理', tag: '订单管理',
+    body: new SwBody(
+        props: [
+            new SwProp('order_no', type: 'string', desc: '订单号'),
+            new SwProp('receiver', type: 'string', nullable: true, desc: '收货人'),
+            new SwProp('phone', type: 'string', nullable: true, desc: '联系电话'),
+            new SwProp('amount', type: 'number', desc: '金额(元)'),
+            new SwProp('status', type: 'string', nullable: true, desc: '订单状态'),
+            new SwProp('user_id', type: 'number', nullable: true, desc: '用户ID'),
+            new SwProp('address', type: 'string', nullable: true, desc: '收货地址'),
+            new SwProp('remark', type: 'string', nullable: true, desc: '备注'),
+        ],
+        requiredProps: ['order_no', 'amount'],
+    ),
+)]    public function store(): ResponseInterface
     {
         $this->authorize('mall_order.add');
 
@@ -147,40 +107,23 @@ class MallOrderController extends AbstractController
         return ApiResponse::success(['id' => (int) $this->service->create($data)->id], '创建成功');
     }
 
-    #[OA\Put(
-        path: '/api/mall_order/{id}',
-        operationId: 'mall_orderUpdate',
-        summary: '更新订单管理',
-        description: '支持部分字段更新（传哪些改哪些）。',
-        tags: ['订单管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+    #[SwPut(path: '/api/mall_order/{id}', operationId: 'mall_orderUpdate', summary: '更新订单管理', tag: '订单管理',
+    desc: '支持部分字段更新（传哪些改哪些）。',
+    params: [new SwId()],
+    body: new SwBody(
+        props: [
+            new SwProp('order_no', type: 'string', desc: '订单号'),
+            new SwProp('receiver', type: 'string', nullable: true, desc: '收货人'),
+            new SwProp('phone', type: 'string', nullable: true, desc: '联系电话'),
+            new SwProp('amount', type: 'number', desc: '金额(元)'),
+            new SwProp('status', type: 'string', nullable: true, desc: '订单状态'),
+            new SwProp('user_id', type: 'number', nullable: true, desc: '用户ID'),
+            new SwProp('address', type: 'string', nullable: true, desc: '收货地址'),
+            new SwProp('remark', type: 'string', nullable: true, desc: '备注'),
         ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'order_no', type: 'string', description: '订单号'),
-                    new OA\Property(property: 'receiver', type: 'string', nullable: true, description: '收货人'),
-                    new OA\Property(property: 'phone', type: 'string', nullable: true, description: '联系电话'),
-                    new OA\Property(property: 'amount', type: 'number', description: '金额(元)'),
-                    new OA\Property(property: 'status', type: 'string', nullable: true, description: '订单状态'),
-                    new OA\Property(property: 'user_id', type: 'number', nullable: true, description: '用户ID'),
-                    new OA\Property(property: 'address', type: 'string', nullable: true, description: '收货地址'),
-                    new OA\Property(property: 'remark', type: 'string', nullable: true, description: '备注'),
-                ]
-            )
-        ),
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
-    )]
-    public function update(int $id): ResponseInterface
+        required: false,
+    ),
+)]    public function update(int $id): ResponseInterface
     {
         $this->authorize('mall_order.edit');
 
@@ -190,23 +133,9 @@ class MallOrderController extends AbstractController
         return ApiResponse::success(['id' => $id], '保存成功');
     }
 
-    #[OA\Delete(
-        path: '/api/mall_order/{id}',
-        operationId: 'mall_orderDestroy',
-        summary: '删除订单管理',
-        tags: ['订单管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
-    )]
-    public function destroy(int $id): ResponseInterface
+    #[SwDelete(path: '/api/mall_order/{id}', operationId: 'mall_orderDestroy', summary: '删除订单管理', tag: '订单管理',
+    params: [new SwId()],
+)]    public function destroy(int $id): ResponseInterface
     {
         $this->authorize('mall_order.delete');
 

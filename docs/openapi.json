@@ -15,6 +15,7 @@
                 "description": "校验用户名密码，签发 access_token（2 小时）与 refresh_token（30 天，含旋转与家族吊销）。",
                 "operationId": "authLogin",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
@@ -27,16 +28,19 @@
                                     "username": {
                                         "description": "用户名（3-64 字符）",
                                         "type": "string",
-                                        "example": "admin"
+                                        "example": "admin",
+                                        "nullable": false
                                     },
                                     "password": {
                                         "description": "密码（6-64 字符）",
                                         "type": "string",
-                                        "example": "admin123456"
+                                        "example": "admin123456",
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -75,7 +79,8 @@
                                         }
                                     },
                                     "type": "object"
-                                }
+                                },
+                                "example": null
                             }
                         }
                     },
@@ -94,6 +99,7 @@
                 "description": "用 refresh_token 换新 token 对；旧 refresh_token 被重放会触发整个家族吊销。",
                 "operationId": "authRefresh",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
@@ -104,17 +110,26 @@
                                 "properties": {
                                     "refresh_token": {
                                         "description": "登录时返回的刷新令牌",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
                 "responses": {
                     "200": {
                         "description": "返回新的 token 对"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
@@ -190,7 +205,8 @@
                                         }
                                     },
                                     "type": "object"
-                                }
+                                },
+                                "example": null
                             }
                         }
                     },
@@ -245,33 +261,14 @@
                 "operationId": "formIndex",
                 "parameters": [
                     {
-                        "name": "page",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 1,
-                            "minimum": 1
-                        }
-                    },
-                    {
-                        "name": "page_size",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 20,
-                            "maximum": 100,
-                            "minimum": 1
-                        }
-                    },
-                    {
                         "name": "keyword",
                         "in": "query",
                         "description": "按名称/标识模糊搜索",
                         "required": false,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "default": null,
+                            "example": null
                         }
                     },
                     {
@@ -281,10 +278,33 @@
                         "required": false,
                         "schema": {
                             "type": "integer",
+                            "default": null,
                             "enum": [
                                 0,
                                 1
-                            ]
+                            ],
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
                         }
                     }
                 ],
@@ -313,6 +333,7 @@
                 "description": "schema 结构：{fields: [{field, label, type, required?, min?, max?, options?}]}，type 支持 input/textarea/number/select/radio/checkbox/date/switch。需要 form.add 权限。",
                 "operationId": "formStore",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
@@ -325,15 +346,19 @@
                                 "properties": {
                                     "name": {
                                         "type": "string",
-                                        "example": "客户报名"
+                                        "example": "客户报名",
+                                        "nullable": false
                                     },
                                     "code": {
                                         "description": "公开提交接口用它定位",
                                         "type": "string",
-                                        "example": "customer_signup"
+                                        "example": "customer_signup",
+                                        "nullable": false
                                     },
                                     "description": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "schema": {
                                         "properties": {
@@ -349,7 +374,8 @@
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -386,9 +412,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -423,13 +451,16 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
@@ -441,27 +472,38 @@
                                 ],
                                 "properties": {
                                     "name": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "code": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "description": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "status": {
                                         "type": "integer",
                                         "enum": [
                                             0,
                                             1
-                                        ]
+                                        ],
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "schema": {
-                                        "type": "object"
+                                        "type": "object",
+                                        "example": null,
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -499,9 +541,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -538,15 +582,17 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     },
                     {
                         "name": "page",
                         "in": "query",
-                        "required": false,
+                        "description": "页码，默认 1",
                         "schema": {
                             "type": "integer",
                             "default": 1,
@@ -556,7 +602,7 @@
                     {
                         "name": "page_size",
                         "in": "query",
-                        "required": false,
+                        "description": "每页条数，默认 20",
                         "schema": {
                             "type": "integer",
                             "default": 20,
@@ -629,7 +675,8 @@
                                         }
                                     },
                                     "type": "object"
-                                }
+                                },
+                                "example": null
                             }
                         }
                     },
@@ -660,6 +707,7 @@
                     }
                 ],
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
@@ -667,7 +715,9 @@
                                 "properties": {
                                     "data": {
                                         "description": "按 schema.fields 的 field 名作为 key 提交",
-                                        "type": "object"
+                                        "type": "object",
+                                        "example": null,
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
@@ -740,7 +790,8 @@
                                         }
                                     },
                                     "type": "object"
-                                }
+                                },
+                                "example": null
                             }
                         }
                     },
@@ -808,7 +859,8 @@
                 "description": "dryRun：返回将生成的文件内容映射（文件路径 → 代码文本），不写文件、不注册权限。需要 gen.create 权限。",
                 "operationId": "genPreview",
                 "requestBody": {
-                    "required": true,
+                    "description": null,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
@@ -816,17 +868,20 @@
                                     "table": {
                                         "description": "物理表名",
                                         "type": "string",
-                                        "example": "ha_mall_goods"
+                                        "example": "ha_mall_goods",
+                                        "nullable": false
                                     },
                                     "module": {
                                         "description": "模块标识（路由/权限码/前端文件名）",
                                         "type": "string",
-                                        "example": "mall_goods"
+                                        "example": "mall_goods",
+                                        "nullable": false
                                     },
                                     "controller": {
                                         "description": "类名前缀，缺省按模块名 StudlyCase",
                                         "type": "string",
-                                        "example": "MallGoods"
+                                        "example": "MallGoods",
+                                        "nullable": false
                                     },
                                     "menu": {
                                         "properties": {
@@ -905,7 +960,8 @@
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -939,12 +995,14 @@
                 "description": "写入 Model/Service/Controller 与前端 api/页面，补丁路由文件，注册菜单与 view/add/edit/delete 按钮权限并授予系统角色；幂等可重复执行。仅开发环境使用。需要 gen.create 权限。",
                 "operationId": "genGenerate",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/GenConfig"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -974,7 +1032,8 @@
                                         }
                                     },
                                     "type": "object"
-                                }
+                                },
+                                "example": null
                             }
                         }
                     },
@@ -1005,10 +1064,53 @@
                 "operationId": "loginLogIndex",
                 "parameters": [
                     {
+                        "name": "event",
+                        "in": "query",
+                        "description": "事件类型，如 login/logout/login_failed",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "用户名（模糊匹配）",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "用户 ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "ip",
+                        "in": "query",
+                        "description": "登录 IP（精确匹配）",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
                         "name": "page",
                         "in": "query",
                         "description": "页码，默认 1",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 1,
@@ -1019,48 +1121,11 @@
                         "name": "page_size",
                         "in": "query",
                         "description": "每页条数，默认 20",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 20,
                             "maximum": 100,
                             "minimum": 1
-                        }
-                    },
-                    {
-                        "name": "event",
-                        "in": "query",
-                        "description": "事件类型，如 login/logout/login_failed",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "username",
-                        "in": "query",
-                        "description": "用户名（模糊匹配）",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "user_id",
-                        "in": "query",
-                        "description": "用户 ID",
-                        "required": false,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "ip",
-                        "in": "query",
-                        "description": "登录 IP（精确匹配）",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 ],
@@ -1087,12 +1152,16 @@
                                         }
                                     },
                                     "type": "object"
-                                }
+                                },
+                                "example": null
                             }
                         }
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
                     }
                 },
                 "security": [
@@ -1111,10 +1180,31 @@
                 "operationId": "mall_categoryIndex",
                 "parameters": [
                     {
+                        "name": "name",
+                        "in": "query",
+                        "description": "分类名称",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "状态",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
                         "name": "page",
                         "in": "query",
                         "description": "页码，默认 1",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 1,
@@ -1125,30 +1215,11 @@
                         "name": "page_size",
                         "in": "query",
                         "description": "每页条数，默认 20",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 20,
                             "maximum": 100,
                             "minimum": 1
-                        }
-                    },
-                    {
-                        "name": "name",
-                        "in": "query",
-                        "description": "分类名称",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "description": "状态",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 ],
@@ -1176,33 +1247,43 @@
                 "summary": "新增分类管理",
                 "operationId": "mall_categoryStore",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "name"
+                                ],
                                 "properties": {
                                     "name": {
                                         "description": "分类名称",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "sort": {
                                         "description": "排序",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "status": {
                                         "description": "状态",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "description": {
                                         "description": "说明",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -1238,9 +1319,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -1253,9 +1336,6 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
                     }
                 },
                 "security": [
@@ -1275,40 +1355,49 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
                 "requestBody": {
-                    "required": true,
+                    "description": null,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
                                     "name": {
                                         "description": "分类名称",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "sort": {
                                         "description": "排序",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "status": {
                                         "description": "状态",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "description": {
                                         "description": "说明",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -1345,9 +1434,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -1381,10 +1472,53 @@
                 "operationId": "mall_goodsIndex",
                 "parameters": [
                     {
+                        "name": "name",
+                        "in": "query",
+                        "description": "商品名称",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "description": "分类",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "in": "query",
+                        "description": "售价(元)",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "状态",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
                         "name": "page",
                         "in": "query",
                         "description": "页码，默认 1",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 1,
@@ -1395,48 +1529,11 @@
                         "name": "page_size",
                         "in": "query",
                         "description": "每页条数，默认 20",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 20,
                             "maximum": 100,
                             "minimum": 1
-                        }
-                    },
-                    {
-                        "name": "name",
-                        "in": "query",
-                        "description": "商品名称",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "category_id",
-                        "in": "query",
-                        "description": "分类",
-                        "required": false,
-                        "schema": {
-                            "type": "number"
-                        }
-                    },
-                    {
-                        "name": "price",
-                        "in": "query",
-                        "description": "售价(元)",
-                        "required": false,
-                        "schema": {
-                            "type": "number"
-                        }
-                    },
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "description": "状态",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 ],
@@ -1464,46 +1561,63 @@
                 "summary": "新增商品管理",
                 "operationId": "mall_goodsStore",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "name",
+                                    "category_id",
+                                    "price"
+                                ],
                                 "properties": {
                                     "name": {
                                         "description": "商品名称",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "category_id": {
                                         "description": "分类",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "price": {
                                         "description": "售价(元)",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "stock": {
                                         "description": "库存",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "status": {
                                         "description": "状态",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "cover": {
                                         "description": "封面图",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "summary": {
                                         "description": "简介",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -1539,9 +1653,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -1554,9 +1670,6 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
                     }
                 },
                 "security": [
@@ -1576,53 +1689,67 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
                 "requestBody": {
-                    "required": true,
+                    "description": null,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
                                     "name": {
                                         "description": "商品名称",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "category_id": {
                                         "description": "分类",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "price": {
                                         "description": "售价(元)",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "stock": {
                                         "description": "库存",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "status": {
                                         "description": "状态",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "cover": {
                                         "description": "封面图",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "summary": {
                                         "description": "简介",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -1659,9 +1786,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -1695,10 +1824,42 @@
                 "operationId": "mall_goods_skuIndex",
                 "parameters": [
                     {
+                        "name": "goods_id",
+                        "in": "query",
+                        "description": "商品ID",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "sku_code",
+                        "in": "query",
+                        "description": "SKU编码",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "状态",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
                         "name": "page",
                         "in": "query",
                         "description": "页码，默认 1",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 1,
@@ -1709,39 +1870,11 @@
                         "name": "page_size",
                         "in": "query",
                         "description": "每页条数，默认 20",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 20,
                             "maximum": 100,
                             "minimum": 1
-                        }
-                    },
-                    {
-                        "name": "goods_id",
-                        "in": "query",
-                        "description": "商品ID",
-                        "required": false,
-                        "schema": {
-                            "type": "number"
-                        }
-                    },
-                    {
-                        "name": "sku_code",
-                        "in": "query",
-                        "description": "SKU编码",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "description": "状态",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 ],
@@ -1769,41 +1902,57 @@
                 "summary": "新增SKU管理",
                 "operationId": "mall_goods_skuStore",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "goods_id",
+                                    "sku_code",
+                                    "price"
+                                ],
                                 "properties": {
                                     "goods_id": {
                                         "description": "商品ID",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "sku_code": {
                                         "description": "SKU编码",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "specs": {
                                         "description": "规格",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "price": {
                                         "description": "售价(元)",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "stock": {
                                         "description": "库存",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "status": {
                                         "description": "状态",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -1839,9 +1988,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -1854,9 +2005,6 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
                     }
                 },
                 "security": [
@@ -1876,48 +2024,61 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
                 "requestBody": {
-                    "required": true,
+                    "description": null,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
                                     "goods_id": {
                                         "description": "商品ID",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "sku_code": {
                                         "description": "SKU编码",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "specs": {
                                         "description": "规格",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "price": {
                                         "description": "售价(元)",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "stock": {
                                         "description": "库存",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "status": {
                                         "description": "状态",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -1954,9 +2115,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -1990,10 +2153,53 @@
                 "operationId": "mall_orderIndex",
                 "parameters": [
                     {
+                        "name": "order_no",
+                        "in": "query",
+                        "description": "订单号",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "receiver",
+                        "in": "query",
+                        "description": "收货人",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "phone",
+                        "in": "query",
+                        "description": "联系电话",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "订单状态",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
                         "name": "page",
                         "in": "query",
                         "description": "页码，默认 1",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 1,
@@ -2004,48 +2210,11 @@
                         "name": "page_size",
                         "in": "query",
                         "description": "每页条数，默认 20",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 20,
                             "maximum": 100,
                             "minimum": 1
-                        }
-                    },
-                    {
-                        "name": "order_no",
-                        "in": "query",
-                        "description": "订单号",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "receiver",
-                        "in": "query",
-                        "description": "收货人",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "phone",
-                        "in": "query",
-                        "description": "联系电话",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "description": "订单状态",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 ],
@@ -2073,52 +2242,68 @@
                 "summary": "新增订单管理",
                 "operationId": "mall_orderStore",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "order_no",
+                                    "amount"
+                                ],
                                 "properties": {
                                     "order_no": {
                                         "description": "订单号",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "receiver": {
                                         "description": "收货人",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "phone": {
                                         "description": "联系电话",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "amount": {
                                         "description": "金额(元)",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "status": {
                                         "description": "订单状态",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "user_id": {
                                         "description": "用户ID",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "address": {
                                         "description": "收货地址",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "remark": {
                                         "description": "备注",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -2154,9 +2339,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -2169,9 +2356,6 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
                     }
                 },
                 "security": [
@@ -2191,59 +2375,73 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
                 "requestBody": {
-                    "required": true,
+                    "description": null,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
                                     "order_no": {
                                         "description": "订单号",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "receiver": {
                                         "description": "收货人",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "phone": {
                                         "description": "联系电话",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "amount": {
                                         "description": "金额(元)",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "status": {
                                         "description": "订单状态",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "user_id": {
                                         "description": "用户ID",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "address": {
                                         "description": "收货地址",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "remark": {
                                         "description": "备注",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -2280,9 +2478,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -2316,10 +2516,31 @@
                 "operationId": "mall_order_itemIndex",
                 "parameters": [
                     {
+                        "name": "order_id",
+                        "in": "query",
+                        "description": "订单ID",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "goods_name",
+                        "in": "query",
+                        "description": "商品名称",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
                         "name": "page",
                         "in": "query",
                         "description": "页码，默认 1",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 1,
@@ -2330,30 +2551,11 @@
                         "name": "page_size",
                         "in": "query",
                         "description": "每页条数，默认 20",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 20,
                             "maximum": 100,
                             "minimum": 1
-                        }
-                    },
-                    {
-                        "name": "order_id",
-                        "in": "query",
-                        "description": "订单ID",
-                        "required": false,
-                        "schema": {
-                            "type": "number"
-                        }
-                    },
-                    {
-                        "name": "goods_name",
-                        "in": "query",
-                        "description": "商品名称",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 ],
@@ -2381,39 +2583,59 @@
                 "summary": "新增订单明细",
                 "operationId": "mall_order_itemStore",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "order_id",
+                                    "goods_name",
+                                    "price",
+                                    "quantity",
+                                    "amount"
+                                ],
                                 "properties": {
                                     "order_id": {
                                         "description": "订单ID",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "goods_id": {
                                         "description": "商品ID",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "goods_name": {
                                         "description": "商品名称",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "price": {
                                         "description": "单价(元)",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "quantity": {
                                         "description": "数量",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "amount": {
                                         "description": "小计(元)",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -2449,9 +2671,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -2464,9 +2688,6 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
                     }
                 },
                 "security": [
@@ -2486,46 +2707,61 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
                 "requestBody": {
-                    "required": true,
+                    "description": null,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
                                     "order_id": {
                                         "description": "订单ID",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "goods_id": {
                                         "description": "商品ID",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "goods_name": {
                                         "description": "商品名称",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "price": {
                                         "description": "单价(元)",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "quantity": {
                                         "description": "数量",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "amount": {
                                         "description": "小计(元)",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -2562,9 +2798,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -2604,7 +2842,9 @@
                         "description": "按名称/权限码过滤（返回平铺列表）",
                         "required": false,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "default": null,
+                            "example": null
                         }
                     }
                 ],
@@ -2655,7 +2895,8 @@
                                         }
                                     },
                                     "type": "object"
-                                }
+                                },
+                                "example": null
                             }
                         }
                     },
@@ -2680,6 +2921,7 @@
                 "description": "创建菜单或按钮权限；按钮只能挂在菜单下；创建后自动授予全部系统角色。需要 permission.add 权限。",
                 "operationId": "permissionStore",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
@@ -2693,7 +2935,8 @@
                                     "parent_id": {
                                         "description": "父节点 ID，0 为顶级",
                                         "type": "integer",
-                                        "example": 41
+                                        "example": 41,
+                                        "nullable": false
                                     },
                                     "type": {
                                         "description": "节点类型",
@@ -2701,26 +2944,32 @@
                                         "enum": [
                                             "menu",
                                             "button"
-                                        ]
+                                        ],
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "code": {
                                         "description": "权限码，小写字母开头的 a-z0-9_.",
                                         "type": "string",
-                                        "example": "mall_goods.export"
+                                        "example": "mall_goods.export",
+                                        "nullable": false
                                     },
                                     "name": {
                                         "type": "string",
-                                        "example": "商品导出"
+                                        "example": "商品导出",
+                                        "nullable": false
                                     },
                                     "path": {
                                         "description": "菜单路由路径（仅 menu 需要）",
                                         "type": "string",
-                                        "example": "mall/goods"
+                                        "example": "mall/goods",
+                                        "nullable": false
                                     },
                                     "icon": {
                                         "description": "菜单图标名（仅 menu）",
                                         "type": "string",
-                                        "example": "Goods"
+                                        "example": "Goods",
+                                        "nullable": false
                                     },
                                     "visible": {
                                         "description": "侧边栏是否可见，默认 1",
@@ -2728,18 +2977,25 @@
                                         "enum": [
                                             0,
                                             1
-                                        ]
+                                        ],
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "sort": {
                                         "description": "排序值，越小越靠前",
-                                        "type": "integer"
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "description": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -2776,50 +3032,70 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
                 "requestBody": {
-                    "required": true,
+                    "description": null,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
                                     "parent_id": {
-                                        "type": "integer"
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "code": {
                                         "description": "权限码（内置节点不可改）",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "name": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "path": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "icon": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "visible": {
                                         "type": "integer",
                                         "enum": [
                                             0,
                                             1
-                                        ]
+                                        ],
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "sort": {
-                                        "type": "integer"
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "description": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -2857,9 +3133,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -2893,10 +3171,42 @@
                 "operationId": "productIndex",
                 "parameters": [
                     {
+                        "name": "name",
+                        "in": "query",
+                        "description": "商品名称",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "in": "query",
+                        "description": "价格",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "状态",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
                         "name": "page",
                         "in": "query",
                         "description": "页码，默认 1",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 1,
@@ -2907,39 +3217,11 @@
                         "name": "page_size",
                         "in": "query",
                         "description": "每页条数，默认 20",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 20,
                             "maximum": 100,
                             "minimum": 1
-                        }
-                    },
-                    {
-                        "name": "name",
-                        "in": "query",
-                        "description": "商品名称",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "price",
-                        "in": "query",
-                        "description": "价格",
-                        "required": false,
-                        "schema": {
-                            "type": "number"
-                        }
-                    },
-                    {
-                        "name": "status",
-                        "in": "query",
-                        "description": "状态",
-                        "required": false,
-                        "schema": {
-                            "type": "string"
                         }
                     }
                 ],
@@ -2967,32 +3249,44 @@
                 "summary": "新增示例商品",
                 "operationId": "productStore",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "name",
+                                    "price"
+                                ],
                                 "properties": {
                                     "name": {
                                         "description": "商品名称",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "price": {
                                         "description": "价格",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "stock": {
                                         "description": "库存",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "status": {
                                         "description": "状态",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -3028,9 +3322,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -3043,9 +3339,6 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
                     }
                 },
                 "security": [
@@ -3065,39 +3358,49 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
                 "requestBody": {
-                    "required": true,
+                    "description": null,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
                                     "name": {
                                         "description": "商品名称",
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "price": {
                                         "description": "价格",
-                                        "type": "number"
+                                        "type": "number",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "stock": {
                                         "description": "库存",
                                         "type": "number",
+                                        "example": null,
                                         "nullable": true
                                     },
                                     "status": {
                                         "description": "状态",
                                         "type": "string",
+                                        "example": null,
                                         "nullable": true
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -3134,9 +3437,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -3204,7 +3509,8 @@
                                         }
                                     },
                                     "type": "object"
-                                }
+                                },
+                                "example": null
                             }
                         }
                     },
@@ -3229,6 +3535,7 @@
                 "description": "需要 role.add 权限。",
                 "operationId": "roleStore",
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
@@ -3241,21 +3548,28 @@
                                     "code": {
                                         "description": "角色标识，小写开头的 a-z0-9_-",
                                         "type": "string",
-                                        "example": "operator"
+                                        "example": "operator",
+                                        "nullable": false
                                     },
                                     "name": {
                                         "type": "string",
-                                        "example": "运营人员"
+                                        "example": "运营人员",
+                                        "nullable": false
                                     },
                                     "description": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "sort": {
-                                        "type": "integer"
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -3292,33 +3606,45 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
                 "requestBody": {
-                    "required": true,
+                    "description": null,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
                                     "code": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "name": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "description": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
                                     },
                                     "sort": {
-                                        "type": "integer"
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },
@@ -3356,9 +3682,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -3395,9 +3723,11 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
@@ -3427,7 +3757,8 @@
                                         }
                                     },
                                     "type": "object"
-                                }
+                                },
+                                "example": null
                             }
                         }
                     },
@@ -3455,13 +3786,16 @@
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": null
                         }
                     }
                 ],
                 "requestBody": {
+                    "description": null,
                     "required": true,
                     "content": {
                         "application/json": {
@@ -3481,11 +3815,13 @@
                                             2,
                                             41,
                                             47
-                                        ]
+                                        ],
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
-                            }
+                            },
+                            "example": null
                         }
                     }
                 },

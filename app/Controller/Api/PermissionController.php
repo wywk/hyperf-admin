@@ -16,6 +16,15 @@ use App\Common\ApiResponse;
 use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
 use App\Service\RbacService;
+use App\Swagger\Attributes\SwBody;
+use App\Swagger\Attributes\SwDelete;
+use App\Swagger\Attributes\SwGet;
+use App\Swagger\Attributes\SwId;
+use App\Swagger\Attributes\SwPost;
+use App\Swagger\Attributes\SwProp;
+use App\Swagger\Attributes\SwPut;
+use App\Swagger\Attributes\SwQuery;
+use App\Swagger\Attributes\SwResp;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use OpenApi\Attributes as OA;
@@ -41,40 +50,22 @@ class PermissionController extends AbstractController
     /**
      * GET /api/permissions?keyword=.
      */
-    #[OA\Get(
-        path: '/api/permissions',
-        operationId: 'permissionIndex',
-        summary: '权限树查询',
-        description: '返回整棵权限树（menu/button 节点带 children）；带 keyword 时返回平铺的过滤结果。需要 permission.view 或 role.view 权限。',
-        tags: ['权限管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'keyword', in: 'query', required: false, description: '按名称/权限码过滤（返回平铺列表）',
-                schema: new OA\Schema(type: 'string')),
-        ],
-        responses: [
-            new OA\Response(
-                response: '200',
-                description: '权限树或平铺列表',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(
-                            properties: [
-                                new OA\Property(property: 'id', type: 'integer'),
-                                new OA\Property(property: 'parent_id', type: 'integer'),
-                                new OA\Property(property: 'type', type: 'string', enum: ['menu', 'button']),
-                                new OA\Property(property: 'code', type: 'string', example: 'mall_goods.edit'),
-                                new OA\Property(property: 'name', type: 'string'),
-                                new OA\Property(property: 'path', type: 'string', description: '菜单路由路径（仅 menu）'),
-                                new OA\Property(property: 'children', type: 'array', items: new OA\Items(type: 'object')),
-                            ]
-                        )),
-                    ]
-                )
-            ),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-        ]
+    #[SwGet(path: '/api/permissions', operationId: 'permissionIndex', summary: '权限树查询', tag: '权限管理',
+        desc: '返回整棵权限树（menu/button 节点带 children）；带 keyword 时返回平铺的过滤结果。需要 permission.view 或 role.view 权限。',
+        params: [new SwQuery('keyword', desc: '按名称/权限码过滤（返回平铺列表）')],
+        responses: [new SwResp(desc: '权限树或平铺列表', props: [
+            new OA\Property(property: 'data', type: 'array', items: new OA\Items(
+                properties: [
+                    new OA\Property(property: 'id', type: 'integer'),
+                    new OA\Property(property: 'parent_id', type: 'integer'),
+                    new OA\Property(property: 'type', type: 'string', enum: ['menu', 'button']),
+                    new OA\Property(property: 'code', type: 'string', example: 'mall_goods.edit'),
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'path', type: 'string', description: '菜单路由路径（仅 menu）'),
+                    new OA\Property(property: 'children', type: 'array', items: new OA\Items(type: 'object')),
+                ]
+            )),
+        ])]
     )]
     public function index(): ResponseInterface
     {
@@ -95,36 +86,23 @@ class PermissionController extends AbstractController
     /**
      * POST /api/permissions.
      */
-    #[OA\Post(
-        path: '/api/permissions',
-        operationId: 'permissionStore',
-        summary: '创建权限节点',
-        description: '创建菜单或按钮权限；按钮只能挂在菜单下；创建后自动授予全部系统角色。需要 permission.add 权限。',
-        tags: ['权限管理'],
-        security: [['bearerAuth' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['type', 'code', 'name'],
-                properties: [
-                    new OA\Property(property: 'parent_id', type: 'integer', example: 41, description: '父节点 ID，0 为顶级'),
-                    new OA\Property(property: 'type', type: 'string', enum: ['menu', 'button'], description: '节点类型'),
-                    new OA\Property(property: 'code', type: 'string', example: 'mall_goods.export', description: '权限码，小写字母开头的 a-z0-9_.'),
-                    new OA\Property(property: 'name', type: 'string', example: '商品导出'),
-                    new OA\Property(property: 'path', type: 'string', example: 'mall/goods', description: '菜单路由路径（仅 menu 需要）'),
-                    new OA\Property(property: 'icon', type: 'string', example: 'Goods', description: '菜单图标名（仅 menu）'),
-                    new OA\Property(property: 'visible', type: 'integer', enum: [0, 1], description: '侧边栏是否可见，默认 1'),
-                    new OA\Property(property: 'sort', type: 'integer', description: '排序值，越小越靠前'),
-                    new OA\Property(property: 'description', type: 'string'),
-                ]
-            )
+    #[SwPost(path: '/api/permissions', operationId: 'permissionStore', summary: '创建权限节点', tag: '权限管理',
+        desc: '创建菜单或按钮权限；按钮只能挂在菜单下；创建后自动授予全部系统角色。需要 permission.add 权限。',
+        body: new SwBody(
+            props: [
+                new SwProp('parent_id', type: 'integer', desc: '父节点 ID，0 为顶级', example: 41),
+                new SwProp('type', desc: '节点类型', enum: ['menu', 'button']),
+                new SwProp('code', desc: '权限码，小写字母开头的 a-z0-9_.', example: 'mall_goods.export'),
+                new SwProp('name', example: '商品导出'),
+                new SwProp('path', desc: '菜单路由路径（仅 menu 需要）', example: 'mall/goods'),
+                new SwProp('icon', desc: '菜单图标名（仅 menu）', example: 'Goods'),
+                new SwProp('visible', type: 'integer', desc: '侧边栏是否可见，默认 1', enum: [0, 1]),
+                new SwProp('sort', type: 'integer', desc: '排序值，越小越靠前'),
+                new SwProp('description'),
+            ],
+            requiredProps: ['type', 'code', 'name'],
         ),
-        responses: [
-            new OA\Response(response: '200', description: '返回创建的权限节点'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
+        responses: [new SwResp(desc: '返回创建的权限节点')]
     )]
     public function store(): ResponseInterface
     {
@@ -148,38 +126,23 @@ class PermissionController extends AbstractController
     /**
      * PUT /api/permissions/{id}.
      */
-    #[OA\Put(
-        path: '/api/permissions/{id}',
-        operationId: 'permissionUpdate',
-        summary: '更新权限节点',
-        description: '按「传哪些改哪些」处理部分更新；type 创建后不可改；内置节点（is_system）不允许改权限码。需要 permission.edit 权限。',
-        tags: ['权限管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'parent_id', type: 'integer'),
-                    new OA\Property(property: 'code', type: 'string', description: '权限码（内置节点不可改）'),
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'path', type: 'string'),
-                    new OA\Property(property: 'icon', type: 'string'),
-                    new OA\Property(property: 'visible', type: 'integer', enum: [0, 1]),
-                    new OA\Property(property: 'sort', type: 'integer'),
-                    new OA\Property(property: 'description', type: 'string'),
-                ]
-            )
+    #[SwPut(path: '/api/permissions/{id}', operationId: 'permissionUpdate', summary: '更新权限节点', tag: '权限管理',
+        desc: '按「传哪些改哪些」处理部分更新；type 创建后不可改；内置节点（is_system）不允许改权限码。需要 permission.edit 权限。',
+        params: [new SwId()],
+        body: new SwBody(
+            props: [
+                new SwProp('parent_id', type: 'integer'),
+                new SwProp('code', desc: '权限码（内置节点不可改）'),
+                new SwProp('name'),
+                new SwProp('path'),
+                new SwProp('icon'),
+                new SwProp('visible', type: 'integer', enum: [0, 1]),
+                new SwProp('sort', type: 'integer'),
+                new SwProp('description'),
+            ],
+            required: false,
         ),
-        responses: [
-            new OA\Response(response: '200', description: '返回更新后的权限节点'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
+        responses: [new SwResp(desc: '返回更新后的权限节点')]
     )]
     public function update(int $id): ResponseInterface
     {
@@ -222,22 +185,10 @@ class PermissionController extends AbstractController
     /**
      * DELETE /api/permissions/{id}.
      */
-    #[OA\Delete(
-        path: '/api/permissions/{id}',
-        operationId: 'permissionDestroy',
-        summary: '删除权限节点',
-        description: '有子节点或为内置节点（is_system）时拒绝删除。需要 permission.delete 权限。',
-        tags: ['权限管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-            new OA\Response(response: '200', description: '已删除'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
+    #[SwDelete(path: '/api/permissions/{id}', operationId: 'permissionDestroy', summary: '删除权限节点', tag: '权限管理',
+        desc: '有子节点或为内置节点（is_system）时拒绝删除。需要 permission.delete 权限。',
+        params: [new SwId()],
+        responses: [new SwResp(desc: '已删除')]
     )]
     public function destroy(int $id): ResponseInterface
     {

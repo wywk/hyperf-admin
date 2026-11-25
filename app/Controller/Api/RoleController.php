@@ -16,6 +16,14 @@ use App\Common\ApiResponse;
 use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
 use App\Service\RbacService;
+use App\Swagger\Attributes\SwBody;
+use App\Swagger\Attributes\SwDelete;
+use App\Swagger\Attributes\SwGet;
+use App\Swagger\Attributes\SwId;
+use App\Swagger\Attributes\SwPost;
+use App\Swagger\Attributes\SwProp;
+use App\Swagger\Attributes\SwPut;
+use App\Swagger\Attributes\SwResp;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use OpenApi\Attributes as OA;
@@ -38,34 +46,19 @@ class RoleController extends AbstractController
     /**
      * GET /api/roles.
      */
-    #[OA\Get(
-        path: '/api/roles',
-        operationId: 'roleIndex',
-        summary: '角色列表',
-        description: '返回全部角色（平铺，不分页），含 is_system 标记与权限数量。',
-        tags: ['角色管理'],
-        security: [['bearerAuth' => []]],
-        responses: [
-            new OA\Response(
-                response: '200',
-                description: '角色列表',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(
-                            properties: [
-                                new OA\Property(property: 'id', type: 'integer'),
-                                new OA\Property(property: 'code', type: 'string', example: 'admin'),
-                                new OA\Property(property: 'name', type: 'string', example: '超级管理员'),
-                                new OA\Property(property: 'is_system', type: 'integer', description: '系统内置角色不可删除'),
-                                new OA\Property(property: 'permission_count', type: 'integer'),
-                            ]
-                        )),
-                    ]
-                )
-            ),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-        ]
+    #[SwGet(path: '/api/roles', operationId: 'roleIndex', summary: '角色列表', tag: '角色管理',
+        desc: '返回全部角色（平铺，不分页），含 is_system 标记与权限数量。',
+        responses: [new SwResp(desc: '角色列表', props: [
+            new OA\Property(property: 'data', type: 'array', items: new OA\Items(
+                properties: [
+                    new OA\Property(property: 'id', type: 'integer'),
+                    new OA\Property(property: 'code', type: 'string', example: 'admin'),
+                    new OA\Property(property: 'name', type: 'string', example: '超级管理员'),
+                    new OA\Property(property: 'is_system', type: 'integer', description: '系统内置角色不可删除'),
+                    new OA\Property(property: 'permission_count', type: 'integer'),
+                ]
+            )),
+        ])]
     )]
     public function index(): ResponseInterface
     {
@@ -77,31 +70,18 @@ class RoleController extends AbstractController
     /**
      * POST /api/roles.
      */
-    #[OA\Post(
-        path: '/api/roles',
-        operationId: 'roleStore',
-        summary: '创建角色',
-        description: '需要 role.add 权限。',
-        tags: ['角色管理'],
-        security: [['bearerAuth' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['code', 'name'],
-                properties: [
-                    new OA\Property(property: 'code', type: 'string', example: 'operator', description: '角色标识，小写开头的 a-z0-9_-'),
-                    new OA\Property(property: 'name', type: 'string', example: '运营人员'),
-                    new OA\Property(property: 'description', type: 'string'),
-                    new OA\Property(property: 'sort', type: 'integer'),
-                ]
-            )
+    #[SwPost(path: '/api/roles', operationId: 'roleStore', summary: '创建角色', tag: '角色管理',
+        desc: '需要 role.add 权限。',
+        body: new SwBody(
+            props: [
+                new SwProp('code', desc: '角色标识，小写开头的 a-z0-9_-', example: 'operator'),
+                new SwProp('name', example: '运营人员'),
+                new SwProp('description'),
+                new SwProp('sort', type: 'integer'),
+            ],
+            requiredProps: ['code', 'name'],
         ),
-        responses: [
-            new OA\Response(response: '200', description: '返回创建的角色'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
+        responses: [new SwResp(desc: '返回创建的角色')]
     )]
     public function store(): ResponseInterface
     {
@@ -125,34 +105,19 @@ class RoleController extends AbstractController
     /**
      * PUT /api/roles/{id}.
      */
-    #[OA\Put(
-        path: '/api/roles/{id}',
-        operationId: 'roleUpdate',
-        summary: '更新角色',
-        description: '部分更新：传哪些改哪些；内置角色不允许改标识。需要 role.edit 权限。',
-        tags: ['角色管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'code', type: 'string'),
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'description', type: 'string'),
-                    new OA\Property(property: 'sort', type: 'integer'),
-                ]
-            )
+    #[SwPut(path: '/api/roles/{id}', operationId: 'roleUpdate', summary: '更新角色', tag: '角色管理',
+        desc: '部分更新：传哪些改哪些；内置角色不允许改标识。需要 role.edit 权限。',
+        params: [new SwId()],
+        body: new SwBody(
+            props: [
+                new SwProp('code'),
+                new SwProp('name'),
+                new SwProp('description'),
+                new SwProp('sort', type: 'integer'),
+            ],
+            required: false,
         ),
-        responses: [
-            new OA\Response(response: '200', description: '返回更新后的角色'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
+        responses: [new SwResp(desc: '返回更新后的角色')]
     )]
     public function update(int $id): ResponseInterface
     {
@@ -185,22 +150,10 @@ class RoleController extends AbstractController
     /**
      * DELETE /api/roles/{id}.
      */
-    #[OA\Delete(
-        path: '/api/roles/{id}',
-        operationId: 'roleDestroy',
-        summary: '删除角色',
-        description: '内置角色（is_system）不可删除；有用户绑定时拒绝删除。需要 role.delete 权限。',
-        tags: ['角色管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-            new OA\Response(response: '200', description: '已删除'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
+    #[SwDelete(path: '/api/roles/{id}', operationId: 'roleDestroy', summary: '删除角色', tag: '角色管理',
+        desc: '内置角色（is_system）不可删除；有用户绑定时拒绝删除。需要 role.delete 权限。',
+        params: [new SwId()],
+        responses: [new SwResp(desc: '已删除')]
     )]
     public function destroy(int $id): ResponseInterface
     {
@@ -214,31 +167,14 @@ class RoleController extends AbstractController
     /**
      * GET /api/roles/{id}/permissions：该角色已勾选的权限 ID。
      */
-    #[OA\Get(
-        path: '/api/roles/{id}/permissions',
-        operationId: 'rolePermissionIds',
-        summary: '角色已授权的权限 ID',
-        description: '用于角色授权弹窗回显（前端只需勾选叶子节点）。需要 role.view 权限。',
-        tags: ['角色管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-            new OA\Response(
-                response: '200',
-                description: '权限 ID 集合',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'data', properties: [
-                            new OA\Property(property: 'permission_ids', type: 'array', items: new OA\Items(type: 'integer'), example: [41, 42, 47, 68]),
-                        ]),
-                    ]
-                )
-            ),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-        ]
+    #[SwGet(path: '/api/roles/{id}/permissions', operationId: 'rolePermissionIds', summary: '角色已授权的权限 ID', tag: '角色管理',
+        desc: '用于角色授权弹窗回显（前端只需勾选叶子节点）。需要 role.view 权限。',
+        params: [new SwId()],
+        responses: [new SwResp(desc: '权限 ID 集合', props: [
+            new OA\Property(property: 'data', properties: [
+                new OA\Property(property: 'permission_ids', type: 'array', items: new OA\Items(type: 'integer'), example: [41, 42, 47, 68]),
+            ]),
+        ])]
     )]
     public function permissions(int $id): ResponseInterface
     {
@@ -250,33 +186,17 @@ class RoleController extends AbstractController
     /**
      * PUT /api/roles/{id}/permissions：覆盖式保存角色权限。
      */
-    #[OA\Put(
-        path: '/api/roles/{id}/permissions',
-        operationId: 'roleSyncPermissions',
-        summary: '覆盖式保存角色授权',
-        description: '全量覆盖该角色的权限；系统角色会强制补回 is_system 权限防止锁死。保存后 Redis 权限缓存立即失效。需要 role.assign 权限。',
-        tags: ['角色管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['permission_ids'],
-                properties: [
-                    new OA\Property(property: 'permission_ids', type: 'array', items: new OA\Items(type: 'integer'), example: [1, 2, 41, 47],
-                        description: '全量权限 ID 列表（可为空数组）'),
-                ]
-            )
+    #[SwPut(path: '/api/roles/{id}/permissions', operationId: 'roleSyncPermissions', summary: '覆盖式保存角色授权', tag: '角色管理',
+        desc: '全量覆盖该角色的权限；系统角色会强制补回 is_system 权限防止锁死。保存后 Redis 权限缓存立即失效。需要 role.assign 权限。',
+        params: [new SwId()],
+        body: new SwBody(
+            props: [
+                new SwProp('permission_ids', type: 'array', desc: '全量权限 ID 列表（可为空数组）',
+                    items: new OA\Items(type: 'integer'), example: [1, 2, 41, 47]),
+            ],
+            requiredProps: ['permission_ids'],
         ),
-        responses: [
-            new OA\Response(response: '200', description: '返回实际生效的权限 ID 集合'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
+        responses: [new SwResp(desc: '返回实际生效的权限 ID 集合')]
     )]
     public function syncPermissions(int $id): ResponseInterface
     {

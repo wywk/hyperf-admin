@@ -17,7 +17,14 @@ use App\Model\MallGoods;
 use App\Service\MallGoodsService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
-use OpenApi\Attributes as OA;
+use App\Swagger\Attributes\SwBody;
+use App\Swagger\Attributes\SwDelete;
+use App\Swagger\Attributes\SwGet;
+use App\Swagger\Attributes\SwId;
+use App\Swagger\Attributes\SwPost;
+use App\Swagger\Attributes\SwProp;
+use App\Swagger\Attributes\SwPut;
+use App\Swagger\Attributes\SwQuery;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -37,33 +44,14 @@ class MallGoodsController extends AbstractController
     {
     }
 
-    #[OA\Get(
-        path: '/api/mall_goods',
-        operationId: 'mall_goodsIndex',
-        summary: '商品管理列表',
-        tags: ['商品管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'page', in: 'query', required: false, description: '页码，默认 1',
-                schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)),
-            new OA\Parameter(name: 'page_size', in: 'query', required: false, description: '每页条数，默认 20',
-                schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)),
-            new OA\Parameter(name: 'name', in: 'query', required: false, description: '商品名称',
-                schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'category_id', in: 'query', required: false, description: '分类',
-                schema: new OA\Schema(type: 'number')),
-            new OA\Parameter(name: 'price', in: 'query', required: false, description: '售价(元)',
-                schema: new OA\Schema(type: 'number')),
-            new OA\Parameter(name: 'status', in: 'query', required: false, description: '状态',
-                schema: new OA\Schema(type: 'string')),
-        ],
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-        ]
-    )]
-    public function index(): ResponseInterface
+    #[SwGet(path: '/api/mall_goods', operationId: 'mall_goodsIndex', summary: '商品管理列表', tag: '商品管理', page: true,
+    params: [
+        new SwQuery('name', type: 'string', desc: '商品名称'),
+        new SwQuery('category_id', type: 'number', desc: '分类'),
+        new SwQuery('price', type: 'number', desc: '售价(元)'),
+        new SwQuery('status', type: 'string', desc: '状态'),
+    ],
+)]    public function index(): ResponseInterface
     {
         $this->authorize('mall_goods.view');
 
@@ -82,23 +70,9 @@ class MallGoodsController extends AbstractController
         ));
     }
 
-    #[OA\Get(
-        path: '/api/mall_goods/{id}',
-        operationId: 'mall_goodsShow',
-        summary: '商品管理详情',
-        tags: ['商品管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
-    )]
-    public function show(int $id): ResponseInterface
+    #[SwGet(path: '/api/mall_goods/{id}', operationId: 'mall_goodsShow', summary: '商品管理详情', tag: '商品管理',
+    params: [new SwId()],
+)]    public function show(int $id): ResponseInterface
     {
         $this->authorize('mall_goods.view');
 
@@ -110,34 +84,20 @@ class MallGoodsController extends AbstractController
         return ApiResponse::success($model);
     }
 
-    #[OA\Post(
-        path: '/api/mall_goods',
-        operationId: 'mall_goodsStore',
-        summary: '新增商品管理',
-        tags: ['商品管理'],
-        security: [['bearerAuth' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'name', type: 'string', description: '商品名称'),
-                    new OA\Property(property: 'category_id', type: 'number', description: '分类'),
-                    new OA\Property(property: 'price', type: 'number', description: '售价(元)'),
-                    new OA\Property(property: 'stock', type: 'number', nullable: true, description: '库存'),
-                    new OA\Property(property: 'status', type: 'string', nullable: true, description: '状态'),
-                    new OA\Property(property: 'cover', type: 'string', nullable: true, description: '封面图'),
-                    new OA\Property(property: 'summary', type: 'string', nullable: true, description: '简介'),
-                ]
-            )
-        ),
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
-    )]
-    public function store(): ResponseInterface
+    #[SwPost(path: '/api/mall_goods', operationId: 'mall_goodsStore', summary: '新增商品管理', tag: '商品管理',
+    body: new SwBody(
+        props: [
+            new SwProp('name', type: 'string', desc: '商品名称'),
+            new SwProp('category_id', type: 'number', desc: '分类'),
+            new SwProp('price', type: 'number', desc: '售价(元)'),
+            new SwProp('stock', type: 'number', nullable: true, desc: '库存'),
+            new SwProp('status', type: 'string', nullable: true, desc: '状态'),
+            new SwProp('cover', type: 'string', nullable: true, desc: '封面图'),
+            new SwProp('summary', type: 'string', nullable: true, desc: '简介'),
+        ],
+        requiredProps: ['name', 'category_id', 'price'],
+    ),
+)]    public function store(): ResponseInterface
     {
         $this->authorize('mall_goods.add');
 
@@ -146,39 +106,22 @@ class MallGoodsController extends AbstractController
         return ApiResponse::success(['id' => (int) $this->service->create($data)->id], '创建成功');
     }
 
-    #[OA\Put(
-        path: '/api/mall_goods/{id}',
-        operationId: 'mall_goodsUpdate',
-        summary: '更新商品管理',
-        description: '支持部分字段更新（传哪些改哪些）。',
-        tags: ['商品管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+    #[SwPut(path: '/api/mall_goods/{id}', operationId: 'mall_goodsUpdate', summary: '更新商品管理', tag: '商品管理',
+    desc: '支持部分字段更新（传哪些改哪些）。',
+    params: [new SwId()],
+    body: new SwBody(
+        props: [
+            new SwProp('name', type: 'string', desc: '商品名称'),
+            new SwProp('category_id', type: 'number', desc: '分类'),
+            new SwProp('price', type: 'number', desc: '售价(元)'),
+            new SwProp('stock', type: 'number', nullable: true, desc: '库存'),
+            new SwProp('status', type: 'string', nullable: true, desc: '状态'),
+            new SwProp('cover', type: 'string', nullable: true, desc: '封面图'),
+            new SwProp('summary', type: 'string', nullable: true, desc: '简介'),
         ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'name', type: 'string', description: '商品名称'),
-                    new OA\Property(property: 'category_id', type: 'number', description: '分类'),
-                    new OA\Property(property: 'price', type: 'number', description: '售价(元)'),
-                    new OA\Property(property: 'stock', type: 'number', nullable: true, description: '库存'),
-                    new OA\Property(property: 'status', type: 'string', nullable: true, description: '状态'),
-                    new OA\Property(property: 'cover', type: 'string', nullable: true, description: '封面图'),
-                    new OA\Property(property: 'summary', type: 'string', nullable: true, description: '简介'),
-                ]
-            )
-        ),
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
-    )]
-    public function update(int $id): ResponseInterface
+        required: false,
+    ),
+)]    public function update(int $id): ResponseInterface
     {
         $this->authorize('mall_goods.edit');
 
@@ -188,23 +131,9 @@ class MallGoodsController extends AbstractController
         return ApiResponse::success(['id' => $id], '保存成功');
     }
 
-    #[OA\Delete(
-        path: '/api/mall_goods/{id}',
-        operationId: 'mall_goodsDestroy',
-        summary: '删除商品管理',
-        tags: ['商品管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
-    )]
-    public function destroy(int $id): ResponseInterface
+    #[SwDelete(path: '/api/mall_goods/{id}', operationId: 'mall_goodsDestroy', summary: '删除商品管理', tag: '商品管理',
+    params: [new SwId()],
+)]    public function destroy(int $id): ResponseInterface
     {
         $this->authorize('mall_goods.delete');
 

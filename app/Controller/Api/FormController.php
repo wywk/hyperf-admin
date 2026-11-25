@@ -18,6 +18,15 @@ use App\Exception\BusinessException;
 use App\Model\Form;
 use App\Model\FormSubmission;
 use App\Support\ClientIp;
+use App\Swagger\Attributes\SwBody;
+use App\Swagger\Attributes\SwDelete;
+use App\Swagger\Attributes\SwGet;
+use App\Swagger\Attributes\SwId;
+use App\Swagger\Attributes\SwPost;
+use App\Swagger\Attributes\SwProp;
+use App\Swagger\Attributes\SwPut;
+use App\Swagger\Attributes\SwQuery;
+use App\Swagger\Attributes\SwResp;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use OpenApi\Attributes as OA;
@@ -41,25 +50,13 @@ class FormController extends AbstractController
     /**
      * GET /api/forms 表单列表。
      */
-    #[OA\Get(
-        path: '/api/forms',
-        operationId: 'formIndex',
-        summary: '表单列表',
-        description: '表单定义分页列表（不含 schema 大字段）。需要 form.view 权限。',
-        tags: ['表单管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)),
-            new OA\Parameter(name: 'page_size', in: 'query', required: false, schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)),
-            new OA\Parameter(name: 'keyword', in: 'query', required: false, description: '按名称/标识模糊搜索', schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'status', in: 'query', required: false, description: '1=已发布 0=停用',
-                schema: new OA\Schema(type: 'integer', enum: [0, 1])),
+    #[SwGet(path: '/api/forms', operationId: 'formIndex', summary: '表单列表', tag: '表单管理', page: true,
+        desc: '表单定义分页列表（不含 schema 大字段）。需要 form.view 权限。',
+        params: [
+            new SwQuery('keyword', desc: '按名称/标识模糊搜索'),
+            new SwQuery('status', type: 'integer', desc: '1=已发布 0=停用', enum: [0, 1]),
         ],
-        responses: [
-            new OA\Response(response: '200', description: '分页结果：{total, page, page_size, items[]}'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-        ]
+        responses: [new SwResp(desc: '分页结果：{total, page, page_size, items[]}')]
     )]
     public function index(): ResponseInterface
     {
@@ -99,22 +96,10 @@ class FormController extends AbstractController
     /**
      * GET /api/forms/{id} 表单详情（含 Schema）。
      */
-    #[OA\Get(
-        path: '/api/forms/{id}',
-        operationId: 'formShow',
-        summary: '表单详情',
-        description: '返回表单定义，含完整 JSON Schema（设计器回显用）。需要 form.view 权限。',
-        tags: ['表单管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-            new OA\Response(response: '200', description: '表单定义（含 schema.fields 字段数组）'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
+    #[SwGet(path: '/api/forms/{id}', operationId: 'formShow', summary: '表单详情', tag: '表单管理',
+        desc: '返回表单定义，含完整 JSON Schema（设计器回显用）。需要 form.view 权限。',
+        params: [new SwId()], errors: [401, 403, 404],
+        responses: [new SwResp(desc: '表单定义（含 schema.fields 字段数组）')]
     )]
     public function show(int $id): ResponseInterface
     {
@@ -131,35 +116,22 @@ class FormController extends AbstractController
     /**
      * POST /api/forms 新增表单。
      */
-    #[OA\Post(
-        path: '/api/forms',
-        operationId: 'formStore',
-        summary: '创建表单',
-        description: 'schema 结构：{fields: [{field, label, type, required?, min?, max?, options?}]}，type 支持 input/textarea/number/select/radio/checkbox/date/switch。需要 form.add 权限。',
-        tags: ['表单管理'],
-        security: [['bearerAuth' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['name', 'code', 'schema'],
-                properties: [
-                    new OA\Property(property: 'name', type: 'string', example: '客户报名'),
-                    new OA\Property(property: 'code', type: 'string', example: 'customer_signup', description: '公开提交接口用它定位'),
-                    new OA\Property(property: 'description', type: 'string'),
-                    new OA\Property(property: 'schema', type: 'object',
-                        properties: [
-                            new OA\Property(property: 'fields', type: 'array', items: new OA\Items(type: 'object'),
-                                description: '字段定义数组，每项含 field/label/type'),
-                        ]),
-                ]
-            )
+    #[SwPost(path: '/api/forms', operationId: 'formStore', summary: '创建表单', tag: '表单管理',
+        desc: 'schema 结构：{fields: [{field, label, type, required?, min?, max?, options?}]}，type 支持 input/textarea/number/select/radio/checkbox/date/switch。需要 form.add 权限。',
+        body: new SwBody(
+            props: [
+                new SwProp('name', example: '客户报名'),
+                new SwProp('code', desc: '公开提交接口用它定位', example: 'customer_signup'),
+                new SwProp('description'),
+                new OA\Property(property: 'schema', type: 'object',
+                    properties: [
+                        new OA\Property(property: 'fields', type: 'array', items: new OA\Items(type: 'object'),
+                            description: '字段定义数组，每项含 field/label/type'),
+                    ]),
+            ],
+            requiredProps: ['name', 'code', 'schema'],
         ),
-        responses: [
-            new OA\Response(response: '200', description: '返回新表单 id'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
+        responses: [new SwResp(desc: '返回新表单 id')]
     )]
     public function store(): ResponseInterface
     {
@@ -181,36 +153,20 @@ class FormController extends AbstractController
     /**
      * PUT /api/forms/{id} 更新表单。
      */
-    #[OA\Put(
-        path: '/api/forms/{id}',
-        operationId: 'formUpdate',
-        summary: '更新表单',
-        description: '全量覆盖 name/code/schema/description，可选更新 status。需要 form.edit 权限。',
-        tags: ['表单管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ['name', 'code', 'schema'],
-                properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'code', type: 'string'),
-                    new OA\Property(property: 'description', type: 'string'),
-                    new OA\Property(property: 'status', type: 'integer', enum: [0, 1]),
-                    new OA\Property(property: 'schema', type: 'object'),
-                ]
-            )
+    #[SwPut(path: '/api/forms/{id}', operationId: 'formUpdate', summary: '更新表单', tag: '表单管理',
+        desc: '全量覆盖 name/code/schema/description，可选更新 status。需要 form.edit 权限。',
+        params: [new SwId()],
+        body: new SwBody(
+            props: [
+                new SwProp('name'),
+                new SwProp('code'),
+                new SwProp('description'),
+                new SwProp('status', type: 'integer', enum: [0, 1]),
+                new SwProp('schema', type: 'object'),
+            ],
+            requiredProps: ['name', 'code', 'schema'],
         ),
-        responses: [
-            new OA\Response(response: '200', description: '返回表单 id'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
+        responses: [new SwResp(desc: '返回表单 id')]
     )]
     public function update(int $id): ResponseInterface
     {
@@ -237,22 +193,10 @@ class FormController extends AbstractController
     /**
      * DELETE /api/forms/{id} 删除表单（连同提交数据）。
      */
-    #[OA\Delete(
-        path: '/api/forms/{id}',
-        operationId: 'formDestroy',
-        summary: '删除表单',
-        description: '连同该表单的全部提交数据一并删除。需要 form.delete 权限。',
-        tags: ['表单管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-            new OA\Response(response: '200', description: '已删除'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
+    #[SwDelete(path: '/api/forms/{id}', operationId: 'formDestroy', summary: '删除表单', tag: '表单管理',
+        desc: '连同该表单的全部提交数据一并删除。需要 form.delete 权限。',
+        params: [new SwId()],
+        responses: [new SwResp(desc: '已删除')]
     )]
     public function destroy(int $id): ResponseInterface
     {
@@ -272,24 +216,10 @@ class FormController extends AbstractController
     /**
      * GET /api/forms/{id}/submissions 提交数据列表。
      */
-    #[OA\Get(
-        path: '/api/forms/{id}/submissions',
-        operationId: 'formSubmissions',
-        summary: '表单提交数据分页',
-        description: '返回 form 元信息（含 schema，用于渲染列）与提交数据分页。需要 form.view 权限。',
-        tags: ['表单管理'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)),
-            new OA\Parameter(name: 'page_size', in: 'query', required: false, schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)),
-        ],
-        responses: [
-            new OA\Response(response: '200', description: '{form, total, page, page_size, items[]}'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
+    #[SwGet(path: '/api/forms/{id}/submissions', operationId: 'formSubmissions', summary: '表单提交数据分页', tag: '表单管理', page: true,
+        desc: '返回 form 元信息（含 schema，用于渲染列）与提交数据分页。需要 form.view 权限。',
+        params: [new SwId()], errors: [401, 403, 404],
+        responses: [new SwResp(desc: '{form, total, page, page_size, items[]}')]
     )]
     public function submissions(int $id): ResponseInterface
     {
@@ -321,33 +251,18 @@ class FormController extends AbstractController
     /**
      * GET /api/form/{code} 公开：按标识取已发布的表单 Schema（渲染用）。
      */
-    #[OA\Get(
-        path: '/api/form/{code}',
-        operationId: 'formPublicSchema',
-        summary: '【公开】按标识取表单 Schema',
-        description: '无需登录；只返回已发布（status=1）的表单，供任意渲染方（H5/静态页）拉取字段定义。',
-        tags: ['表单（公开）'],
-        parameters: [
-            new OA\Parameter(name: 'code', in: 'path', required: true, description: '表单标识',
-                schema: new OA\Schema(type: 'string', example: 'customer_signup')),
-        ],
-        responses: [
-            new OA\Response(
-                response: '200',
-                description: '{id, name, description, schema}',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'data', type: 'object',
-                            properties: [
-                                new OA\Property(property: 'id', type: 'integer'),
-                                new OA\Property(property: 'name', type: 'string'),
-                                new OA\Property(property: 'schema', type: 'object'),
-                            ]),
-                    ]
-                )
-            ),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
+    #[SwGet(path: '/api/form/{code}', operationId: 'formPublicSchema', summary: '【公开】按标识取表单 Schema', tag: '表单（公开）', auth: false,
+        desc: '无需登录；只返回已发布（status=1）的表单，供任意渲染方（H5/静态页）拉取字段定义。',
+        params: [new SwId('code', type: 'string', desc: '表单标识', example: 'customer_signup')],
+        errors: [404],
+        responses: [new SwResp(desc: '{id, name, description, schema}', props: [
+            new OA\Property(property: 'data', type: 'object',
+                properties: [
+                    new OA\Property(property: 'id', type: 'integer'),
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'schema', type: 'object'),
+                ]),
+        ])]
     )]
     public function publicSchema(string $code): ResponseInterface
     {
@@ -367,31 +282,15 @@ class FormController extends AbstractController
     /**
      * POST /api/form/{code}/submit 公开：提交表单数据（按 Schema 做基础校验）。
      */
-    #[OA\Post(
-        path: '/api/form/{code}/submit',
-        operationId: 'formPublicSubmit',
-        summary: '【公开】提交表单数据',
-        description: '无需登录；按表单 Schema 校验必填/类型/数值范围后入库，并记录提交者 IP。',
-        tags: ['表单（公开）'],
-        parameters: [
-            new OA\Parameter(name: 'code', in: 'path', required: true, description: '表单标识',
-                schema: new OA\Schema(type: 'string', example: 'customer_signup')),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                example: ['name' => '张三', 'phone' => '13800000000', 'age' => 28],
-                properties: [
-                    new OA\Property(property: 'data', type: 'object',
-                        description: '按 schema.fields 的 field 名作为 key 提交'),
-                ]
-            )
+    #[SwPost(path: '/api/form/{code}/submit', operationId: 'formPublicSubmit', summary: '【公开】提交表单数据', tag: '表单（公开）', auth: false,
+        desc: '无需登录；按表单 Schema 校验必填/类型/数值范围后入库，并记录提交者 IP。',
+        params: [new SwId('code', type: 'string', desc: '表单标识', example: 'customer_signup')],
+        errors: [404, 422],
+        body: new SwBody(
+            props: [new SwProp('data', type: 'object', desc: '按 schema.fields 的 field 名作为 key 提交')],
+            example: ['name' => '张三', 'phone' => '13800000000', 'age' => 28],
         ),
-        responses: [
-            new OA\Response(response: '200', description: '提交成功'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
+        responses: [new SwResp(desc: '提交成功')]
     )]
     public function submit(string $code): ResponseInterface
     {

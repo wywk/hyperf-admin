@@ -17,7 +17,14 @@ use App\Model\Product;
 use App\Service\ProductService;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
-use OpenApi\Attributes as OA;
+use App\Swagger\Attributes\SwBody;
+use App\Swagger\Attributes\SwDelete;
+use App\Swagger\Attributes\SwGet;
+use App\Swagger\Attributes\SwId;
+use App\Swagger\Attributes\SwPost;
+use App\Swagger\Attributes\SwProp;
+use App\Swagger\Attributes\SwPut;
+use App\Swagger\Attributes\SwQuery;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -37,31 +44,13 @@ class ProductController extends AbstractController
     {
     }
 
-    #[OA\Get(
-        path: '/api/product',
-        operationId: 'productIndex',
-        summary: '示例商品列表',
-        tags: ['示例商品'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'page', in: 'query', required: false, description: '页码，默认 1',
-                schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)),
-            new OA\Parameter(name: 'page_size', in: 'query', required: false, description: '每页条数，默认 20',
-                schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)),
-            new OA\Parameter(name: 'name', in: 'query', required: false, description: '商品名称',
-                schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'price', in: 'query', required: false, description: '价格',
-                schema: new OA\Schema(type: 'number')),
-            new OA\Parameter(name: 'status', in: 'query', required: false, description: '状态',
-                schema: new OA\Schema(type: 'string')),
-        ],
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-        ]
-    )]
-    public function index(): ResponseInterface
+    #[SwGet(path: '/api/product', operationId: 'productIndex', summary: '示例商品列表', tag: '示例商品', page: true,
+    params: [
+        new SwQuery('name', type: 'string', desc: '商品名称'),
+        new SwQuery('price', type: 'number', desc: '价格'),
+        new SwQuery('status', type: 'string', desc: '状态'),
+    ],
+)]    public function index(): ResponseInterface
     {
         $this->authorize('product.view');
 
@@ -80,23 +69,9 @@ class ProductController extends AbstractController
         ));
     }
 
-    #[OA\Get(
-        path: '/api/product/{id}',
-        operationId: 'productShow',
-        summary: '示例商品详情',
-        tags: ['示例商品'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
-    )]
-    public function show(int $id): ResponseInterface
+    #[SwGet(path: '/api/product/{id}', operationId: 'productShow', summary: '示例商品详情', tag: '示例商品',
+    params: [new SwId()],
+)]    public function show(int $id): ResponseInterface
     {
         $this->authorize('product.view');
 
@@ -108,31 +83,17 @@ class ProductController extends AbstractController
         return ApiResponse::success($model);
     }
 
-    #[OA\Post(
-        path: '/api/product',
-        operationId: 'productStore',
-        summary: '新增示例商品',
-        tags: ['示例商品'],
-        security: [['bearerAuth' => []]],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'name', type: 'string', description: '商品名称'),
-                    new OA\Property(property: 'price', type: 'number', description: '价格'),
-                    new OA\Property(property: 'stock', type: 'number', nullable: true, description: '库存'),
-                    new OA\Property(property: 'status', type: 'string', nullable: true, description: '状态'),
-                ]
-            )
-        ),
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
-    )]
-    public function store(): ResponseInterface
+    #[SwPost(path: '/api/product', operationId: 'productStore', summary: '新增示例商品', tag: '示例商品',
+    body: new SwBody(
+        props: [
+            new SwProp('name', type: 'string', desc: '商品名称'),
+            new SwProp('price', type: 'number', desc: '价格'),
+            new SwProp('stock', type: 'number', nullable: true, desc: '库存'),
+            new SwProp('status', type: 'string', nullable: true, desc: '状态'),
+        ],
+        requiredProps: ['name', 'price'],
+    ),
+)]    public function store(): ResponseInterface
     {
         $this->authorize('product.add');
 
@@ -141,36 +102,19 @@ class ProductController extends AbstractController
         return ApiResponse::success(['id' => (int) $this->service->create($data)->id], '创建成功');
     }
 
-    #[OA\Put(
-        path: '/api/product/{id}',
-        operationId: 'productUpdate',
-        summary: '更新示例商品',
-        description: '支持部分字段更新（传哪些改哪些）。',
-        tags: ['示例商品'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+    #[SwPut(path: '/api/product/{id}', operationId: 'productUpdate', summary: '更新示例商品', tag: '示例商品',
+    desc: '支持部分字段更新（传哪些改哪些）。',
+    params: [new SwId()],
+    body: new SwBody(
+        props: [
+            new SwProp('name', type: 'string', desc: '商品名称'),
+            new SwProp('price', type: 'number', desc: '价格'),
+            new SwProp('stock', type: 'number', nullable: true, desc: '库存'),
+            new SwProp('status', type: 'string', nullable: true, desc: '状态'),
         ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'name', type: 'string', description: '商品名称'),
-                    new OA\Property(property: 'price', type: 'number', description: '价格'),
-                    new OA\Property(property: 'stock', type: 'number', nullable: true, description: '库存'),
-                    new OA\Property(property: 'status', type: 'string', nullable: true, description: '状态'),
-                ]
-            )
-        ),
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-            new OA\Response(response: '422', ref: '#/components/responses/ValidationError'),
-        ]
-    )]
-    public function update(int $id): ResponseInterface
+        required: false,
+    ),
+)]    public function update(int $id): ResponseInterface
     {
         $this->authorize('product.edit');
 
@@ -180,23 +124,9 @@ class ProductController extends AbstractController
         return ApiResponse::success(['id' => $id], '保存成功');
     }
 
-    #[OA\Delete(
-        path: '/api/product/{id}',
-        operationId: 'productDestroy',
-        summary: '删除示例商品',
-        tags: ['示例商品'],
-        security: [['bearerAuth' => []]],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-        ],
-        responses: [
-                        new OA\Response(response: '200', description: '成功'),
-            new OA\Response(response: '401', ref: '#/components/responses/Unauthorized'),
-            new OA\Response(response: '403', ref: '#/components/responses/Forbidden'),
-            new OA\Response(response: '404', ref: '#/components/responses/NotFound'),
-        ]
-    )]
-    public function destroy(int $id): ResponseInterface
+    #[SwDelete(path: '/api/product/{id}', operationId: 'productDestroy', summary: '删除示例商品', tag: '示例商品',
+    params: [new SwId()],
+)]    public function destroy(int $id): ResponseInterface
     {
         $this->authorize('product.delete');
 

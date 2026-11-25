@@ -24,13 +24,14 @@ class SwId extends OA\Parameter
         string $name = 'id',
         string $type = 'integer',
         string $desc = 'ID',
+        mixed $example = null,
     ) {
         parent::__construct(
             name: $name,
             in: 'path',
             required: true,
             description: $desc !== '' ? $desc : null,
-            schema: new OA\Schema(type: $type),
+            schema: new OA\Schema(type: $type, example: $example),
         );
     }
 }
