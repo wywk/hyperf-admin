@@ -4082,7 +4082,7 @@
                     {
                         "name": "name",
                         "in": "query",
-                        "description": "商品名称",
+                        "description": "名称",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -4169,7 +4169,7 @@
                                 ],
                                 "properties": {
                                     "name": {
-                                        "description": "商品名称",
+                                        "description": "名称",
                                         "type": "string",
                                         "example": null,
                                         "nullable": false
@@ -4184,13 +4184,13 @@
                                         "description": "库存",
                                         "type": "number",
                                         "example": null,
-                                        "nullable": true
+                                        "nullable": false
                                     },
                                     "status": {
                                         "description": "状态",
                                         "type": "string",
                                         "example": null,
-                                        "nullable": true
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
@@ -4283,7 +4283,7 @@
                             "schema": {
                                 "properties": {
                                     "name": {
-                                        "description": "商品名称",
+                                        "description": "名称",
                                         "type": "string",
                                         "example": null,
                                         "nullable": false
@@ -4298,13 +4298,13 @@
                                         "description": "库存",
                                         "type": "number",
                                         "example": null,
-                                        "nullable": true
+                                        "nullable": false
                                     },
                                     "status": {
                                         "description": "状态",
                                         "type": "string",
                                         "example": null,
-                                        "nullable": true
+                                        "nullable": false
                                     }
                                 },
                                 "type": "object"
@@ -4366,6 +4366,67 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/product/export": {
+            "get": {
+                "tags": [
+                    "示例商品"
+                ],
+                "summary": "导出示例商品 Excel",
+                "description": "与列表共用搜索参数，导出全部匹配记录为 xlsx（按 id 升序分批读取）。",
+                "operationId": "productExport",
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "名称",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "price",
+                        "in": "query",
+                        "description": "价格",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "状态",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
                     }
                 },
                 "security": [

@@ -128,3 +128,11 @@ export const http = {
     return request<T>({ ...config, url, method: 'delete' })
   },
 }
+
+/**
+ * 下载二进制文件（带鉴权头），返回 Blob；错误仍然走统一拦截器（401 自动刷新等）。
+ */
+export async function downloadFile(url: string, params?: Record<string, unknown>): Promise<Blob> {
+  const response = await service.get(url, { params, responseType: 'blob' })
+  return response.data as Blob
+}

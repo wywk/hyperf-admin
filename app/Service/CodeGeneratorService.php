@@ -300,6 +300,7 @@ class CodeGeneratorService
         $optionMaps = [];
         $searchParams = [];
         $formFieldSpecs = [];
+        $exportColumns = [];
 
         foreach ($fields as $field) {
             $name = $field['name'];
@@ -319,6 +320,8 @@ class CodeGeneratorService
             $rules[] = "            '{$name}' => '" . ($required ? 'required|' : 'nullable|') . $ruleBody . "',";
             if ($name !== 'id') {
                 $fillable[] = "        '{$name}',";
+                // 导出列：除 id 外全部业务字段（ExcelService 负责把数组/日期等转成文本）
+                $exportColumns[] = "        '{$name}' => '{$label}',";
             }
 
             $casts[] = match ($formType) {
@@ -424,6 +427,7 @@ class CodeGeneratorService
             'form_rules' => $formRules === [] ? '{}' : "{\n" . implode("\n", $formRules) . "\n}",
             'option_maps' => $optionMaps === [] ? '' : implode("\n\n", $optionMaps) . "\n",
             'routes_block' => $this->renderRoutesBlock($module, $studly),
+            'export_columns' => implode("\n", $exportColumns) ?: "        // 无导出字段",
             'frontend_route' => $this->renderFrontendRoute($module, $studly, $menuName, $menuPath),
         ];
     }
@@ -479,6 +483,7 @@ class CodeGeneratorService
 
         return "Router::addGroup('/api', function () {\n"
             . "    Router::get('/{$module}', [{$c}, 'index']);\n"
+            . "    Router::get('/{$module}/export', [{$c}, 'export']);\n"
             . "    Router::post('/{$module}', [{$c}, 'store']);\n"
             . "    Router::get('/{$module}/{id:\\d+}', [{$c}, 'show']);\n"
             . "    Router::put('/{$module}/{id:\\d+}', [{$c}, 'update']);\n"
@@ -578,6 +583,25 @@ class {$ctx['studly']}Service
         ];
     }
 
+    /**
+     * 导出全量数据：与列表共用筛选条件，按 id 升序每批 500 条产出（Generator，内存友好）。
+     */
+    public function exportRows(array \$filters): \\Generator
+    {
+        \$page = 1;
+        do {
+            \$query = {$ctx['studly']}::query()->orderBy('id');
+
+{$ctx['search_wheres']}
+
+            \$rows = \$query->forPage(\$page, 500)->get();
+            foreach (\$rows as \$row) {
+                yield \$row;
+            }
+            ++\$page;
+        } while (\$rows->count() === 500);
+    }
+
     public function create(array \$data): {$ctx['studly']}
     {
         return {$ctx['studly']}::query()->create(\$data);
@@ -660,6 +684,14 @@ PHP;
         params: [new SwId()],
     )]
 PHP;
+        $swExport = <<<PHP
+    #[SwGet(path: '/api/{$module}/export', operationId: '{$module}Export', summary: '导出{$tag} Excel', tag: '{$tag}',
+        desc: '与列表共用搜索参数，导出全部匹配记录为 xlsx（按 id 升序分批读取）。',
+        params: [
+{$searchParamLines}
+        ],
+    )]
+PHP;
 
         return <<<PHP
 <?php
@@ -679,6 +711,7 @@ use App\\Controller\\AbstractController;
 use App\\Controller\\Concerns\\AuthorizesRequests;
 use App\\Model\\{$ctx['studly']};
 use App\\Service\\{$ctx['studly']}Service;
+use App\\Service\\Excel\\ExcelService;
 use App\\Swagger\\Attributes\\SwBody;
 use App\\Swagger\\Attributes\\SwDelete;
 use App\\Swagger\\Attributes\\SwGet;
@@ -703,6 +736,9 @@ class {$ctx['studly']}Controller extends AbstractController
 
     #[Inject]
     protected ValidatorFactoryInterface \$validatorFactory;
+
+    #[Inject]
+    protected ExcelService \$excel;
 
     public function __construct(protected {$ctx['studly']}Service \$service)
     {
@@ -772,6 +808,25 @@ class {$ctx['studly']}Controller extends AbstractController
         return ApiResponse::success(null, '已删除');
     }
 
+{$swExport}
+    public function export(): ResponseInterface
+    {
+        \$this->authorize('{$ctx['module']}.view');
+
+        \$data = \$this->validatorFactory->make(\$this->request->all(), \$this->searchRules())->validate();
+        \$filters = array_filter(\$this->searchFilters(\$data), static fn (\$v) => \$v !== null && \$v !== '');
+
+        \$binary = \$this->excel->export(
+            '{$ctx['module']}.xlsx',
+            \$this->exportColumns(),
+            \$this->service->exportRows(\$filters)
+        );
+
+        return \$this->response->raw(\$binary)
+            ->withHeader('Content-Type', ExcelService::XLSX_MIME)
+            ->withHeader('Content-Disposition', 'attachment; filename="{$ctx['module']}.xlsx"');
+    }
+
     private function rules(): array
     {
         return [
@@ -804,6 +859,14 @@ class {$ctx['studly']}Controller extends AbstractController
         return array_keys(\$this->searchFilters([]));
     }
 
+    /** 导出列：字段 => 表头文本（配置的所有业务字段） */
+    private function exportColumns(): array
+    {
+        return [
+{$ctx['export_columns']}
+        ];
+    }
+
     /** 从请求里提取搜索条件 */
     private function searchFilters(array \$data): array
     {
@@ -819,7 +882,7 @@ PHP;
     private function renderFrontendApi(array $ctx): string
     {
         return <<<TS
-import { http } from '@/api/http'
+import { downloadFile, http } from '@/api/http'
 
 export interface {$ctx['studly']}Item {
   id: number
@@ -846,6 +909,11 @@ export function delete{$ctx['studly']}(id: number) {
   return http.delete<null>(`/{$ctx['module']}/\${id}`)
 }
 
+/** 导出 Excel（xlsx Blob），与列表共用搜索参数 */
+export function export{$ctx['studly']}Excel(params?: Record<string, unknown>): Promise<Blob> {
+  return downloadFile('/{$ctx['module']}/export', params)
+}
+
 TS;
     }
 
@@ -864,12 +932,14 @@ import { onMounted, reactive, ref } from 'vue'
 import {
   create{$studly},
   delete{$studly},
+  export{$studly}Excel,
   fetch{$studly}List,
   update{$studly},
 } from '@/api/gen/{$module}'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
+const exporting = ref(false)
 {$ctx['option_maps']}
 const items = ref<any[]>([])
 const total = ref(0)
@@ -899,6 +969,33 @@ function resetQuery(): void {
   }
   query.page = 1
   void load()
+}
+
+/** 按当前搜索条件导出全量 Excel */
+async function exportExcel(): Promise<void> {
+  exporting.value = true
+  try {
+    const filters: Record<string, unknown> = {}
+    for (const key of Object.keys(query)) {
+      if (key !== 'page' && key !== 'page_size') {
+        filters[key] = query[key]
+      }
+    }
+    const blob = await export{$studly}Excel(filters)
+    downloadBlob(blob, '{$module}.xlsx')
+  } catch {
+    // 错误提示由请求层统一处理
+  } finally {
+    exporting.value = false
+  }
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(link.href)
 }
 
 onMounted(load)
@@ -984,7 +1081,10 @@ async function remove(row: any): Promise<void> {
   <div class="page">
     <div class="page-header">
       <h2 class="page-title">{$ctx['menu_name']}管理</h2>
-      <el-button v-permission="'{$module}.add'" type="primary" @click="openCreate">新增</el-button>
+      <div class="header-actions">
+        <el-button :loading="exporting" @click="exportExcel">导出 Excel</el-button>
+        <el-button v-permission="'{$module}.add'" type="primary" @click="openCreate">新增</el-button>
+      </div>
     </div>
 
     <el-card shadow="never">
@@ -1038,6 +1138,11 @@ async function remove(row: any): Promise<void> {
 .page-title {
   margin: 0;
   font-size: 20px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .filters {

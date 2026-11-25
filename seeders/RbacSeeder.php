@@ -100,8 +100,9 @@ class RbacSeeder extends Seeder
         $admin = $this->upsertRole('admin', '管理员', '拥有全部权限，内置角色不可删除', 1, 10);
         $user = $this->upsertRole('user', '普通用户', '仅可访问基础页面', 0, 20);
 
-        // 管理员：整棵权限树（新建权限的接口也会自动授予系统角色）
-        $this->sync($admin, array_values($idsByCode));
+        // 管理员：整棵权限树 + 生成器等途径创建的全部权限（超管语义：始终拥有所有权限）
+        $allPermissionIds = Permission::query()->pluck('id')->all();
+        $this->sync($admin, $allPermissionIds);
 
         // 普通用户：只给基础页面，用来验证菜单过滤与 403
         $basicCodes = ['dashboard', 'profile'];

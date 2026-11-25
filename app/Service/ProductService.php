@@ -44,6 +44,33 @@ class ProductService
         ];
     }
 
+    /**
+     * 导出全量数据：与列表共用筛选条件，按 id 升序每批 500 条产出（Generator，内存友好）。
+     */
+    public function exportRows(array $filters): \Generator
+    {
+        $page = 1;
+        do {
+            $query = Product::query()->orderBy('id');
+
+        if (isset($filters['name']) && $filters['name'] !== null && $filters['name'] !== '') {
+            $query->where('name', 'like', '%'.$filters['name'].'%');
+        }
+        if (isset($filters['price']) && $filters['price'] !== null && $filters['price'] !== '') {
+            $query->where('price', $filters['price']);
+        }
+        if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
+            $query->where('status', $filters['status']);
+        }
+
+            $rows = $query->forPage($page, 500)->get();
+            foreach ($rows as $row) {
+                yield $row;
+            }
+            ++$page;
+        } while ($rows->count() === 500);
+    }
+
     public function create(array $data): Product
     {
         return Product::query()->create($data);
