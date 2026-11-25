@@ -18,6 +18,13 @@
 find app -name "*.php" | xargs -n1 php -l
 vendor/bin/php-cs-fixer fix --dry-run --diff
 
+# 后端：功能测试（使用独立的 hyperf_admin_test 库）
+#   首次准备：
+#   mysql -e "CREATE DATABASE IF NOT EXISTS hyperf_admin_test DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+#   DB_DATABASE=hyperf_admin_test php bin/hyperf.php migrate --force
+#   DB_DATABASE=hyperf_admin_test php bin/hyperf.php db:seed --force
+php test/run.php
+
 # 前端：类型检查 + 生产构建
 cd frontend
 npx vue-tsc --noEmit

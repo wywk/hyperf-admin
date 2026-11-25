@@ -7,6 +7,10 @@
   </testsuites>
   <php>
     <env name="APP_ENV" value="testing" force="true"/>
+    <!-- 测试使用独立数据库，避免污染开发数据；需先执行：
+         CREATE DATABASE hyperf_admin_test && DB_DATABASE=hyperf_admin_test php bin/hyperf.php migrate && db:seed -->
+    <env name="DB_DATABASE" value="hyperf_admin_test" force="true"/>
+    <env name="JWT_SECRET" value="testing_secret_only_for_phpunit_32bytes" force="true"/>
   </php>
   <source>
     <include>
