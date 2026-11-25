@@ -28,6 +28,8 @@ English | [简体中文](README.md)
 | 📋 Login audit | Full record of login/logout/failures (IP, UA, event) with paged query API + admin page, configurable retention and a built-in prune command |
 | 🧾 Form designer | Visual form builder (input / number / select / radio / checkbox / switch / date) exporting **JSON Schema**; built-in render engine; collect submissions via a public endpoint after publishing |
 | ⚙️ Code generator | Pick a table + configure fields → generates **backend** (Model / Service / Controller / route block / validation) + **frontend** (api module / list page / form dialog) + auto-registers menus and button permissions |
+| 📁 File management | Storage driver abstraction (local driver out of the box; implement `DriverInterface` for OSS/S3/COS), upload whitelist + size limit + real MIME sniffing, public URLs, thumbnail preview |
+| 📚 Data dictionary | Two-level dict types + items; business reads select options via `/api/dict/{code}` / `/api/dict/batch` (Redis-cached, invalidated on writes) |
 | 📖 API docs | Zero-dependency OpenAPI 3.0 doc page (`/api/docs`), maintained alongside code via lightweight `Sw*` attributes |
 | 🐳 Deployment | Production Dockerfile (layered caching / health check / auto-migration on boot) + `docker-compose.prod.yml` one-command stack |
 

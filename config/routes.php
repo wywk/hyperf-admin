@@ -10,6 +10,7 @@ declare(strict_types=1);
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 use App\Controller\Api\AuthController;
+use App\Controller\Api\DictController;
 use App\Controller\Api\DocsController;
 use App\Controller\Api\FileController;
 use App\Controller\Api\FormController;
@@ -79,6 +80,19 @@ Router::addGroup('/api', function () {
     Router::get('/files', [FileController::class, 'index']);
     Router::delete('/files/{id:\d+}', [FileController::class, 'destroy']);
     Router::get('/files/{id:\d+}/download', [FileController::class, 'download']);
+
+    // 数据字典（管理接口内部做 dict.* 权限校验；items/batch 只需登录）
+    // 注意：{code} 路由要放在 types/items 之后，避免吞掉两段路径
+    Router::get('/dict/types', [DictController::class, 'types']);
+    Router::post('/dict/types', [DictController::class, 'storeType']);
+    Router::put('/dict/types/{id:\d+}', [DictController::class, 'updateType']);
+    Router::delete('/dict/types/{id:\d+}', [DictController::class, 'destroyType']);
+    Router::get('/dict/types/{id:\d+}/items', [DictController::class, 'items']);
+    Router::post('/dict/types/{id:\d+}/items', [DictController::class, 'storeItem']);
+    Router::put('/dict/items/{id:\d+}', [DictController::class, 'updateItem']);
+    Router::delete('/dict/items/{id:\d+}', [DictController::class, 'destroyItem']);
+    Router::post('/dict/batch', [DictController::class, 'batch']);
+    Router::get('/dict/{code:[a-z][a-z0-9_]*}', [DictController::class, 'data']);
 }, ['middleware' => [AuthMiddleware::class]]);
 
 // 本地上传文件的公开访问（文件名为随机 UUID，路径由 LocalDriver::absolute 校验防穿越）

@@ -221,6 +221,662 @@
                 ]
             }
         },
+        "/api/dict/types": {
+            "get": {
+                "tags": [
+                    "数据字典"
+                ],
+                "summary": "字典类型列表",
+                "description": "全部类型按 sort 排序，item_count 为该类型字典项数量。",
+                "operationId": "dictTypes",
+                "parameters": [
+                    {
+                        "name": "keyword",
+                        "in": "query",
+                        "description": "按名称/编码模糊搜索",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "类型数组，item 含 name/code/description/sort/status/item_count",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "items": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            },
+                                            "example": null,
+                                            "nullable": false
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "数据字典"
+                ],
+                "summary": "新增字典类型",
+                "operationId": "dictTypeStore",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "code"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "description": "类型名称",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "code": {
+                                        "description": "类型编码，小写字母开头，业务按此取字典",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "description": {
+                                        "description": "描述",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "sort": {
+                                        "description": "排序",
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "description": "1=启用 0=停用",
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ],
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/dict/types/{id}": {
+            "put": {
+                "tags": [
+                    "数据字典"
+                ],
+                "summary": "更新字典类型",
+                "description": "编码不可修改；停用类型会同时清掉其缓存。",
+                "operationId": "dictTypeUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": null,
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "类型名称",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "description": {
+                                        "description": "描述",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "sort": {
+                                        "description": "排序",
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "description": "1=启用 0=停用",
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ],
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "数据字典"
+                ],
+                "summary": "删除字典类型",
+                "description": "同时删除该类型下全部字典项并清缓存。",
+                "operationId": "dictTypeDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/dict/types/{id}/items": {
+            "get": {
+                "tags": [
+                    "数据字典"
+                ],
+                "summary": "字典项列表",
+                "description": "管理视角：含停用项，按 sort 排序。",
+                "operationId": "dictItems",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "字典项数组，item 含 label/value/sort/status/remark",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "items": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            },
+                                            "example": null,
+                                            "nullable": false
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "数据字典"
+                ],
+                "summary": "新增字典项",
+                "operationId": "dictItemStore",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "label",
+                                    "value"
+                                ],
+                                "properties": {
+                                    "label": {
+                                        "description": "显示文本",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "value": {
+                                        "description": "存储值，同类型内唯一",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "sort": {
+                                        "description": "排序",
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "description": "1=启用 0=停用",
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ],
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "remark": {
+                                        "description": "备注",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/dict/items/{id}": {
+            "put": {
+                "tags": [
+                    "数据字典"
+                ],
+                "summary": "更新字典项",
+                "description": "值不得与同类型下其他项冲突；修改后清所属类型缓存。",
+                "operationId": "dictItemUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": null,
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "label": {
+                                        "description": "显示文本",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "value": {
+                                        "description": "存储值",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "sort": {
+                                        "description": "排序",
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "description": "1=启用 0=停用",
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ],
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "remark": {
+                                        "description": "备注",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "数据字典"
+                ],
+                "summary": "删除字典项",
+                "operationId": "dictItemDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/dict/{code}": {
+            "get": {
+                "tags": [
+                    "数据字典"
+                ],
+                "summary": "按编码取字典项",
+                "description": "仅返回启用类型下的启用项（带缓存），下拉数据源用；只需登录，无需字典管理权限。",
+                "operationId": "dictData",
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "query",
+                        "description": "字典编码，如 order_status",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "数组 [{label, value}]，按 sort 排序",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "items": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "label": {
+                                                        "type": "string"
+                                                    },
+                                                    "value": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            },
+                                            "example": null,
+                                            "nullable": false
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/dict/batch": {
+            "post": {
+                "tags": [
+                    "数据字典"
+                ],
+                "summary": "批量取多个字典",
+                "description": "页面初始化时一次拉取多个下拉数据源；只需登录。",
+                "operationId": "dictBatch",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "codes"
+                                ],
+                                "properties": {
+                                    "codes": {
+                                        "description": "字典编码数组",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/docs": {
             "get": {
                 "tags": [
@@ -4280,6 +4936,10 @@
         {
             "name": "认证",
             "description": "认证"
+        },
+        {
+            "name": "数据字典",
+            "description": "数据字典"
         },
         {
             "name": "文档",
