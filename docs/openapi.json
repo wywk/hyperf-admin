@@ -3619,6 +3619,74 @@
                 ]
             }
         },
+        "/api/health": {
+            "get": {
+                "tags": [
+                    "系统监控"
+                ],
+                "summary": "系统健康快照",
+                "description": "聚合 MySQL、Redis、PHP/Swoole 运行时、队列积压、磁盘、定时任务（含下次执行时间）、近 1 小时接口耗时（p50/p95/最慢路径）与最近错误日志。需要 health.view 权限。前端每 30 秒轮询。",
+                "operationId": "healthOverview",
+                "responses": {
+                    "200": {
+                        "description": "各维度指标",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "database": {
+                                                    "type": "object"
+                                                },
+                                                "redis": {
+                                                    "type": "object"
+                                                },
+                                                "runtime": {
+                                                    "type": "object"
+                                                },
+                                                "queue": {
+                                                    "type": "object"
+                                                },
+                                                "disk": {
+                                                    "type": "object"
+                                                },
+                                                "crontab": {
+                                                    "type": "object"
+                                                },
+                                                "api_stats": {
+                                                    "type": "object"
+                                                },
+                                                "recent_errors": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/jobs": {
             "get": {
                 "tags": [
@@ -8162,6 +8230,10 @@
         {
             "name": "代码生成器",
             "description": "代码生成器"
+        },
+        {
+            "name": "系统监控",
+            "description": "系统监控"
         },
         {
             "name": "任务中心",

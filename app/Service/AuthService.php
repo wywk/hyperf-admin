@@ -29,7 +29,8 @@ class AuthService
         protected CaptchaService $captcha,
         protected PasswordPolicyService $passwordPolicy,
         protected TotpService $totpService,
-        protected DataScopeService $dataScope
+        protected DataScopeService $dataScope,
+        protected LoginRiskService $risk
     ) {
     }
 
@@ -119,13 +120,18 @@ class AuthService
         $user->last_login_at = date('Y-m-d H:i:s');
         $user->save();
 
+        // 登录风控：评估风险等级（中高风险会推安全提醒给本人），结果随审计日志落库
+        $risk = $this->risk->assessAndNotify((string) $user->username, (int) $user->id, $ip);
+
         $this->audit->record(
             LoginLog::EVENT_LOGIN_SUCCESS,
             (string) $user->username,
             $ip,
             (int) $user->id,
             '登录成功',
-            $userAgent
+            $userAgent,
+            $risk['level'],
+            implode('、', $risk['reasons'])
         );
 
         return array_merge($this->tokenService->issue($user, null, $ip, $userAgent), ['user' => $this->profile($user)]);

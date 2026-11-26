@@ -19,6 +19,7 @@ use App\Controller\Api\DocsController;
 use App\Controller\Api\FileController;
 use App\Controller\Api\FormController;
 use App\Controller\Api\GenController;
+use App\Controller\Api\HealthController;
 use App\Controller\Api\JobController;
 use App\Controller\Api\LoginLogController;
 use App\Controller\Api\NotificationController;
@@ -82,6 +83,9 @@ Router::addGroup('/api', function () {
     Router::post('/jobs/export', [JobController::class, 'createExport']);
     Router::post('/jobs/{id:\d+}/retry', [JobController::class, 'retry']);
     Router::delete('/jobs/{id:\d+}', [JobController::class, 'destroy']);
+
+    // 系统健康监控（health.view 权限）
+    Router::get('/health', [HealthController::class, 'overview']);
 
     // 定时任务（接口内部做 crontab.* 权限校验）
     Router::get('/crontabs', [CrontabController::class, 'index']);

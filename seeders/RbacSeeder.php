@@ -98,6 +98,9 @@ class RbacSeeder extends Seeder
         'jobs' => ['system', 'menu', '任务中心', 'system/jobs', 'List', 58],
         'jobs.view' => ['jobs', 'button', '查看全部任务', '', '', 10],
 
+        'health' => ['system', 'menu', '系统监控', 'system/health', 'Odometer', 62],
+        'health.view' => ['health', 'button', '查看健康指标', '', '', 10],
+
         'tool' => ['', 'menu', '工具开发', 'tool', 'SetUp', 40],
 
         'form' => ['tool', 'menu', '表单管理', 'tool/forms', 'EditPen', 10],

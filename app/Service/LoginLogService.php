@@ -30,6 +30,8 @@ class LoginLogService
 
     /**
      * @param null|int $userId 账号不存在时传 null
+     * @param int $riskLevel 登录风控等级（仅登录成功事件有值）
+     * @param string $riskReasons 风控命中原因（顿号分隔）
      */
     public function record(
         string $event,
@@ -37,7 +39,9 @@ class LoginLogService
         string $ip,
         ?int $userId = null,
         string $message = '',
-        string $userAgent = ''
+        string $userAgent = '',
+        int $riskLevel = 0,
+        string $riskReasons = ''
     ): void {
         if (! $this->configService->bool('login_log_enabled', (bool) config('security.login_log_enabled', true))) {
             return;
@@ -51,6 +55,8 @@ class LoginLogService
                 'ip' => mb_substr($ip, 0, 45),
                 'user_agent' => mb_substr($userAgent, 0, 512),
                 'message' => mb_substr($message, 0, 255),
+                'risk_level' => $riskLevel,
+                'risk_reasons' => mb_substr($riskReasons, 0, 255),
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
         } catch (Throwable $e) {
@@ -84,6 +90,9 @@ class LoginLogService
                 'ip' => (string) $row->ip,
                 'user_agent' => (string) $row->user_agent,
                 'message' => (string) $row->message,
+                'risk_level' => (int) $row->risk_level,
+                'risk_text' => $row->riskText(),
+                'risk_reasons' => (string) $row->risk_reasons,
                 'created_at' => $row->created_at?->toDateTimeString(),
             ];
         }
@@ -143,6 +152,9 @@ class LoginLogService
         }
         if (! empty($filters['ip'])) {
             $query->where('ip', $filters['ip']);
+        }
+        if (isset($filters['risk_level']) && $filters['risk_level'] !== '') {
+            $query->where('risk_level', (int) $filters['risk_level']);
         }
 
         return $query;

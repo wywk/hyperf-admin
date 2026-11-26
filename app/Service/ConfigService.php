@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Service;
@@ -16,6 +18,8 @@ use App\Model\Config;
 use Hyperf\Contract\StdoutLoggerInterface;
 use Hyperf\Redis\Redis;
 use Throwable;
+
+use function Hyperf\Config\config;
 
 /**
  * 系统配置：数据库存值 + Redis 缓存，按 type 自动转成 PHP 类型。
@@ -50,7 +54,7 @@ class ConfigService
     public function all(): array
     {
         try {
-            $cached = $this->redis->get(self::CACHE_KEY);
+            $cached = $this->redis->get($this->cacheKey());
             if (is_string($cached)) {
                 $decoded = json_decode($cached, true);
                 if (is_array($decoded)) {
@@ -68,7 +72,7 @@ class ConfigService
         }
 
         try {
-            $this->redis->setex(self::CACHE_KEY, self::CACHE_TTL, (string) json_encode($values, JSON_UNESCAPED_UNICODE));
+            $this->redis->setex($this->cacheKey(), self::CACHE_TTL, (string) json_encode($values, JSON_UNESCAPED_UNICODE));
         } catch (Throwable) {
         }
 
@@ -180,10 +184,19 @@ class ConfigService
     public function flushCache(): void
     {
         try {
-            $this->redis->del(self::CACHE_KEY);
+            $this->redis->del($this->cacheKey());
         } catch (Throwable $e) {
             $this->logger->warning('系统配置缓存清理失败：' . $e->getMessage());
         }
+    }
+
+    /**
+     * 缓存键按数据库隔离：多个环境（开发/测试）共用同一 Redis 时，
+     * 各自缓存自己库的配置，避免互相覆盖（测试环境尤其会踩）。
+     */
+    private function cacheKey(): string
+    {
+        return self::CACHE_KEY . ':' . (string) config('databases.default.database', 'default');
     }
 
     /**

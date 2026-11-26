@@ -72,6 +72,7 @@ class LoginLogController extends AbstractController
             'username' => 'nullable|string|max:64',
             'user_id' => 'nullable|integer|min:1',
             'ip' => 'nullable|string|max:45',
+            'risk_level' => 'nullable|integer|between:0,3',
         ], [
             'page.integer' => 'page 必须是整数',
             'page.min' => 'page 最小为 1',
@@ -83,6 +84,7 @@ class LoginLogController extends AbstractController
             'username' => $data['username'] ?? null,
             'user_id' => isset($data['user_id']) ? (int) $data['user_id'] : null,
             'ip' => $data['ip'] ?? null,
+            'risk_level' => $data['risk_level'] ?? null,
         ], static fn ($value) => $value !== null && $value !== '');
 
         return ApiResponse::success($this->loginLogService->paginate(
