@@ -118,6 +118,27 @@ class OperationLogTest extends TestCase
         $this->assertSame(403, $resp->json('code'));
     }
 
+    public function testExportReturnsXlsx(): void
+    {
+        $token = $this->loginToken('admin', 'admin123456');
+
+        // 确保至少有一条日志
+        $this->json('/api/roles', ['code' => 'oplog-export-' . uniqid(), 'name' => '导出验证角色'], [
+            'Authorization' => 'Bearer ' . $token,
+        ]);
+
+        $resp = $this->get('/api/operation-logs/export?method=POST', [], ['Authorization' => 'Bearer ' . $token]);
+        $this->assertSame(200, $resp->getStatusCode());
+        $this->assertStringContainsString(
+            'attachment; filename="operation-logs.xlsx"',
+            $resp->getHeaderLine('Content-Disposition')
+        );
+        // xlsx 是 zip 容器，魔数 PK\x03\x04
+        $this->assertSame("PK\x03\x04", substr((string) $resp->getBody(), 0, 4));
+
+        \App\Model\Role::query()->where('name', '导出验证角色')->delete();
+    }
+
     private function loginToken(string $username, string $password): string
     {
         $body = $this->json('/api/auth/login', [

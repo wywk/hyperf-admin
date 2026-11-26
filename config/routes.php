@@ -50,6 +50,7 @@ Router::addGroup('/api', function () {
     Router::post('/auth/logout', [AuthController::class, 'logout']);
     Router::get('/auth/login-logs', [LoginLogController::class, 'index']);
     Router::get('/operation-logs', [OperationLogController::class, 'index']);
+    Router::get('/operation-logs/export', [OperationLogController::class, 'export']);
 
     // 定时任务（接口内部做 crontab.* 权限校验）
     Router::get('/crontabs', [CrontabController::class, 'index']);

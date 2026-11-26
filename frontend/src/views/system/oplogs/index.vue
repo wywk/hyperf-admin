@@ -2,7 +2,8 @@
 import { onMounted, reactive, ref } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from '@/plugins/element'
-import { fetchOperationLogs } from '@/api/oplog'
+import { exportOperationLogs, fetchOperationLogs } from '@/api/oplog'
+import { saveBlob } from '@/utils/download'
 import type { OperationLogItem } from '@/types'
 
 type TagType = 'success' | 'warning' | 'danger' | 'info' | 'primary'
@@ -95,6 +96,26 @@ function refresh(): void {
   void load()
   ElMessage.success('已刷新')
 }
+
+const exporting = ref(false)
+
+async function exportLogs(): Promise<void> {
+  exporting.value = true
+  try {
+    const blob = await exportOperationLogs({
+      username: query.username.trim() || undefined,
+      method: query.method || undefined,
+      path: query.path.trim() || undefined,
+      status_code: query.status_code,
+    })
+    saveBlob(blob, 'operation-logs.xlsx')
+    ElMessage.success('已导出（最多 5000 条）')
+  } catch {
+    // 错误提示已由请求层统一处理
+  } finally {
+    exporting.value = false
+  }
+}
 </script>
 
 <template>
@@ -111,6 +132,7 @@ function refresh(): void {
         <el-icon><Refresh /></el-icon>
         <span>刷新</span>
       </el-button>
+      <el-button v-permission="'oplog.view'" :loading="exporting" @click="exportLogs">导出 Excel</el-button>
     </div>
 
     <el-card shadow="never" class="filter-card">

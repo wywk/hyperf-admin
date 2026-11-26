@@ -131,6 +131,50 @@ class OperationLogService
     }
 
     /**
+     * 导出行（最多 limit 条，防止内存失控；复用分页过滤条件）。
+     *
+     * @return iterable<int, array<int, string>>
+     */
+    public function exportRows(array $filters, int $limit = 5000): iterable
+    {
+        $query = OperationLog::query();
+
+        if (! empty($filters['user_id'])) {
+            $query->where('user_id', $filters['user_id']);
+        }
+        if (! empty($filters['username'])) {
+            $query->where('username', $filters['username']);
+        }
+        if (! empty($filters['method'])) {
+            $query->where('method', strtoupper($filters['method']));
+        }
+        if (! empty($filters['path'])) {
+            $query->where('path', 'like', '%' . $filters['path'] . '%');
+        }
+        if (! empty($filters['status_code'])) {
+            $query->where('status_code', $filters['status_code']);
+        }
+
+        $rows = $query->orderByDesc('id')->limit($limit)->get();
+
+        foreach ($rows as $row) {
+            /* @var OperationLog $row */
+            yield [
+                (string) $row->id,
+                (string) $row->username,
+                (string) $row->user_id,
+                (string) $row->method,
+                (string) $row->path,
+                (string) json_encode($row->params, JSON_UNESCAPED_UNICODE),
+                (string) $row->status_code,
+                (string) $row->cost_ms,
+                (string) $row->ip,
+                (string) ($row->created_at?->toDateTimeString() ?? ''),
+            ];
+        }
+    }
+
+    /**
      * 递归剔除敏感字段；序列化后超长（>64KB）则整体丢弃记为截断标记。
      */
     private function sanitize(?array $params): ?array

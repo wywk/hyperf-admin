@@ -13,6 +13,7 @@ namespace App\Controller\Api;
 use App\Common\ApiResponse;
 use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
+use App\Service\Excel\ExcelService;
 use App\Service\OperationLogService;
 use App\Swagger\Attributes\SwGet;
 use App\Swagger\Attributes\SwQuery;
@@ -31,6 +32,9 @@ class OperationLogController extends AbstractController
 
     #[Inject]
     protected ValidatorFactoryInterface $validatorFactory;
+
+    #[Inject]
+    protected ExcelService $excel;
 
     public function __construct(protected OperationLogService $operationLogService)
     {
@@ -88,5 +92,51 @@ class OperationLogController extends AbstractController
             max(1, (int) ($data['page'] ?? 1)),
             min(100, max(1, (int) ($data['page_size'] ?? 20)))
         ));
+    }
+
+    /**
+     * GET /api/operation-logs/export.
+     */
+    #[SwGet(path: '/api/operation-logs/export', operationId: 'operationLogExport', summary: '操作日志导出 Excel', tag: '操作日志',
+        desc: '按当前过滤条件导出 xlsx（最多 5000 条，按 ID 倒序）。需要 oplog.view 权限。',
+        params: [
+            new SwQuery('user_id', type: 'integer', desc: '操作人用户 ID'),
+            new SwQuery('username', desc: '操作人用户名（精确匹配）'),
+            new SwQuery('method', desc: '请求方法 POST/PUT/DELETE/PATCH'),
+            new SwQuery('path', desc: '请求路径（模糊匹配）'),
+            new SwQuery('status_code', type: 'integer', desc: '响应状态码'),
+        ],
+        responses: [new SwResp(desc: 'xlsx 二进制流（Content-Disposition: attachment）')]
+    )]
+    public function export(): ResponseInterface
+    {
+        $this->authorize('oplog.view');
+
+        $data = $this->validatorFactory->make($this->request->all(), [
+            'user_id' => 'nullable|integer|min:1',
+            'username' => 'nullable|string|max:64',
+            'method' => 'nullable|string|in:POST,PUT,DELETE,PATCH',
+            'path' => 'nullable|string|max:255',
+            'status_code' => 'nullable|integer|between:100,599',
+        ], [
+            'method.in' => 'method 只支持 POST/PUT/DELETE/PATCH',
+            'status_code.between' => 'status_code 取值范围 100-599',
+        ])->validate();
+
+        $filters = array_filter([
+            'user_id' => isset($data['user_id']) ? (int) $data['user_id'] : null,
+            'username' => $data['username'] ?? null,
+            'method' => isset($data['method']) ? strtoupper($data['method']) : null,
+            'path' => $data['path'] ?? null,
+            'status_code' => isset($data['status_code']) ? (int) $data['status_code'] : null,
+        ], static fn ($value) => $value !== null && $value !== '');
+
+        $binary = $this->excel->export('operation-logs.xlsx', [
+            'ID', '操作人', '用户 ID', '方法', '路径', '参数(已脱敏)', '状态码', '耗时(ms)', 'IP', '时间',
+        ], $this->operationLogService->exportRows($filters));
+
+        return $this->response->raw($binary)
+            ->withHeader('Content-Type', ExcelService::XLSX_MIME)
+            ->withHeader('Content-Disposition', 'attachment; filename="operation-logs.xlsx"');
     }
 }
