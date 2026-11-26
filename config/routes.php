@@ -63,6 +63,7 @@ Router::addGroup('/api', function () {
     Router::post('/auth/totp/enable', [AuthController::class, 'enableTotp']);
     Router::post('/auth/totp/disable', [AuthController::class, 'disableTotp']);
     Router::get('/auth/login-logs', [LoginLogController::class, 'index']);
+    Router::get('/auth/login-logs/export', [LoginLogController::class, 'export']);
     Router::get('/operation-logs', [OperationLogController::class, 'index']);
     Router::get('/operation-logs/export', [OperationLogController::class, 'export']);
 
@@ -229,6 +230,20 @@ Router::addGroup('/api', function () {
     Router::delete('/mall_order_item/{id:\d+}', [\App\Controller\Api\MallOrderItemController::class, 'destroy']);
 }, ['middleware' => [AuthMiddleware::class]]);
 // [gen:mall_order_item] end
+
+
+// [gen:category] start（代码生成器维护，勿手改）
+Router::addGroup('/api', function () {
+    Router::get('/category', [\App\Controller\Api\CategoryController::class, 'index']);
+    Router::get('/category/export', [\App\Controller\Api\CategoryController::class, 'export']);
+    Router::post('/category/import', [\App\Controller\Api\CategoryController::class, 'import']);
+    Router::post('/category', [\App\Controller\Api\CategoryController::class, 'store']);
+    Router::get('/category/{id:\d+}', [\App\Controller\Api\CategoryController::class, 'show']);
+    Router::put('/category/{id:\d+}', [\App\Controller\Api\CategoryController::class, 'update']);
+    Router::delete('/category/{id:\d+}', [\App\Controller\Api\CategoryController::class, 'destroy']);
+    Router::post('/category/batch-delete', [\App\Controller\Api\CategoryController::class, 'batchDestroy']);
+}, ['middleware' => [AuthMiddleware::class]]);
+// [gen:category] end
 
 // [gen:product] start（代码生成器维护，勿手改）
 Router::addGroup('/api', function () {

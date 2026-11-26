@@ -1,10 +1,12 @@
-# 生产部署栈：app + MySQL + Redis，一条命令拉起整套后端。
+# 生产部署栈：web(前端) + app(后端) + MySQL + Redis，一条命令拉起整套服务。
 #
 # 首次部署：
-#   1. 在本目录创建 .env.prod（参考 .env.example，改掉 DB_HOST/REDIS_HOST、密码与 JWT_SECRET）
-#      最少包含：JWT_SECRET、DB_PASSWORD、DB_DATABASE、DB_USERNAME、REDIS_HOST
+#   1. 在本目录创建 .env.prod（参考 .env.prod.example，改掉密码与 JWT_SECRET）
+#      最少包含：JWT_SECRET、DB_PASSWORD、DB_DATABASE、DB_USERNAME
 #   2. docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#   3. 浏览器访问 http://<主机>:${WEB_PORT:-8000}（默认账号 admin，密码见 SEED_ADMIN_PASSWORD）
 #
+# 首次启动自动建表 + 填充基础数据（RUN_MIGRATIONS / RUN_SEEDER）。
 # MySQL/Redis 已在外面（如云数据库）时，去掉对应 service，
 # 并把 DB_HOST/REDIS_HOST 指向真实地址即可。
 
@@ -44,6 +46,19 @@ services:
         condition: service_started
     volumes:
       - app-logs:/opt/www/runtime/logs
+
+  # 前端：Nginx 托管打包产物并反代 /api 到 app，浏览器只需暴露这一个端口
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: hyperf-admin-web:latest
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8000}:80"
+    depends_on:
+      app:
+        condition: service_healthy
 
   mysql:
     image: mysql:5.7.41

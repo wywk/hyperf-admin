@@ -106,4 +106,23 @@ class AuthTest extends TestCase
 
         return $body['data']['access_token'];
     }
+
+    public function testLoginLogsExportReturnsXlsx(): void
+    {
+        $token = $this->loginToken('admin', 'admin123456');
+
+        // 登录本身已产生审计流水，直接导出
+        $resp = $this->get('/api/auth/login-logs/export?username=admin', [], ['Authorization' => 'Bearer ' . $token]);
+        $this->assertSame(200, $resp->getStatusCode());
+        $this->assertStringContainsString(
+            'attachment; filename="login-logs.xlsx"',
+            $resp->getHeaderLine('Content-Disposition')
+        );
+        // xlsx 是 zip 容器，魔数 PK\x03\x04
+        $this->assertSame("PK\x03\x04", substr((string) $resp->getBody(), 0, 4));
+
+        // 未登录 401
+        $anon = $this->get('/api/auth/login-logs/export');
+        $this->assertSame(401, $anon->getStatusCode());
+    }
 }

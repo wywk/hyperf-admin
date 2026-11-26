@@ -168,6 +168,14 @@ export const layoutRoutes: RouteRecordRaw[] = [
     meta: { title: '订单明细', permission: 'mall_order_item' },
   },
   // [gen:mall_order_item] end
+  // [gen:category] start（代码生成器维护，勿手改）
+  {
+    path: 'category',
+    name: 'gen-category',
+    component: () => import('@/views/gen/category/index.vue'),
+    meta: { title: '商品分类', permission: 'category' },
+  },
+  // [gen:category] end
   // [gen:product] start（代码生成器维护，勿手改）
   {
     path: 'product',
