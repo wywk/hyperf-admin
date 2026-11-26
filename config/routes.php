@@ -19,6 +19,7 @@ use App\Controller\Api\DocsController;
 use App\Controller\Api\FileController;
 use App\Controller\Api\FormController;
 use App\Controller\Api\GenController;
+use App\Controller\Api\JobController;
 use App\Controller\Api\LoginLogController;
 use App\Controller\Api\NotificationController;
 use App\Controller\Api\OperationLogController;
@@ -74,6 +75,13 @@ Router::addGroup('/api', function () {
     Router::post('/notifications/{id:\d+}/read', [NotificationController::class, 'read']);
     Router::delete('/notifications/read', [NotificationController::class, 'clearRead']);
     Router::delete('/notifications/{id:\d+}', [NotificationController::class, 'destroy']);
+
+    // 异步任务中心：创建任务登录即可；列表按 jobs.view 权限决定看全部还是只看自己
+    Router::get('/jobs', [JobController::class, 'index']);
+    Router::get('/jobs/running', [JobController::class, 'running']);
+    Router::post('/jobs/export', [JobController::class, 'createExport']);
+    Router::post('/jobs/{id:\d+}/retry', [JobController::class, 'retry']);
+    Router::delete('/jobs/{id:\d+}', [JobController::class, 'destroy']);
 
     // 定时任务（接口内部做 crontab.* 权限校验）
     Router::get('/crontabs', [CrontabController::class, 'index']);

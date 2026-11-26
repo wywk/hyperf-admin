@@ -17,6 +17,7 @@ use App\Model\Category;
 use App\Service\CategoryService;
 use App\Service\Excel\ExcelService;
 use App\Swagger\Attributes\SwBody;
+use OpenApi\Attributes as OA;
 use App\Swagger\Attributes\SwDelete;
 use App\Swagger\Attributes\SwGet;
 use App\Swagger\Attributes\SwId;
@@ -141,7 +142,8 @@ class CategoryController extends AbstractController
     #[SwPost(path: '/api/category/batch-delete', operationId: 'categoryBatchDestroy', summary: '批量删除商品分类', tag: '商品分类',
         desc: '按 ID 数组批量删除，返回实际删除数量。需要 category.delete 权限。',
         body: new SwBody(props: [
-            new SwProp('ids', type: 'array', desc: '待删除的 ID 数组（1-100 个）'),
+            new SwProp('ids', type: 'array', desc: '待删除的 ID 数组（1-100 个）',
+                items: new OA\Items(type: 'integer')),
         ], requiredProps: ['ids']),
         responses: [new SwResp(desc: '删除数量', props: [
             new SwProp('deleted', type: 'integer'),

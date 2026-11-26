@@ -2,9 +2,12 @@
 import { onMounted, reactive, ref } from 'vue'
 import { Download, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from '@/plugins/element'
-import { exportLoginLogs, fetchLoginLogs } from '@/api/audit'
-import { saveBlob } from '@/utils/download'
+import { fetchLoginLogs } from '@/api/audit'
+import { createExportJob } from '@/api/jobs'
+import { useJobStore } from '@/stores/jobs'
 import type { LoginLogItem } from '@/types'
+
+const jobStore = useJobStore()
 
 type TagType = 'success' | 'warning' | 'danger' | 'info' | 'primary'
 
@@ -79,16 +82,16 @@ function refresh(): void {
 
 const exporting = ref(false)
 
-/** 按当前筛选条件导出全量 Excel（后端上限 5000 行） */
+/** 按当前筛选条件创建异步导出任务，完成后站内消息提醒，任务中心可下载 */
 async function exportLogs(): Promise<void> {
   exporting.value = true
   try {
-    const blob = await exportLoginLogs({
+    await createExportJob('export.login_logs', {
       event: query.event || undefined,
       username: query.username.trim() || undefined,
     })
-    saveBlob(blob, 'login-logs.xlsx')
-    ElMessage.success('已导出（最多 5000 条）')
+    jobStore.bump()
+    ElMessage.success('已创建导出任务，完成后可在任务中心下载')
   } catch {
     // 错误提示已由请求层统一处理
   } finally {

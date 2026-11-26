@@ -95,6 +95,9 @@ class RbacSeeder extends Seeder
         'crontab.delete' => ['crontab', 'button', '删除任务', '', '', 40],
         'crontab.run' => ['crontab', 'button', '手动执行', '', '', 50],
 
+        'jobs' => ['system', 'menu', '任务中心', 'system/jobs', 'List', 58],
+        'jobs.view' => ['jobs', 'button', '查看全部任务', '', '', 10],
+
         'tool' => ['', 'menu', '工具开发', 'tool', 'SetUp', 40],
 
         'form' => ['tool', 'menu', '表单管理', 'tool/forms', 'EditPen', 10],

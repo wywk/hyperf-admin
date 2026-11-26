@@ -2,12 +2,13 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
-import { Bell, CaretBottom, Document, Expand, Fold, Moon, ShoppingCart, Sunny } from '@element-plus/icons-vue'
+import { Bell, CaretBottom, Document, Expand, Fold, List, Moon, ShoppingCart, Sunny } from '@element-plus/icons-vue'
 import { useTheme } from '@/composables/theme'
 
 const { isDark, toggle: toggleTheme } = useTheme()
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
+import { useJobStore } from '@/stores/jobs'
 import SidebarItem from '@/layout/SidebarItem.vue'
 import { API_BASE_URL } from '@/api/http'
 import {
@@ -21,6 +22,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const notify = useNotificationStore()
+const jobStore = useJobStore()
 
 const collapsed = ref(window.innerWidth < 960)
 const activePath = computed(() => route.path)
@@ -35,6 +37,7 @@ const bellVisible = ref(false)
 const recent = ref<NotificationItem[]>([])
 const recentLoading = ref(false)
 let pollTimer: number | undefined
+let jobPollTimer: number | undefined
 
 async function loadRecent(): Promise<void> {
   recentLoading.value = true
@@ -111,11 +114,18 @@ watch(bellVisible, (visible) => {
 onMounted(() => {
   void notify.refresh()
   pollTimer = window.setInterval(() => void notify.refresh(), 60000)
+
+  // 顶栏任务角标：进行中的异步任务数，30 秒轮询
+  void jobStore.refresh()
+  jobPollTimer = window.setInterval(() => void jobStore.refresh(), 30000)
 })
 
 onBeforeUnmount(() => {
   if (pollTimer) {
     window.clearInterval(pollTimer)
+  }
+  if (jobPollTimer) {
+    window.clearInterval(jobPollTimer)
   }
 })
 
@@ -202,6 +212,18 @@ async function onCommand(command: string): Promise<void> {
             <el-icon><Document /></el-icon>
             <span>接口文档</span>
           </a>
+
+          <!-- 异步任务角标：有排队/执行中的任务时展示，点击进任务中心 -->
+          <el-badge
+            :value="jobStore.badge"
+            :hidden="!jobStore.hasRunning"
+            class="bell-badge"
+            type="warning"
+          >
+            <el-button text circle class="bell-btn" title="任务中心" @click="router.push({ name: 'jobs' })">
+              <el-icon :size="17"><List /></el-icon>
+            </el-button>
+          </el-badge>
 
           <el-popover
             v-model:visible="bellVisible"

@@ -437,3 +437,28 @@ export interface NotificationSummary {
   total: number
   by_type: Partial<Record<NotificationType, number>>
 }
+
+/** 异步任务（任务中心） */
+export type JobType = 'export.login_logs' | 'export.operation_logs' | 'export.products'
+export type JobStatus = 0 | 1 | 2 | 3
+
+export interface JobItem {
+  id: number
+  type: JobType | string
+  type_text: string
+  status: JobStatus
+  attempts: number
+  error: string
+  result_file_id: number | null
+  user_id: number | null
+  duration_ms: number | null
+  created_at: string | null
+  finished_at: string | null
+}
+
+export interface JobResult {
+  total: number
+  page: number
+  page_size: number
+  items: JobItem[]
+}

@@ -2,8 +2,9 @@
 import { onMounted, reactive, ref } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from '@/plugins/element'
-import { exportOperationLogs, fetchOperationLogs } from '@/api/oplog'
-import { saveBlob } from '@/utils/download'
+import { fetchOperationLogs } from '@/api/oplog'
+import { createExportJob } from '@/api/jobs'
+import { useJobStore } from '@/stores/jobs'
 import type { OperationLogItem } from '@/types'
 
 type TagType = 'success' | 'warning' | 'danger' | 'info' | 'primary'
@@ -106,18 +107,20 @@ function refresh(): void {
 }
 
 const exporting = ref(false)
+const jobStore = useJobStore()
 
+/** 按当前筛选条件创建异步导出任务，完成后站内消息提醒，任务中心可下载 */
 async function exportLogs(): Promise<void> {
   exporting.value = true
   try {
-    const blob = await exportOperationLogs({
+    await createExportJob('export.operation_logs', {
       username: query.username.trim() || undefined,
       method: query.method || undefined,
       path: query.path.trim() || undefined,
       status_code: query.status_code,
     })
-    saveBlob(blob, 'operation-logs.xlsx')
-    ElMessage.success('已导出（最多 5000 条）')
+    jobStore.bump()
+    ElMessage.success('已创建导出任务，完成后可在任务中心下载')
   } catch {
     // 错误提示已由请求层统一处理
   } finally {
