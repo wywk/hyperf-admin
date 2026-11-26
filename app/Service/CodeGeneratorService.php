@@ -922,6 +922,7 @@ use App\\Swagger\\Attributes\\SwProp;
 use App\\Swagger\\Attributes\\SwPut;
 use App\\Swagger\\Attributes\\SwQuery;
 use App\\Swagger\\Attributes\\SwResp;
+use OpenApi\\Attributes as OA;
 use Hyperf\\Di\\Annotation\\Inject;
 use Hyperf\\Validation\\Contract\\ValidatorFactoryInterface;
 use Psr\\Http\\Message\\ResponseInterface;
@@ -1004,7 +1005,8 @@ class {$ctx['studly']}Controller extends AbstractController
     #[SwPost(path: '/api/{$ctx['module']}/batch-delete', operationId: '{$ctx['module']}BatchDestroy', summary: '批量删除{$tag}', tag: '{$tag}',
         desc: '按 ID 数组批量删除，返回实际删除数量。需要 {$ctx['module']}.delete 权限。',
         body: new SwBody(props: [
-            new SwProp('ids', type: 'array', desc: '待删除的 ID 数组（1-100 个）'),
+            new SwProp('ids', type: 'array', desc: '待删除的 ID 数组（1-100 个）',
+                items: new OA\\Items(type: 'integer')),
         ], requiredProps: ['ids']),
         responses: [new SwResp(desc: '删除数量', props: [
             new SwProp('deleted', type: 'integer'),

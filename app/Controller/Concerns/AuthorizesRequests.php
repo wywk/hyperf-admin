@@ -50,4 +50,25 @@ trait AuthorizesRequests
 
         throw new BusinessException(ApiCode::FORBIDDEN, '没有权限执行该操作');
     }
+
+    /**
+     * 非抛异常版权限判断：用于「有权限看全部，没权限看自己」这类分支逻辑。
+     */
+    protected function can(string ...$codes): bool
+    {
+        $user = Context::get('user');
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        $granted = $this->rbacService->permissionsForRole((string) ($user->role ?: 'user'));
+
+        foreach ($codes as $code) {
+            if (in_array($code, $granted, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
