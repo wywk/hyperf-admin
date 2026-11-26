@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { loginApi, logoutApi, meApi } from '@/api/auth'
-import type { LoginPayload, LoginResult, MenuNode, UserProfile } from '@/types'
+import type { LoginPayload, LoginResponse, LoginResult, MenuNode, UserProfile } from '@/types'
 import { clearTokens, getAccessToken, onTokenChange, setTokens } from '@/utils/token'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -41,16 +41,27 @@ export const useAuthStore = defineStore('auth', () => {
     return codes.some((code) => hasPermission(code))
   }
 
-  async function login(payload: LoginPayload): Promise<LoginResult> {
+  /**
+   * 登录：开启两步验证的账号会拿到一次性凭证而不写 token，由登录页继续第二步。
+   */
+  async function login(payload: LoginPayload): Promise<LoginResponse> {
     submitting.value = true
     try {
       const result = await loginApi(payload)
-      setTokens(result)
-      user.value = result.user
+      if ('requires_totp' in result) {
+        return result
+      }
+      completeLogin(result)
       return result
     } finally {
       submitting.value = false
     }
+  }
+
+  /** 两步验证通过后写登录态（登录页调用） */
+  function completeLogin(result: LoginResult): void {
+    setTokens(result)
+    user.value = result.user
   }
 
   async function fetchProfile(force = false): Promise<UserProfile> {
@@ -88,6 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
     hasPermission,
     hasAnyPermission,
     login,
+    completeLogin,
     fetchProfile,
     logout,
     reset,

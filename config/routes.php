@@ -44,6 +44,8 @@ Router::get('/api/docs/openapi.json', [DocsController::class, 'json']);
 Router::addGroup('/api', function () {
     Router::post('/auth/login', [AuthController::class, 'login']);
     Router::post('/auth/refresh', [AuthController::class, 'refresh']);
+    Router::get('/auth/captcha', [AuthController::class, 'captcha']);
+    Router::post('/auth/totp/verify', [AuthController::class, 'verifyTotp']);
 
     // 表单公开接口：按标识取已发布 Schema、提交数据（渲染方可以是任意前端/静态页）
     Router::get('/form/{code:[a-z][a-z0-9_-]*}', [FormController::class, 'publicSchema']);
@@ -56,6 +58,9 @@ Router::addGroup('/api', function () {
     Router::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Router::post('/auth/logout', [AuthController::class, 'logout']);
     Router::post('/auth/password', [AuthController::class, 'changePassword']);
+    Router::post('/auth/totp/setup', [AuthController::class, 'setupTotp']);
+    Router::post('/auth/totp/enable', [AuthController::class, 'enableTotp']);
+    Router::post('/auth/totp/disable', [AuthController::class, 'disableTotp']);
     Router::get('/auth/login-logs', [LoginLogController::class, 'index']);
     Router::get('/operation-logs', [OperationLogController::class, 'index']);
     Router::get('/operation-logs/export', [OperationLogController::class, 'export']);

@@ -29,6 +29,11 @@ class ConfigSeeder extends Seeder
         ['security', 'login_decay_seconds', '900', Config::TYPE_NUMBER, '登录锁定时长（秒）', '达到失败上限后锁定的秒数，默认 900（15 分钟）', 20],
         ['security', 'crontab_fail_alert_threshold', '3', Config::TYPE_NUMBER, '任务失败告警阈值', '定时任务连续失败多少次触发一次告警', 30],
         ['security', 'alert_webhook_url', '', Config::TYPE_STRING, '告警 Webhook', '任务告警 POST 的地址，留空则只写日志', 40],
+        ['security', 'login_captcha_enabled', '0', Config::TYPE_BOOLEAN, '强制登录验证码', '开启后每次登录都要输入图形验证码（关闭时失败达到阈值仍会要求）', 50],
+        ['security', 'login_captcha_threshold', '3', Config::TYPE_NUMBER, '验证码触发阈值', '同一 IP + 用户名连续失败多少次后要求验证码，默认 3', 60],
+        ['security', 'password_min_length', '8', Config::TYPE_NUMBER, '密码最小长度', '新建账号、重置密码、自助改密都会校验，最小 6', 70],
+        ['security', 'password_require_complexity', '1', Config::TYPE_BOOLEAN, '密码复杂度校验', '要求密码同时包含字母和数字，且不能包含用户名', 80],
+        ['security', 'password_expire_days', '0', Config::TYPE_NUMBER, '密码有效期（天）', '0 表示不过期；到期后登录不拦截，但个人中心会提示修改', 90],
 
         ['audit', 'login_log_enabled', '1', Config::TYPE_BOOLEAN, '记录登录日志', '关闭后不再写 login_logs（不建议）', 10],
         ['audit', 'operation_log_enabled', '1', Config::TYPE_BOOLEAN, '记录操作日志', '关闭后不再写 operation_logs（不建议）', 20],

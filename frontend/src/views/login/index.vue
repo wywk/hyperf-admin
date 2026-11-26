@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { Document, Key, Lock, User } from '@element-plus/icons-vue'
 import { ElMessage } from '@/plugins/element'
 import { useAuthStore } from '@/stores/auth'
 import { RequestError } from '@/api/http'
+import { fetchCaptchaApi, verifyTotpApi } from '@/api/auth'
+import type { LoginResult } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
@@ -35,6 +37,56 @@ function fill(account: (typeof accounts)[number]): void {
   form.username = account.username
   form.password = account.password
   errorMessage.value = ''
+  void refreshCaptcha()
+}
+
+/* ---------------- 图形验证码 ---------------- */
+
+const captcha = reactive({ required: false, id: '', image: '' })
+const captchaCode = ref('')
+const captchaLoading = ref(false)
+
+/**
+ * 每次失败后都重新问一次：失败次数到阈值时后端会开始要求验证码，
+ * 前端只要跟着这个开关走就行，不用自己维护计数。
+ */
+async function refreshCaptcha(): Promise<void> {
+  captchaLoading.value = true
+  try {
+    const result = await fetchCaptchaApi(form.username.trim())
+    captcha.required = result.required
+    captcha.id = result.captcha_id ?? ''
+    captcha.image = result.image ?? ''
+    captchaCode.value = ''
+  } catch {
+    // 拿不到验证码状态时不阻塞登录，失败后自然会重试
+  } finally {
+    captchaLoading.value = false
+  }
+}
+
+/* ---------------- 登录（含两步验证） ---------------- */
+
+const totpToken = ref('')
+const totpCode = ref('')
+const totpSubmitting = ref(false)
+
+function finishLogin(result: LoginResult): void {
+  auth.completeLogin(result)
+  ElMessage.success('登录成功')
+}
+
+async function goAfterLogin(): Promise<void> {
+  // 只接受站内相对路径，避免开放重定向
+  const redirect = route.query.redirect
+  const target = typeof redirect === 'string' && redirect.startsWith('/') ? redirect : '/'
+
+  // 跳转失败不能当成登录失败：此时 token 已经拿到，提示「登录失败」会误导用户
+  try {
+    await router.replace(target)
+  } catch {
+    await router.replace('/')
+  }
 }
 
 async function submit(): Promise<void> {
@@ -50,23 +102,57 @@ async function submit(): Promise<void> {
   errorMessage.value = ''
 
   try {
-    await auth.login({ username: form.username.trim(), password: form.password })
-    ElMessage.success('登录成功')
+    const result = await auth.login({
+      username: form.username.trim(),
+      password: form.password,
+      ...(captcha.required ? { captcha_id: captcha.id, captcha_code: captchaCode.value.trim() } : {}),
+    })
 
-    // 只接受站内相对路径，避免开放重定向
-    const redirect = route.query.redirect
-    const target = typeof redirect === 'string' && redirect.startsWith('/') ? redirect : '/'
-
-    // 跳转失败不能当成登录失败：此时 token 已经拿到，提示「登录失败」会误导用户
-    try {
-      await router.replace(target)
-    } catch {
-      await router.replace('/')
+    if ('requires_totp' in result) {
+      totpToken.value = result.totp_token
+      totpCode.value = ''
+      return
     }
+
+    finishLogin(result)
+    await goAfterLogin()
   } catch (error) {
     errorMessage.value = error instanceof RequestError ? error.message : '登录失败，请稍后重试'
+    // 失败次数可能刚好越过阈值，下一次就要验证码了
+    await refreshCaptcha()
   }
 }
+
+async function submitTotp(): Promise<void> {
+  if (!/^\d{6}$/.test(totpCode.value.trim())) {
+    errorMessage.value = '请输入 6 位动态验证码'
+    return
+  }
+
+  errorMessage.value = ''
+  totpSubmitting.value = true
+  try {
+    const result = await verifyTotpApi(totpToken.value, totpCode.value.trim())
+    finishLogin(result)
+    await goAfterLogin()
+  } catch (error) {
+    errorMessage.value = error instanceof RequestError ? error.message : '验证失败，请重试'
+    totpCode.value = ''
+  } finally {
+    totpSubmitting.value = false
+  }
+}
+
+function backToPassword(): void {
+  totpToken.value = ''
+  totpCode.value = ''
+  errorMessage.value = ''
+  void refreshCaptcha()
+}
+
+onMounted(() => {
+  void refreshCaptcha()
+})
 </script>
 
 <template>
@@ -117,6 +203,7 @@ async function submit(): Promise<void> {
         />
 
         <el-form
+          v-if="!totpToken"
           ref="formRef"
           :model="form"
           :rules="rules"
@@ -147,12 +234,68 @@ async function submit(): Promise<void> {
             </el-input>
           </el-form-item>
 
+          <el-form-item v-if="captcha.required" label="图形验证码">
+            <div class="captcha-row">
+              <el-input
+                v-model="captchaCode"
+                placeholder="输入右侧 4 位字符"
+                maxlength="4"
+                autocomplete="off"
+                @keyup.enter="submit"
+              />
+              <img
+                v-if="captcha.image"
+                :src="captcha.image"
+                class="captcha-img"
+                alt="验证码"
+                title="看不清？点击换一张"
+                @click="refreshCaptcha"
+              />
+              <el-button v-else text :loading="captchaLoading" @click="refreshCaptcha">获取</el-button>
+            </div>
+          </el-form-item>
+
           <el-button type="primary" class="submit" :loading="auth.submitting" @click="submit">
             {{ auth.submitting ? '登录中…' : '登 录' }}
           </el-button>
         </el-form>
 
-        <div class="accounts">
+        <!-- 两步验证第二步：密码已经过了，这里只要 6 位动态码 -->
+        <div v-else class="totp-step">
+          <el-alert
+            title="该账号已开启两步验证"
+            description="请打开认证器 App，输入当前 6 位动态验证码。"
+            type="info"
+            show-icon
+            :closable="false"
+            class="alert"
+          />
+
+          <el-form label-position="top" size="large" @submit.prevent="submitTotp">
+            <el-form-item label="动态验证码">
+              <el-input
+                v-model="totpCode"
+                placeholder="6 位数字"
+                maxlength="6"
+                class="totp-input"
+                autofocus
+                @keyup.enter="submitTotp"
+              >
+                <template #prefix>
+                  <el-icon><Key /></el-icon>
+                </template>
+              </el-input>
+            </el-form-item>
+
+            <el-button type="primary" class="submit" :loading="totpSubmitting" @click="submitTotp">
+              {{ totpSubmitting ? '验证中…' : '验 证' }}
+            </el-button>
+          </el-form>
+
+          <el-button link class="back" @click="backToPassword">返回重新登录</el-button>
+        </div>
+
+        <div v-if="!totpToken" class="accounts">
           <span class="accounts-title">测试账号（点击填充）</span>
           <div class="account-list">
             <button
@@ -302,6 +445,37 @@ async function submit(): Promise<void> {
   width: 100%;
   margin-top: 4px;
   letter-spacing: 2px;
+}
+
+.captcha-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+.captcha-img {
+  height: 40px;
+  width: 120px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--app-border);
+  flex-shrink: 0;
+}
+
+.totp-step {
+  margin-top: 4px;
+}
+
+.totp-input :deep(input) {
+  letter-spacing: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 18px;
+}
+
+.back {
+  width: 100%;
+  margin-top: 10px;
 }
 
 .accounts {

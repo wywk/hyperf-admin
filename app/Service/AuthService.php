@@ -25,23 +25,39 @@ class AuthService
         protected LoginThrottle $throttle,
         protected TokenService $tokenService,
         protected LoginLogService $audit,
-        protected RbacService $rbac
+        protected RbacService $rbac,
+        protected CaptchaService $captcha,
+        protected PasswordPolicyService $passwordPolicy,
+        protected TotpService $totpService
     ) {
     }
 
     /**
      * 账号密码登录，成功返回 token 对与用户信息。
      *
+     * 开启两步验证的账号这里只返回一次性凭证，动态码校验通过后才签发 token。
+     *
      * @return array<string, mixed>
      */
-    public function login(string $username, string $password, string $ip = '', string $userAgent = ''): array
-    {
+    public function login(
+        string $username,
+        string $password,
+        string $ip = '',
+        string $userAgent = '',
+        ?string $captchaId = null,
+        ?string $captchaCode = null
+    ): array {
         try {
             $this->throttle->assertNotLocked($ip, $username);
         } catch (BusinessException $e) {
             $this->audit->record(LoginLog::EVENT_LOGIN_LOCKED, $username, $ip, null, $e->getMessage(), $userAgent);
 
             throw $e;
+        }
+
+        // 失败次数到阈值（或配置强制开启）时，先过验证码这关，把自动化撞库挡在密码校验之前
+        if ($this->captcha->isRequired($ip, $username)) {
+            $this->captcha->verify($captchaId, $captchaCode);
         }
 
         /** @var null|User $user */
@@ -70,10 +86,46 @@ class AuthService
 
         $this->throttle->clear($ip, $username);
 
+        // 开了两步验证：先不发 token，只给一次性凭证
+        if ($this->totpService->isEnabled($user)) {
+            return [
+                'requires_totp' => true,
+                'totp_token' => $this->totpService->issueLoginChallenge((int) $user->id),
+                'expires_in' => 300,
+            ];
+        }
+
+        return $this->finishLogin($user, $ip, $userAgent);
+    }
+
+    /**
+     * 两步验证第二步：用一次性凭证 + 动态码换正式 token。
+     *
+     * @return array<string, mixed>
+     */
+    public function verifyTotpLogin(string $totpToken, string $code, string $ip = '', string $userAgent = ''): array
+    {
+        $user = $this->totpService->consumeLoginChallenge($totpToken, $code);
+
+        return $this->finishLogin($user, $ip, $userAgent);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function finishLogin(User $user, string $ip, string $userAgent): array
+    {
         $user->last_login_at = date('Y-m-d H:i:s');
         $user->save();
 
-        $this->audit->record(LoginLog::EVENT_LOGIN_SUCCESS, $username, $ip, (int) $user->id, '登录成功', $userAgent);
+        $this->audit->record(
+            LoginLog::EVENT_LOGIN_SUCCESS,
+            (string) $user->username,
+            $ip,
+            (int) $user->id,
+            '登录成功',
+            $userAgent
+        );
 
         return array_merge($this->tokenService->issue($user, null, $ip, $userAgent), ['user' => $this->profile($user)]);
     }
@@ -143,7 +195,10 @@ class AuthService
             throw new BusinessException(ApiCode::VALIDATION_FAILED, '新密码不能与当前密码相同');
         }
 
+        $this->passwordPolicy->validate($newPassword, (string) $user->username);
+
         $user->password = password_hash($newPassword, PASSWORD_BCRYPT);
+        $user->password_changed_at = date('Y-m-d H:i:s');
         $user->save();
 
         // 当前这台设备保持登录，其它设备上的会话立即失效
@@ -198,6 +253,12 @@ class AuthService
             'menus' => $this->rbac->menuTreeForRole($role),
             'last_login_at' => $user->last_login_at?->toDateTimeString(),
             'created_at' => $user->created_at?->toDateTimeString(),
+            // 两步验证状态：前端「个人中心」用它渲染开关
+            'totp_enabled' => $this->totpService->isEnabled($user),
+            // 密码有效期：过期后前端顶部会提示改密（不阻断登录）
+            'password_expired' => $this->passwordPolicy->isExpired($user),
+            'password_expires_in' => $this->passwordPolicy->daysUntilExpire($user),
+            'password_changed_at' => $user->password_changed_at?->toDateTimeString(),
         ];
     }
 }

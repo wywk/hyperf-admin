@@ -35,7 +35,9 @@ class User extends Model
     protected array $casts = [
         'id' => 'integer',
         'status' => 'integer',
+        'totp_enabled' => 'integer',
         'last_login_at' => 'datetime',
+        'password_changed_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

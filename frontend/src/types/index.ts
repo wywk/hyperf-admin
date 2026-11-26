@@ -29,15 +29,40 @@ export interface UserProfile {
   menus: MenuNode[]
   last_login_at: string | null
   created_at: string | null
+  /** 是否开启两步验证 */
+  totp_enabled?: boolean
+  /** 密码是否已过期（过期不阻断登录，仅提示改密） */
+  password_expired?: boolean
+  /** 距离密码过期还剩几天；未开启有效期策略为 null */
+  password_expires_in?: number | null
+  password_changed_at?: string | null
 }
 
 export interface LoginResult extends TokenPair {
   user: UserProfile
 }
 
+/** 开启两步验证的账号：密码通过后先拿一次性凭证，再换正式 token */
+export interface TotpChallenge {
+  requires_totp: true
+  totp_token: string
+  expires_in: number
+}
+
+export type LoginResponse = LoginResult | TotpChallenge
+
 export interface LoginPayload {
   username: string
   password: string
+  captcha_id?: string
+  captcha_code?: string
+}
+
+export interface CaptchaChallenge {
+  required: boolean
+  captcha_id?: string
+  image?: string
+  expires_in?: number
 }
 
 export interface LoginLogItem {

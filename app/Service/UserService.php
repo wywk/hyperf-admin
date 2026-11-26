@@ -29,7 +29,8 @@ class UserService
 {
     public function __construct(
         protected TokenService $tokenService,
-        protected NotificationService $notificationService
+        protected NotificationService $notificationService,
+        protected PasswordPolicyService $passwordPolicy
     ) {
     }
 
@@ -93,6 +94,8 @@ class UserService
             throw new BusinessException(ApiCode::VALIDATION_FAILED, '该用户名已被占用');
         }
 
+        $this->passwordPolicy->validate($data['password'], $data['username']);
+
         $user = User::query()->create([
             'username' => $data['username'],
             'password' => password_hash($data['password'], PASSWORD_BCRYPT),
@@ -101,6 +104,8 @@ class UserService
             'role' => $data['role'],
             'status' => (int) ($data['status'] ?? 1),
         ]);
+        $user->password_changed_at = date('Y-m-d H:i:s');
+        $user->save();
 
         $this->notificationService->push(
             (int) $user->id,
@@ -225,7 +230,10 @@ class UserService
     {
         $user = $this->findOrFail($id);
 
+        $this->passwordPolicy->validate($password, (string) $user->username);
+
         $user->password = password_hash($password, PASSWORD_BCRYPT);
+        $user->password_changed_at = date('Y-m-d H:i:s');
         $user->save();
 
         // 管理员重置密码意味着账号可能已被接管，直接踢掉所有会话
@@ -269,6 +277,7 @@ class UserService
             'email' => (string) $user->email,
             'role' => (string) $user->role,
             'status' => (int) $user->status,
+            'totp_enabled' => (int) $user->totp_enabled === 1,
             'last_login_at' => $user->last_login_at?->toDateTimeString(),
             'created_at' => $user->created_at?->toDateTimeString(),
         ];

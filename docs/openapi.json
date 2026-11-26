@@ -90,6 +90,212 @@
                 }
             }
         },
+        "/api/auth/captcha": {
+            "get": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "获取图形验证码",
+                "description": "先判断当前用户名/IP 是否需要验证码：不需要时只返回 required=false；需要时返回 SVG 图片（data URI）与一次性 captcha_id。",
+                "operationId": "authCaptcha",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "正在登录的用户名，用于判断失败次数",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{required, captcha_id?, image?, expires_in?}"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                }
+            }
+        },
+        "/api/auth/totp/verify": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "校验动态验证码完成登录",
+                "description": "用登录接口返回的 totp_token + 6 位动态码换取正式 token 对；凭证 5 分钟内有效且只能用一次。",
+                "operationId": "authTotpVerify",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "totp_token",
+                                    "code"
+                                ],
+                                "properties": {
+                                    "totp_token": {
+                                        "description": "登录第一步返回的一次性凭证",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "code": {
+                                        "description": "认证器 App 中的 6 位动态码",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "登录成功，返回 token 对与用户信息"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                }
+            }
+        },
+        "/api/auth/totp/setup": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "生成两步验证密钥",
+                "description": "返回 Base32 密钥与 otpauth 链接（前端可自行渲染二维码）。密钥 10 分钟内有效，验证通过后才写入账号。",
+                "operationId": "authTotpSetup",
+                "responses": {
+                    "200": {
+                        "description": "{secret, otpauth_url, issuer}"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/totp/enable": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "开启两步验证",
+                "description": "校验动态码通过后把密钥写入账号，下次登录需要两步验证。",
+                "operationId": "authTotpEnable",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "description": "6 位动态码",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "已开启"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/totp/disable": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "关闭两步验证",
+                "description": "需要提供当前动态码，避免 token 被盗后直接关掉二次验证。",
+                "operationId": "authTotpDisable",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "description": "6 位动态码",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "已关闭"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/auth/refresh": {
             "post": {
                 "tags": [

@@ -18,6 +18,8 @@ use App\Controller\AbstractController;
 use App\Exception\BusinessException;
 use App\Model\User;
 use App\Service\AuthService;
+use App\Service\CaptchaService;
+use App\Service\TotpService;
 use App\Support\ClientIp;
 use Hyperf\Context\Context;
 use Hyperf\Di\Annotation\Inject;
@@ -26,6 +28,7 @@ use App\Swagger\Attributes\SwBody;
 use App\Swagger\Attributes\SwGet;
 use App\Swagger\Attributes\SwPost;
 use App\Swagger\Attributes\SwProp;
+use App\Swagger\Attributes\SwQuery;
 use App\Swagger\Attributes\SwResp;
 use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
@@ -35,8 +38,11 @@ class AuthController extends AbstractController
     #[Inject]
     protected ValidatorFactoryInterface $validatorFactory;
 
-    public function __construct(protected AuthService $authService)
-    {
+    public function __construct(
+        protected AuthService $authService,
+        protected CaptchaService $captchaService,
+        protected TotpService $totpService
+    ) {
     }
 
     /**
@@ -68,6 +74,8 @@ class AuthController extends AbstractController
         $data = $this->validatorFactory->make($this->request->all(), [
             'username' => 'required|string|between:3,64',
             'password' => 'required|string|between:6,64',
+            'captcha_id' => 'nullable|string|max:64',
+            'captcha_code' => 'nullable|string|max:8',
         ], [
             'username.required' => '请输入用户名',
             'username.between' => '用户名长度需为 3-64 个字符',
@@ -79,10 +87,132 @@ class AuthController extends AbstractController
             (string) $data['username'],
             (string) $data['password'],
             ClientIp::fromRequest($this->request),
-            $this->userAgent()
+            $this->userAgent(),
+            isset($data['captcha_id']) ? (string) $data['captcha_id'] : null,
+            isset($data['captcha_code']) ? (string) $data['captcha_code'] : null
         );
 
-        return ApiResponse::success($result, '登录成功');
+        return ApiResponse::success($result, ($result['requires_totp'] ?? false) ? '请输入动态验证码' : '登录成功');
+    }
+
+    /**
+     * GET /api/auth/captcha：按需签发图形验证码.
+     */
+    #[SwGet(path: '/api/auth/captcha', operationId: 'authCaptcha', summary: '获取图形验证码', tag: '认证', auth: false,
+        desc: '先判断当前用户名/IP 是否需要验证码：不需要时只返回 required=false；需要时返回 SVG 图片（data URI）与一次性 captcha_id。',
+        params: [new SwQuery('username', desc: '正在登录的用户名，用于判断失败次数')],
+        responses: [new SwResp(desc: '{required, captcha_id?, image?, expires_in?}')]
+    )]
+    public function captcha(): ResponseInterface
+    {
+        $data = $this->validatorFactory->make($this->request->all(), [
+            'username' => 'nullable|string|max:64',
+        ])->validate();
+
+        $ip = ClientIp::fromRequest($this->request);
+        $username = (string) ($data['username'] ?? '');
+
+        if (! $this->captchaService->isRequired($ip, $username)) {
+            return ApiResponse::success(['required' => false]);
+        }
+
+        return ApiResponse::success(['required' => true] + $this->captchaService->issue());
+    }
+
+    /**
+     * POST /api/auth/totp/verify：两步验证第二步，换正式 token.
+     */
+    #[SwPost(path: '/api/auth/totp/verify', operationId: 'authTotpVerify', summary: '校验动态验证码完成登录', tag: '认证', auth: false,
+        desc: '用登录接口返回的 totp_token + 6 位动态码换取正式 token 对；凭证 5 分钟内有效且只能用一次。',
+        errors: [401, 422],
+        body: new SwBody(
+            props: [
+                new SwProp('totp_token', desc: '登录第一步返回的一次性凭证'),
+                new SwProp('code', desc: '认证器 App 中的 6 位动态码'),
+            ],
+            requiredProps: ['totp_token', 'code'],
+        ),
+        responses: [new SwResp(desc: '登录成功，返回 token 对与用户信息')]
+    )]
+    public function verifyTotp(): ResponseInterface
+    {
+        $data = $this->validatorFactory->make($this->request->all(), [
+            'totp_token' => 'required|string|max:128',
+            'code' => 'required|string|size:6',
+        ], [
+            'totp_token.required' => '缺少二次验证凭证，请重新登录',
+            'code.required' => '请输入动态验证码',
+            'code.size' => '动态验证码为 6 位数字',
+        ])->validate();
+
+        return ApiResponse::success($this->authService->verifyTotpLogin(
+            (string) $data['totp_token'],
+            (string) $data['code'],
+            ClientIp::fromRequest($this->request),
+            $this->userAgent()
+        ), '登录成功');
+    }
+
+    /**
+     * POST /api/auth/totp/setup：生成待绑定的 TOTP 密钥.
+     */
+    #[SwPost(path: '/api/auth/totp/setup', operationId: 'authTotpSetup', summary: '生成两步验证密钥', tag: '认证',
+        desc: '返回 Base32 密钥与 otpauth 链接（前端可自行渲染二维码）。密钥 10 分钟内有效，验证通过后才写入账号。',
+        responses: [new SwResp(desc: '{secret, otpauth_url, issuer}')]
+    )]
+    public function setupTotp(): ResponseInterface
+    {
+        return ApiResponse::success($this->totpService->startSetup($this->currentUser()));
+    }
+
+    /**
+     * POST /api/auth/totp/enable：校验动态码后开启两步验证.
+     */
+    #[SwPost(path: '/api/auth/totp/enable', operationId: 'authTotpEnable', summary: '开启两步验证', tag: '认证',
+        desc: '校验动态码通过后把密钥写入账号，下次登录需要两步验证。',
+        errors: [422],
+        body: new SwBody(props: [new SwProp('code', desc: '6 位动态码')], requiredProps: ['code']),
+        responses: [new SwResp(desc: '已开启')]
+    )]
+    public function enableTotp(): ResponseInterface
+    {
+        $data = $this->validatorFactory->make($this->request->all(), [
+            'code' => 'required|string|size:6',
+        ], ['code.size' => '动态验证码为 6 位数字'])->validate();
+
+        $this->totpService->enable($this->currentUser(), (string) $data['code']);
+
+        return ApiResponse::success(null, '两步验证已开启');
+    }
+
+    /**
+     * POST /api/auth/totp/disable：校验动态码后关闭两步验证.
+     */
+    #[SwPost(path: '/api/auth/totp/disable', operationId: 'authTotpDisable', summary: '关闭两步验证', tag: '认证',
+        desc: '需要提供当前动态码，避免 token 被盗后直接关掉二次验证。',
+        errors: [422],
+        body: new SwBody(props: [new SwProp('code', desc: '6 位动态码')], requiredProps: ['code']),
+        responses: [new SwResp(desc: '已关闭')]
+    )]
+    public function disableTotp(): ResponseInterface
+    {
+        $data = $this->validatorFactory->make($this->request->all(), [
+            'code' => 'required|string|size:6',
+        ], ['code.size' => '动态验证码为 6 位数字'])->validate();
+
+        $this->totpService->disable($this->currentUser(), (string) $data['code']);
+
+        return ApiResponse::success(null, '两步验证已关闭');
+    }
+
+    private function currentUser(): User
+    {
+        $user = Context::get('user');
+        if (! $user instanceof User) {
+            throw new BusinessException(ApiCode::UNAUTHORIZED);
+        }
+
+        return $user;
     }
 
     /**
