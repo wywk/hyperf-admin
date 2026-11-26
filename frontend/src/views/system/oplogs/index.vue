@@ -240,7 +240,7 @@ async function exportLogs(): Promise<void> {
 }
 
 code.mono {
-  background: #f3f4f6;
+  background: var(--el-fill-color-light);
   padding: 1px 5px;
   border-radius: 4px;
   font-size: 12px;

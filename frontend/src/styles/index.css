@@ -8,6 +8,20 @@
   --app-radius: 10px;
 }
 
+/* 深色模式：跟随 Element Plus 的 html.dark 约定 */
+html.dark {
+  --app-bg: #101014;
+  --app-sidebar-bg: #141424;
+  --app-border: #303040;
+  --app-text: #e5e7eb;
+  --app-muted: #9ca3af;
+  --app-brand: #409eff;
+}
+
+html.dark code.mono {
+  background: var(--el-fill-color-dark);
+}
+
 * {
   box-sizing: border-box;
 }

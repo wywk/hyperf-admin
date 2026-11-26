@@ -2,7 +2,10 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
-import { CaretBottom, Document, Expand, Fold, ShoppingCart } from '@element-plus/icons-vue'
+import { CaretBottom, Document, Expand, Fold, Moon, ShoppingCart, Sunny } from '@element-plus/icons-vue'
+import { useTheme } from '@/composables/theme'
+
+const { isDark, toggle: toggleTheme } = useTheme()
 import { useAuthStore } from '@/stores/auth'
 import SidebarItem from '@/layout/SidebarItem.vue'
 import { API_BASE_URL } from '@/api/http'
@@ -86,6 +89,12 @@ async function onCommand(command: string): Promise<void> {
         </div>
 
         <div class="header-right">
+          <el-tooltip :content="isDark ? '切换到浅色' : '切换到深色'" placement="bottom">
+            <el-button text circle class="theme-btn" @click="toggleTheme">
+              <el-icon :size="16"><Moon v-if="!isDark" /><Sunny v-else /></el-icon>
+            </el-button>
+          </el-tooltip>
+
           <a class="doc-link" href="/shop" target="_blank" rel="noreferrer">
             <el-icon><ShoppingCart /></el-icon>
             <span>手机商城</span>
@@ -207,7 +216,7 @@ async function onCommand(command: string): Promise<void> {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
+  background: var(--app-sidebar-bg);
   border-bottom: 1px solid var(--app-border);
   padding: 0 16px;
 }
@@ -247,7 +256,7 @@ async function onCommand(command: string): Promise<void> {
 }
 
 .user:hover {
-  background: #f3f4f6;
+  background: var(--el-fill-color);
 }
 
 .avatar {
