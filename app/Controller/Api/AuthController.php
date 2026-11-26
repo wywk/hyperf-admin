@@ -159,6 +159,49 @@ class AuthController extends AbstractController
         return ApiResponse::success($this->authService->profile($user));
     }
 
+    /**
+     * POST /api/auth/password：修改自己的密码（需登录）.
+     */
+    #[SwPost(path: '/api/auth/password', operationId: 'authChangePassword', summary: '修改自己的密码', tag: '认证',
+        desc: '校验旧密码后设置新密码；修改成功后除当前设备外的其他登录会话立即失效。',
+        errors: [401, 422],
+        body: new SwBody(
+            props: [
+                new SwProp('old_password', desc: '当前密码'),
+                new SwProp('new_password', desc: '新密码，6-64 位'),
+            ],
+            requiredProps: ['old_password', 'new_password'],
+        ),
+        responses: [new SwResp(desc: '密码已更新')]
+    )]
+    public function changePassword(): ResponseInterface
+    {
+        $user = Context::get('user');
+        $payload = Context::get('token_payload');
+        if (! $user instanceof User) {
+            throw new BusinessException(ApiCode::UNAUTHORIZED);
+        }
+
+        $data = $this->validatorFactory->make($this->request->all(), [
+            'old_password' => 'required|string|between:6,64',
+            'new_password' => 'required|string|between:6,64',
+        ], [
+            'old_password.required' => '请输入当前密码',
+            'old_password.between' => '当前密码长度不正确',
+            'new_password.required' => '请输入新密码',
+            'new_password.between' => '新密码长度需为 6-64 个字符',
+        ])->validate();
+
+        $this->authService->changePassword(
+            $user,
+            (string) $data['old_password'],
+            (string) $data['new_password'],
+            is_array($payload) ? $payload : []
+        );
+
+        return ApiResponse::success(null, '密码已更新，其他设备的登录已失效');
+    }
+
     private function userAgent(): string
     {
         return mb_substr($this->request->getHeaderLine('User-Agent'), 0, 255);

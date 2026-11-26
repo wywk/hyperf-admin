@@ -43,12 +43,23 @@ class RbacSeeder extends Seeder
         'permission.edit' => ['permission', 'button', '编辑权限', '', '', 30],
         'permission.delete' => ['permission', 'button', '删除权限', '', '', 40],
 
+        'user' => ['system', 'menu', '用户管理', 'system/users', 'Avatar', 15],
+        'user.view' => ['user', 'button', '查看用户', '', '', 10],
+        'user.add' => ['user', 'button', '新增用户', '', '', 20],
+        'user.edit' => ['user', 'button', '编辑用户', '', '', 30],
+        'user.delete' => ['user', 'button', '删除用户', '', '', 40],
+        'user.reset' => ['user', 'button', '重置密码', '', '', 50],
+
         'role' => ['system', 'menu', '角色管理', 'system/roles', 'UserFilled', 20],
         'role.view' => ['role', 'button', '查看角色', '', '', 10],
         'role.add' => ['role', 'button', '新增角色', '', '', 20],
         'role.edit' => ['role', 'button', '编辑角色', '', '', 30],
         'role.delete' => ['role', 'button', '删除角色', '', '', 40],
         'role.assign' => ['role', 'button', '分配权限', '', '', 50],
+
+        'session' => ['system', 'menu', '在线会话', 'system/sessions', 'Monitor', 25],
+        'session.view' => ['session', 'button', '查看会话', '', '', 10],
+        'session.kick' => ['session', 'button', '踢下线', '', '', 20],
 
         'audit' => ['system', 'menu', '登录审计', 'audit', 'Tickets', 30],
         'audit.view' => ['audit', 'button', '查看审计日志', '', '', 10],
@@ -63,6 +74,10 @@ class RbacSeeder extends Seeder
         'dict.add' => ['dict', 'button', '新增字典', '', '', 20],
         'dict.edit' => ['dict', 'button', '编辑字典', '', '', 30],
         'dict.delete' => ['dict', 'button', '删除字典', '', '', 40],
+
+        'config' => ['system', 'menu', '系统配置', 'system/configs', 'SetUp', 55],
+        'config.view' => ['config', 'button', '查看配置', '', '', 10],
+        'config.edit' => ['config', 'button', '修改配置', '', '', 20],
 
         'oplog' => ['system', 'menu', '操作日志', 'system/oplogs', 'Document', 60],
         'oplog.view' => ['oplog', 'button', '查看操作日志', '', '', 10],

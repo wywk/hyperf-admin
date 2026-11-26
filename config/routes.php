@@ -10,6 +10,7 @@ declare(strict_types=1);
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 use App\Controller\Api\AuthController;
+use App\Controller\Api\ConfigController;
 use App\Controller\Api\CrontabController;
 use App\Controller\Api\DashboardController;
 use App\Controller\Api\DictController;
@@ -21,6 +22,8 @@ use App\Controller\Api\LoginLogController;
 use App\Controller\Api\OperationLogController;
 use App\Controller\Api\PermissionController;
 use App\Controller\Api\RoleController;
+use App\Controller\Api\SessionController;
+use App\Controller\Api\UserController;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\OperationLogMiddleware;
 use Hyperf\HttpServer\Router\Router;
@@ -51,6 +54,7 @@ Router::addGroup('/api', function () {
     Router::get('/auth/me', [AuthController::class, 'me']);
     Router::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Router::post('/auth/logout', [AuthController::class, 'logout']);
+    Router::post('/auth/password', [AuthController::class, 'changePassword']);
     Router::get('/auth/login-logs', [LoginLogController::class, 'index']);
     Router::get('/auth/login-logs/export', [LoginLogController::class, 'export']);
     Router::get('/operation-logs', [OperationLogController::class, 'index']);
@@ -71,6 +75,23 @@ Router::addGroup('/api', function () {
     Router::delete('/permissions/{id:\d+}', [PermissionController::class, 'destroy']);
 
     // 角色管理 + 角色授权
+    // 角色 / 用户（接口内部做 user.* 权限校验）
+    Router::get('/users', [UserController::class, 'index']);
+    Router::post('/users', [UserController::class, 'store']);
+    Router::put('/users/{id:\d+}', [UserController::class, 'update']);
+    Router::put('/users/{id:\d+}/status', [UserController::class, 'updateStatus']);
+    Router::put('/users/{id:\d+}/password', [UserController::class, 'resetPassword']);
+    Router::delete('/users/{id:\d+}', [UserController::class, 'destroy']);
+
+    // 在线会话（接口内部做 session.* 权限校验）
+    Router::get('/sessions', [SessionController::class, 'index']);
+    Router::delete('/sessions/user/{userId:\d+}', [SessionController::class, 'kickUser']);
+    Router::delete('/sessions/{userId:\d+}/{familyId:[a-zA-Z0-9]+}', [SessionController::class, 'kick']);
+
+    // 系统配置（接口内部做 config.* 权限校验）
+    Router::get('/configs', [ConfigController::class, 'index']);
+    Router::put('/configs', [ConfigController::class, 'update']);
+
     Router::get('/roles', [RoleController::class, 'index']);
     Router::post('/roles', [RoleController::class, 'store']);
     Router::put('/roles/{id:\d+}', [RoleController::class, 'update']);

@@ -26,8 +26,11 @@ use function Hyperf\Config\config;
  */
 class LoginThrottle
 {
-    public function __construct(protected Redis $redis, protected StdoutLoggerInterface $logger)
-    {
+    public function __construct(
+        protected Redis $redis,
+        protected StdoutLoggerInterface $logger,
+        protected ConfigService $configService
+    ) {
     }
 
     /**
@@ -102,11 +105,18 @@ class LoginThrottle
 
     private function maxAttempts(): int
     {
-        return max(1, (int) config('security.login_throttle.max_attempts', 5));
+        // 优先读「系统配置」里的在线参数，没有配置表数据时回落到 .env / security.php
+        return max(1, $this->configService->int(
+            'login_max_attempts',
+            (int) config('security.login_throttle.max_attempts', 5)
+        ));
     }
 
     private function decaySeconds(): int
     {
-        return max(1, (int) config('security.login_throttle.decay_seconds', 900));
+        return max(1, $this->configService->int(
+            'login_decay_seconds',
+            (int) config('security.login_throttle.decay_seconds', 900)
+        ));
     }
 }

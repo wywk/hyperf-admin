@@ -84,7 +84,7 @@ class FileController extends AbstractController
 
         $uploaded = $this->request->getUploadedFiles()['file'] ?? null;
         if ($uploaded === null) {
-            return ApiResponse::error(ApiCode::VALIDATION_FAILED, '缺少上传字段 file（multipart/form-data）');
+            return ApiResponse::fail(ApiCode::VALIDATION_FAILED, '缺少上传字段 file（multipart/form-data）');
         }
 
         $user = Context::get('user');
@@ -152,13 +152,13 @@ class FileController extends AbstractController
 
         $file = \App\Model\File::query()->find($id);
         if ($file === null) {
-            return ApiResponse::error(ApiCode::NOT_FOUND, '文件不存在或已删除');
+            return ApiResponse::fail(ApiCode::NOT_FOUND, '文件不存在或已删除');
         }
 
         try {
             $contents = $this->storageFactory->create($file->driver)->get((string) $file->path);
         } catch (RuntimeException) {
-            return ApiResponse::error(ApiCode::NOT_FOUND, '物理文件已丢失');
+            return ApiResponse::fail(ApiCode::NOT_FOUND, '物理文件已丢失');
         }
 
         return $this->response->raw($contents)

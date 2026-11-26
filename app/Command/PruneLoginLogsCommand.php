@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Model\LoginLog;
+use App\Service\ConfigService;
 use Hyperf\Command\Annotation\Command;
 use Hyperf\Command\Command as HyperfCommand;
 
@@ -28,6 +29,11 @@ class PruneLoginLogsCommand extends HyperfCommand
 
     protected string $description = '清理过期的登录审计日志';
 
+    public function __construct(protected ConfigService $configService)
+    {
+        parent::__construct();
+    }
+
     public function handle(): int
     {
         $option = $this->input->getOption('days');
@@ -37,7 +43,10 @@ class PruneLoginLogsCommand extends HyperfCommand
             return 1;
         }
 
-        $days = (int) ($option ?: config('security.login_log_retention_days', 90));
+        $days = (int) ($option ?: $this->configService->int(
+            'login_log_retention_days',
+            (int) config('security.login_log_retention_days', 90)
+        ));
         if ($days < 1) {
             $this->output->error('LOGIN_LOG_RETENTION_DAYS 必须大于 0');
 
