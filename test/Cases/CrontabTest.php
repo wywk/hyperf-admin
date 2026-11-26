@@ -194,6 +194,62 @@ class CrontabTest extends TestCase
         $this->delete('/api/crontabs/' . $taskId, [], $headers);
     }
 
+    public function testSystemLogPruneTask(): void
+    {
+        // 造一条 91 天前的登录日志与 181 天前的操作日志
+        $old = date('Y-m-d H:i:s', time() - 91 * 86400);
+        $veryOld = date('Y-m-d H:i:s', time() - 181 * 86400);
+        $loginId = \App\Model\LoginLog::query()->insertGetId([
+            'user_id' => 0, 'username' => 'prune-test', 'event' => 'logout', 'ip' => '127.0.0.1',
+            'user_agent' => '', 'message' => '', 'created_at' => $old,
+        ]);
+        $opId = \App\Model\OperationLog::query()->insertGetId([
+            'user_id' => 0, 'username' => 'prune-test', 'method' => 'POST', 'path' => '/api/prune-test',
+            'action' => '', 'params' => null, 'status_code' => 200, 'cost_ms' => 1,
+            'ip' => '127.0.0.1', 'user_agent' => '', 'created_at' => $veryOld,
+        ]);
+
+        $task = make(\App\Crontab\SystemLogPruneTask::class);
+        $output = $task->execute([]);
+
+        $this->assertNull(\App\Model\LoginLog::query()->find($loginId), '91 天前的登录日志应被清理');
+        $this->assertNull(\App\Model\OperationLog::query()->find($opId), '181 天前的操作日志应被清理');
+        $this->assertStringContainsString('登录日志清理', $output);
+    }
+
+    public function testFailAlertThreshold(): void
+    {
+        $token = $this->loginToken('admin', 'admin123456');
+        $headers = ['Authorization' => 'Bearer ' . $token];
+        $this->cleanHandlers(['App\\Crontab\\TaskInterface']);
+
+        $create = $this->json('/api/crontabs', [
+            'name' => '告警阈值验证',
+            'handler' => 'App\\Crontab\\TaskInterface',
+            'rule' => '0 9 * * *',
+        ], $headers);
+        $taskId = $create->json('data.id');
+
+        // 默认阈值 3：连续触发 3 次失败
+        for ($i = 0; $i < 3; $i++) {
+            $this->json('/api/crontabs/' . $taskId . '/run', [], $headers);
+        }
+        $task = \App\Model\CrontabTask::query()->find($taskId);
+        $this->assertSame(3, (int) $task?->consecutive_failures);
+
+        // 成功一次后清零
+        $update = $this->put('/api/crontabs/' . $taskId, [
+            'name' => '告警阈值验证',
+            'handler' => 'App\\Crontab\\DemoReportTask',
+            'rule' => '0 9 * * *',
+        ], $headers);
+        $update->assertOk();
+        $this->json('/api/crontabs/' . $taskId . '/run', [], $headers);
+        $this->assertSame(0, (int) \App\Model\CrontabTask::query()->find($taskId)?->consecutive_failures);
+
+        $this->delete('/api/crontabs/' . $taskId, [], $headers);
+    }
+
     private function loginToken(string $username, string $password): string
     {
         $body = $this->json('/api/auth/login', [

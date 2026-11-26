@@ -22,8 +22,10 @@ use Throwable;
  */
 class CrontabExecutor
 {
-    public function __construct(protected StdoutLoggerInterface $logger)
-    {
+    public function __construct(
+        protected StdoutLoggerInterface $logger,
+        protected \App\Service\CrontabAlertService $alertService
+    ) {
     }
 
     /**
@@ -69,12 +71,13 @@ class CrontabExecutor
         ]);
 
         $task->last_run_at = date('Y-m-d H:i:s');
-        // 连续失败计数：成功清零，失败累加；用于后续告警/自动停用（预留）
+        // 连续失败计数：成功清零，失败累加；达到阈值触发一次告警
         if ($status === CrontabLog::STATUS_SUCCESS) {
             $task->consecutive_failures = 0;
         } else {
             $task->consecutive_failures = (int) $task->consecutive_failures + 1;
             $this->logger->warning(sprintf('定时任务执行失败（id=%d handler=%s）：%s', $task->id, $task->handler, $output));
+            $this->alertService->maybeAlert($task, $log);
         }
         $task->save();
 

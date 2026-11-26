@@ -33,4 +33,10 @@ return [
 
     // 操作日志保留天数，预留清理任务使用
     'operation_log_retention_days' => (int) env('OPERATION_LOG_RETENTION_DAYS', 180),
+
+    // 定时任务连续失败多少次后触发告警（每轮失败都会调用，只在恰好达到阈值时告警一次）
+    'crontab_fail_alert_threshold' => (int) env('CRONTAB_FAIL_ALERT_THRESHOLD', 3),
+
+    // 任务告警 webhook 地址（可选，POST JSON）；为空则只写 stdout 日志
+    'alert_webhook_url' => (string) env('ALERT_WEBHOOK_URL', ''),
 ];
