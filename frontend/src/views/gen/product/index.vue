@@ -3,7 +3,7 @@
  * Product 管理页（由代码生成器生成，可按需调整）。
  * 列表 / 搜索 / 新增 / 编辑 / 删除，权限码 product.view/.add/.edit/.delete。
  */
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import {
   batchDeleteProduct,
   createProduct,
@@ -14,14 +14,13 @@ import {
   updateProduct,
 } from '@/api/gen/product'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
+import { fetchDict } from '@/api/dict'
 
 const loading = ref(false)
 const exporting = ref(false)
-const selectedIds = ref<number[]>([])
-const statusLabels: Record<string, string> = {
-  '1': '上架',
-  '0': '下架',
-}
+const statusOptions = ref<Array<{ label: string; value: string }>>([])
+
+const statusLabels = computed<Record<string, string>>(() => Object.fromEntries(statusOptions.value.map((o) => [String(o.value), o.label])))
 
 const items = ref<any[]>([])
 const total = ref(0)
@@ -80,7 +79,10 @@ function downloadBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(link.href)
 }
 
-onMounted(load)
+onMounted(async () => {
+  statusOptions.value = (await fetchDict('common_status')).items
+  await load()
+})
 
 /* ---------------- 表单 ---------------- */
 
@@ -256,8 +258,7 @@ async function onImportFile(e: Event): Promise<void> {
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="query.status" clearable filterable style="width: 180px">
-              <el-option key="1" label="上架" value="1" />
-              <el-option key="0" label="下架" value="0" />
+              <el-option v-for="opt in statusOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -313,8 +314,7 @@ async function onImportFile(e: Event): Promise<void> {
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status" clearable filterable>
-              <el-option key="1" label="上架" value="1" />
-              <el-option key="0" label="下架" value="0" />
+              <el-option v-for="opt in statusOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
           </el-select>
         </el-form-item>
       </el-form>

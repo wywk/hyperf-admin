@@ -131,6 +131,40 @@ class GeneratorTest extends TestCase
         $this->assertStringContainsString('accept=".xlsx"', $page);
     }
 
+    public function testGeneratedDictFieldUsesDictSource(): void
+    {
+        $config = $this->config();
+        foreach ($config['fields'] as &$field) {
+            if ($field['name'] === 'status') {
+                $field['options'] = ['dict:common_status'];
+            }
+        }
+        unset($field);
+
+        $result = $this->gen->generate($config, dryRun: true);
+        $controller = $result['files']['app/Controller/Api/GenTestItemsController.php'];
+        $page = $result['files']['frontend/src/views/gen/gen_test_items/index.vue'];
+
+        // 后端：不做硬编码 in 校验，放宽为 string；运行时用 DictService 校验字典值
+        $this->assertStringNotContainsString("'status' => 'nullable|in:", $controller);
+        $this->assertMatchesRegularExpression("/'status' => 'nullable\|string/", $controller);
+        $this->assertStringContainsString('use App\\Service\\DictService;', $controller);
+        $this->assertStringContainsString('protected DictService $dict;', $controller);
+        $this->assertStringContainsString('private function validateDictValues(array $data): array', $controller);
+        $this->assertStringContainsString("'status' => 'common_status',", $controller);
+        $this->assertStringContainsString('$data = $this->validateDictValues($data);', $controller);
+
+        // 前端：动态加载字典项 + v-for 选项 + computed 标签映射
+        $this->assertStringContainsString("fetchDict('common_status')", $page);
+        $this->assertStringContainsString('statusOptions = ref<Array<{ label: string; value: string }>>', $page);
+        $this->assertStringContainsString('statusLabels = computed<Record<string, string>>', $page);
+        $this->assertStringContainsString('v-for="opt in statusOptions"', $page);
+        $this->assertStringContainsString("import { fetchDict } from '@/api/dict'", $page);
+        $this->assertStringContainsString("import { computed, onMounted, reactive, ref } from 'vue'", $page);
+        $this->assertStringNotContainsString("'1': '启用'", $page);
+        $this->assertStringNotContainsString('label="启用"', $page);
+    }
+
     public function testGeneratedModelUsesBareTableName(): void
     {
         $result = $this->gen->generate($this->config(), dryRun: true);

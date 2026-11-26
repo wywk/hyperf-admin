@@ -14,6 +14,8 @@ use App\Common\ApiResponse;
 use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
 use App\Model\Product;
+use App\Exception\BusinessException;
+use App\Service\DictService;
 use App\Service\ProductService;
 use App\Service\Excel\ExcelService;
 use App\Swagger\Attributes\SwBody;
@@ -45,6 +47,8 @@ class ProductController extends AbstractController
     #[Inject]
     protected ExcelService $excel;
 
+    #[Inject]
+    protected DictService $dict;
     public function __construct(protected ProductService $service)
     {
     }
@@ -96,7 +100,7 @@ class ProductController extends AbstractController
             new SwProp('name', type: 'string', desc: '名称'),
             new SwProp('price', type: 'number', desc: '价格'),
             new SwProp('stock', type: 'number', desc: '库存'),
-            new SwProp('status', type: 'string', desc: '状态'),
+            new SwProp('status', type: 'string', desc: '状态（字典 common_status）'),
             ],
             requiredProps: ['name', 'price'],
         ),
@@ -106,6 +110,7 @@ class ProductController extends AbstractController
         $this->authorize('product.add');
 
         $data = $this->validatorFactory->make($this->request->all(), $this->rules())->validate();
+        $data = $this->validateDictValues($data);
 
         return ApiResponse::success(['id' => (int) $this->service->create($data)->id], '创建成功');
     }
@@ -118,7 +123,7 @@ class ProductController extends AbstractController
             new SwProp('name', type: 'string', desc: '名称'),
             new SwProp('price', type: 'number', desc: '价格'),
             new SwProp('stock', type: 'number', desc: '库存'),
-            new SwProp('status', type: 'string', desc: '状态'),
+            new SwProp('status', type: 'string', desc: '状态（字典 common_status）'),
             ],
             required: false,
         ),
@@ -128,6 +133,7 @@ class ProductController extends AbstractController
         $this->authorize('product.edit');
 
         $data = $this->validatorFactory->make($this->request->all(), $this->rulesForUpdate())->validate();
+        $data = $this->validateDictValues($data);
         $this->service->update($id, $data);
 
         return ApiResponse::success(['id' => $id], '保存成功');
@@ -251,13 +257,33 @@ class ProductController extends AbstractController
         ], $failed === [] ? '导入完成' : '导入完成（部分行校验失败）');
     }
 
+    /** 字典字段值校验：与字典项比对（DictService 走缓存） */
+    private function validateDictValues(array $data): array
+    {
+        $checks = [
+        'status' => 'common_status',
+        ];
+        foreach ($checks as $field => $code) {
+            $value = $data[$field] ?? null;
+            if ($value === null || $value === '') {
+                continue;
+            }
+            $allowed = array_column($this->dict->items($code), 'value');
+            if (! in_array((string) $value, $allowed, true)) {
+                throw new BusinessException(ApiCode::VALIDATION_FAILED, "{$field} 的值不在字典 {$code} 范围内");
+            }
+        }
+
+        return $data;
+    }
+
     private function rules(): array
     {
         return [
             'name' => 'required|string|max:64',
             'price' => 'required|numeric',
             'stock' => 'nullable|numeric',
-            'status' => 'nullable|in:1,0',
+            'status' => 'nullable|string|max:191',
         ];
     }
 
