@@ -11,6 +11,7 @@ declare(strict_types=1);
  */
 use App\Controller\Api\AuthController;
 use App\Controller\Api\CrontabController;
+use App\Controller\Api\DashboardController;
 use App\Controller\Api\DictController;
 use App\Controller\Api\DocsController;
 use App\Controller\Api\FileController;
@@ -47,6 +48,7 @@ Router::addGroup('/api', function () {
 // 需要登录的接口
 Router::addGroup('/api', function () {
     Router::get('/auth/me', [AuthController::class, 'me']);
+    Router::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Router::post('/auth/logout', [AuthController::class, 'logout']);
     Router::get('/auth/login-logs', [LoginLogController::class, 'index']);
     Router::get('/operation-logs', [OperationLogController::class, 'index']);

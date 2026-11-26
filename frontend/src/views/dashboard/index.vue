@@ -5,10 +5,41 @@ import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from '@/plugins/element'
 import { useAuthStore } from '@/stores/auth'
 import { API_BASE_URL } from '@/api/http'
+import { fetchDashboardStats } from '@/api/dashboard'
 import { getExpiresAt } from '@/utils/token'
 
 const auth = useAuthStore()
 const router = useRouter()
+
+// ---------- 系统统计 ----------
+interface TrendItem {
+  date: string
+  count: number
+}
+
+interface DashboardStats {
+  users_total: number
+  users_enabled: number
+  roles_total: number
+  files_total: number
+  logins_today: number
+  operations_today: number
+  operations_total: number
+  crontab_enabled: number
+  crontab_failing: number
+  trend: TrendItem[]
+}
+
+const stats = ref<DashboardStats | null>(null)
+const maxTrend = computed(() => Math.max(1, ...(stats.value?.trend ?? []).map((t) => t.count)))
+
+async function loadStats(): Promise<void> {
+  try {
+    stats.value = await fetchDashboardStats()
+  } catch {
+    // 统计卡片加载失败不影响页面其他内容
+  }
+}
 
 const now = ref(Date.now())
 const refreshing = ref(false)
@@ -18,6 +49,7 @@ onMounted(() => {
   timer = window.setInterval(() => {
     now.value = Date.now()
   }, 1000)
+  void loadStats()
 })
 
 onBeforeUnmount(() => {
@@ -75,6 +107,70 @@ function goAudit(): void {
         <span>刷新资料</span>
       </el-button>
     </div>
+
+    <!-- 系统统计 -->
+    <el-row v-if="stats" :gutter="16">
+      <el-col :xs="12" :sm="6" :md="4">
+        <el-card shadow="never" class="card stat">
+          <div class="card-label">用户</div>
+          <div class="card-value mono">{{ stats.users_total }}</div>
+          <span class="stat-sub text-muted">启用 {{ stats.users_enabled }}</span>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :sm="6" :md="4">
+        <el-card shadow="never" class="card stat">
+          <div class="card-label">今日登录</div>
+          <div class="card-value mono">{{ stats.logins_today }}</div>
+          <span class="stat-sub text-muted">登录成功次数</span>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :sm="6" :md="4">
+        <el-card shadow="never" class="card stat">
+          <div class="card-label">今日操作</div>
+          <div class="card-value mono">{{ stats.operations_today }}</div>
+          <span class="stat-sub text-muted">累计 {{ stats.operations_total }}</span>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :sm="6" :md="4">
+        <el-card shadow="never" class="card stat">
+          <div class="card-label">定时任务</div>
+          <div class="card-value mono">{{ stats.crontab_enabled }}</div>
+          <span class="stat-sub" :class="stats.crontab_failing > 0 ? 'warn' : 'text-muted'">
+            {{ stats.crontab_failing > 0 ? `${stats.crontab_failing} 个失败中` : '运行正常' }}
+          </span>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :sm="6" :md="4">
+        <el-card shadow="never" class="card stat">
+          <div class="card-label">文件</div>
+          <div class="card-value mono">{{ stats.files_total }}</div>
+          <span class="stat-sub text-muted">已上传</span>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :sm="6" :md="4">
+        <el-card shadow="never" class="card stat">
+          <div class="card-label">角色</div>
+          <div class="card-value mono">{{ stats.roles_total }}</div>
+          <span class="stat-sub text-muted">内置 + 自定义</span>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 近 7 日操作趋势 -->
+    <el-card v-if="stats && stats.trend.length" shadow="never" class="block trend-card">
+      <template #header>
+        <div class="block-head"><span>近 7 日写操作趋势</span></div>
+      </template>
+      <div class="trend">
+        <div v-for="item in stats.trend" :key="item.date" class="trend-item">
+          <div class="trend-bar-wrap">
+            <div class="trend-bar" :style="{ height: `${(item.count / maxTrend) * 100}%` }" />
+          </div>
+          <div class="trend-count mono">{{ item.count }}</div>
+          <div class="trend-date mono text-muted">{{ item.date }}</div>
+        </div>
+      </div>
+    </el-card>
 
     <el-row :gutter="16">
       <el-col :xs="24" :sm="12" :md="6">
@@ -196,6 +292,60 @@ function goAudit(): void {
 .card {
   border-radius: var(--app-radius);
   margin-bottom: 16px;
+}
+
+.stat .card-value {
+  font-size: 22px;
+}
+
+.stat-sub {
+  font-size: 12px;
+}
+
+.trend-card {
+  border-radius: var(--app-radius);
+  margin-bottom: 16px;
+}
+
+.trend {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.trend-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.trend-bar-wrap {
+  height: 120px;
+  width: 100%;
+  max-width: 56px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--el-fill-color-light);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.trend-bar {
+  width: 100%;
+  min-height: 2px;
+  background: var(--el-color-primary);
+  border-radius: 6px 6px 0 0;
+  transition: height 0.4s ease;
+}
+
+.trend-count {
+  font-size: 12px;
+}
+
+.trend-date {
+  font-size: 12px;
 }
 
 .card-label {
