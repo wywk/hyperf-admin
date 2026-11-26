@@ -18,6 +18,7 @@ import { fetchDict } from '@/api/dict'
 
 const loading = ref(false)
 const exporting = ref(false)
+const selectedIds = ref<number[]>([])
 const statusOptions = ref<Array<{ label: string; value: string }>>([])
 
 const statusLabels = computed<Record<string, string>>(() => Object.fromEntries(statusOptions.value.map((o) => [String(o.value), o.label])))
