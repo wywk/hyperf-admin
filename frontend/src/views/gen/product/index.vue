@@ -3,7 +3,7 @@
  * Product 管理页（由代码生成器生成，可按需调整）。
  * 列表 / 搜索 / 新增 / 编辑 / 删除，权限码 product.view/.add/.edit/.delete。
  */
-import { computed, onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import {
   batchDeleteProduct,
   createProduct,
@@ -14,14 +14,15 @@ import {
   updateProduct,
 } from '@/api/gen/product'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
-import { fetchDict } from '@/api/dict'
+
 
 const loading = ref(false)
 const exporting = ref(false)
 const selectedIds = ref<number[]>([])
-const statusOptions = ref<Array<{ label: string; value: string }>>([])
-
-const statusLabels = computed<Record<string, string>>(() => Object.fromEntries(statusOptions.value.map((o) => [String(o.value), o.label])))
+const statusLabels: Record<string, string> = {
+  '1': '上架',
+  '0': '下架',
+}
 
 const items = ref<any[]>([])
 const total = ref(0)
@@ -80,10 +81,7 @@ function downloadBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(link.href)
 }
 
-onMounted(async () => {
-  statusOptions.value = (await fetchDict('common_status')).items
-  await load()
-})
+onMounted(load)
 
 /* ---------------- 表单 ---------------- */
 
@@ -103,10 +101,13 @@ const emptyForm: Record<string, any> = {
   status: '',
 }
 
-function openCreate(): void {
+function openCreate(parentId?: number): void {
   editingId.value = 0
   resetForm()
   Object.assign(form, JSON.parse(JSON.stringify(emptyForm)))
+  if (parentId) {
+    form.parent_id = parentId
+  }
   dialogVisible.value = true
 }
 
@@ -232,6 +233,15 @@ async function onImportFile(e: Event): Promise<void> {
     importing.value = false
   }
 }
+/* ---------------- 详情抽屉 ---------------- */
+
+const detailVisible = ref(false)
+const detailRow = ref<Record<string, any>>({})
+
+function openDetail(row: any): void {
+  detailRow.value = row
+  detailVisible.value = true
+}
 </script>
 
 <template>
@@ -259,7 +269,8 @@ async function onImportFile(e: Event): Promise<void> {
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="query.status" clearable filterable style="width: 180px">
-              <el-option v-for="opt in statusOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+              <el-option key="1" label="上架" value="1" />
+              <el-option key="0" label="下架" value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -279,8 +290,9 @@ async function onImportFile(e: Event): Promise<void> {
         <el-tag type="info">{{ statusLabels[String(row.status)] ?? row.status }}</el-tag>
       </template>
     </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
+            <el-button v-permission="'product.view'" link @click="openDetail(row)">详情</el-button>
             <el-button v-permission="'product.edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button v-permission="'product.delete'" link type="danger" @click="remove(row)">删除</el-button>
           </template>
@@ -304,6 +316,7 @@ async function onImportFile(e: Event): Promise<void> {
 
     <el-dialog v-model="dialogVisible" :title="editingId > 0 ? '编辑' : '新增'" width="560px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
+
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" clearable />
         </el-form-item>
@@ -315,7 +328,8 @@ async function onImportFile(e: Event): Promise<void> {
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status" clearable filterable>
-              <el-option v-for="opt in statusOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+              <el-option key="1" label="上架" value="1" />
+              <el-option key="0" label="下架" value="0" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -325,6 +339,15 @@ async function onImportFile(e: Event): Promise<void> {
       </template>
     </el-dialog>
 
+    <el-drawer v-model="detailVisible" title="详情" size="420px">
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="ID">{{ detailRow.id ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="名称">{{ detailRow.name ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="价格">{{ detailRow.price ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="库存">{{ detailRow.stock ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="状态">{{ statusLabels[String(detailRow.status)] ?? detailRow.status ?? '-' }}</el-descriptions-item>
+      </el-descriptions>
+    </el-drawer>
     <el-dialog v-model="importResult.visible" title="导入结果" width="520px">
       <p>
         共处理 {{ importResult.success + importResult.failed.length }} 行：

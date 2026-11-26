@@ -69,6 +69,14 @@ function search(): void {
   void load()
 }
 
+/** 点击操作人列：一键筛选该用户的近期操作 */
+function filterByUser(username: string): void {
+  query.username = username
+  query.page = 1
+  void load()
+  ElMessage.success(`已筛选 ${username} 的操作记录`)
+}
+
 function reset(): void {
   query.username = ''
   query.method = ''
@@ -166,7 +174,13 @@ async function exportLogs(): Promise<void> {
     <el-card shadow="never" class="table-card">
       <el-table v-loading="loading" :data="items" stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="username" label="操作人" width="110" />
+        <el-table-column prop="username" label="操作人" width="110">
+          <template #default="{ row }">
+            <el-link type="primary" :underline="false" title="点击筛选该用户的操作" @click="filterByUser(row.username)">
+              {{ row.username }}
+            </el-link>
+          </template>
+        </el-table-column>
         <el-table-column label="方法" width="90">
           <template #default="{ row }">
             <el-tag :type="methodTag(row.method)" effect="light" size="small">{{ row.method }}</el-tag>

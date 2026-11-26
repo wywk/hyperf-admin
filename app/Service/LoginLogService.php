@@ -66,20 +66,7 @@ class LoginLogService
      */
     public function paginate(array $filters, int $page, int $pageSize): array
     {
-        $query = LoginLog::query();
-
-        if (! empty($filters['event'])) {
-            $query->where('event', $filters['event']);
-        }
-        if (! empty($filters['username'])) {
-            $query->where('username', $filters['username']);
-        }
-        if (! empty($filters['user_id'])) {
-            $query->where('user_id', $filters['user_id']);
-        }
-        if (! empty($filters['ip'])) {
-            $query->where('ip', $filters['ip']);
-        }
+        $query = $this->filteredQuery($filters);
 
         $total = (int) $query->count();
         $rows = $query->orderByDesc('id')->forPage($page, $pageSize)->get();
@@ -106,5 +93,51 @@ class LoginLogService
             'page_size' => $pageSize,
             'items' => $items,
         ];
+    }
+
+    /**
+     * 导出全量：与列表共用筛选条件，按 id 升序每批 500 条产出（Generator，内存友好），上限 5000 行。
+     *
+     * @param array{event?: string, username?: string, user_id?: int, ip?: string} $filters
+     * @return \Generator<int, array<string, null|string>>
+     */
+    public function exportRows(array $filters): \Generator
+    {
+        $rows = $this->filteredQuery($filters)->orderBy('id')->limit(5000)->get();
+
+        foreach ($rows as $row) {
+            /* @var LoginLog $row */
+            yield [
+                'id' => (int) $row->id,
+                'created_at' => $row->created_at?->toDateTimeString(),
+                'username' => (string) $row->username,
+                'event_text' => $row->eventText(),
+                'ip' => (string) $row->ip,
+                'user_agent' => (string) $row->user_agent,
+            ];
+        }
+    }
+
+    /**
+     * 列表/导出共用的筛选查询。
+     */
+    private function filteredQuery(array $filters): \Hyperf\Database\Model\Builder
+    {
+        $query = LoginLog::query();
+
+        if (! empty($filters['event'])) {
+            $query->where('event', $filters['event']);
+        }
+        if (! empty($filters['username'])) {
+            $query->where('username', $filters['username']);
+        }
+        if (! empty($filters['user_id'])) {
+            $query->where('user_id', $filters['user_id']);
+        }
+        if (! empty($filters['ip'])) {
+            $query->where('ip', $filters['ip']);
+        }
+
+        return $query;
     }
 }

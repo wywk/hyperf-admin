@@ -14,6 +14,7 @@ namespace App\Controller\Api;
 
 use App\Common\ApiResponse;
 use App\Controller\AbstractController;
+use App\Service\Excel\ExcelService;
 use App\Service\LoginLogService;
 use App\Swagger\Attributes\SwGet;
 use App\Swagger\Attributes\SwQuery;
@@ -31,6 +32,9 @@ class LoginLogController extends AbstractController
 {
     #[Inject]
     protected ValidatorFactoryInterface $validatorFactory;
+
+    #[Inject]
+    protected ExcelService $excel;
 
     public function __construct(protected LoginLogService $loginLogService)
     {
@@ -81,5 +85,36 @@ class LoginLogController extends AbstractController
             max(1, (int) ($data['page'] ?? 1)),
             min(100, max(1, (int) ($data['page_size'] ?? 20)))
         ));
+    }
+
+    /**
+     * GET /api/auth/login-logs/export.
+     */
+    #[SwGet(path: '/api/auth/login-logs/export', operationId: 'loginLogExport', summary: '导出登录审计 Excel', tag: '登录审计',
+        desc: '与列表共用筛选条件（event/username/user_id/ip），最多导出 5000 行。',
+        responses: [new SwResp(desc: 'xlsx 二进制流（Content-Disposition 附件下载）')])]
+    public function export(): ResponseInterface
+    {
+        $data = $this->validatorFactory->make($this->request->all(), [
+            'event' => 'nullable|string|max:32',
+            'username' => 'nullable|string|max:64',
+            'user_id' => 'nullable|integer|min:1',
+            'ip' => 'nullable|string|max:45',
+        ])->validate();
+
+        $filters = array_filter([
+            'event' => $data['event'] ?? null,
+            'username' => $data['username'] ?? null,
+            'user_id' => isset($data['user_id']) ? (int) $data['user_id'] : null,
+            'ip' => $data['ip'] ?? null,
+        ], static fn ($value) => $value !== null && $value !== '');
+
+        $binary = $this->excel->export('login-logs.xlsx', [
+            'ID', '时间', '用户名', '事件', 'IP', 'User-Agent',
+        ], $this->loginLogService->exportRows($filters));
+
+        return $this->response->raw($binary)
+            ->withHeader('Content-Type', ExcelService::XLSX_MIME)
+            ->withHeader('Content-Disposition', 'attachment; filename="login-logs.xlsx"');
     }
 }

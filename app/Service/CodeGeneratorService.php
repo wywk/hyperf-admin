@@ -307,7 +307,13 @@ class CodeGeneratorService
         $exportColumns = [];
         $dictLoads = [];
         $dictChecks = [];
+        $detailItems = [];
         $hasDict = false;
+
+        // 树形模式：表里有 parent_id 列时，列表按树渲染（含上级选择、新增子级）
+        $isTree = isset($columnMeta['parent_id']);
+        // 树节点的展示名：第一个 input/textarea 且上列表的字段，兜底 id
+        $treeLabelField = 'id';
 
         foreach ($fields as $field) {
             $name = $field['name'];
@@ -423,6 +429,18 @@ class CodeGeneratorService
                 } else {
                     $tableColumns[] = "    <el-table-column prop=\"{$name}\" label=\"{$label}\" min-width=\"130\" show-overflow-tooltip />";
                 }
+
+                // 详情抽屉：与列表列共用标签与取值逻辑（抽屉里行对象叫 detailRow）
+                $detailValueExpr = match (true) {
+                    $formType === 'switch' => "detailRow.{$name} ? '是' : '否'",
+                    $formType === 'select' && ($field['options'] ?? []) !== [] => "{$name}Labels[String(detailRow.{$name})] ?? detailRow.{$name}",
+                    default => "detailRow.{$name}",
+                };
+                $detailItems[] = "        <el-descriptions-item label=\"{$label}\">{{ {$detailValueExpr} ?? '-' }}</el-descriptions-item>";
+
+                if (in_array($formType, ['input', 'textarea'], true) && $treeLabelField === 'id') {
+                    $treeLabelField = $name;
+                }
             }
 
             if (! empty($field['form'])) {
@@ -437,6 +455,28 @@ class CodeGeneratorService
         $casts = array_values(array_filter($casts));
         $searchItems = array_values(array_filter($searchItems));
         $dictChecksBlock = implode("\n", $dictChecks);
+
+        if ($isTree) {
+            // parent_id 不在字段配置里也能挂树：校验/填充/表单默认值补齐
+            array_unshift($rules, "            'parent_id' => 'nullable|integer|min:0',");
+            array_unshift($fillable, "        'parent_id',");
+            $formDefaults[] = '  parent_id: null,';
+            $formFieldSpecs[] = ['name' => 'parent_id', 'label' => '上级', 'type' => 'number', 'required' => false];
+        }
+
+        $detailBlock = implode("\n", $detailItems);
+        $parentFormItem = $isTree ? <<<'VUE'
+        <el-form-item label="上级" prop="parent_id">
+          <el-tree-select
+            v-model="form.parent_id"
+            :data="parentTreeOptions"
+            check-strictly
+            clearable
+            placeholder="不选则为顶级"
+            style="width: 100%"
+          />
+        </el-form-item>
+VUE : '';
 
         return [
             'module' => $module,
@@ -459,7 +499,7 @@ class CodeGeneratorService
             'routes_block' => $this->renderRoutesBlock($module, $studly),
             'export_columns' => implode("\n", $exportColumns) ?: "        // 无导出字段",
             'frontend_route' => $this->renderFrontendRoute($module, $studly, $menuName, $menuPath),
-            'vue_imports' => $hasDict ? "import { computed, onMounted, reactive, ref } from 'vue'" : "import { onMounted, reactive, ref } from 'vue'",
+            'vue_imports' => $hasDict || $isTree ? "import { computed, onMounted, reactive, ref } from 'vue'" : "import { onMounted, reactive, ref } from 'vue'",
             'dict_import' => $hasDict ? "import { fetchDict } from '@/api/dict'" : '',
             'dict_setup' => $hasDict
                 ? "onMounted(async () => {\n" . implode("\n", $dictLoads) . "\n  await load()\n})"
@@ -468,6 +508,44 @@ class CodeGeneratorService
             'dict_controller_inject' => $hasDict ? "\n    #[Inject]\n    protected DictService \$dict;" : '',
             'dict_validate' => $hasDict ? "        \$data = \$this->validateDictValues(\$data);\n" : '',
             'dict_checks' => implode("\n", $dictChecks),
+            'is_tree' => $isTree,
+            'tree_label_field' => $treeLabelField,
+            'parent_form_item' => $parentFormItem,
+            'detail_items' => $detailBlock,
+            // index 方法体（树形走 listAll 全量，常规走分页）
+            'index_body' => $isTree
+                ? "        return ApiResponse::success(\$this->service->listAll(\n"
+                    . "            array_filter(\$this->searchFilters(\$data), static fn (\$v) => \$v !== null && \$v !== '')\n"
+                    . "        ));\n"
+                : "        \$page = max(1, (int) (\$data['page'] ?? 1));\n"
+                    . "        \$pageSize = min(100, max(1, (int) (\$data['page_size'] ?? 20)));\n\n"
+                    . "        return ApiResponse::success(\$this->service->paginate(\n"
+                    . "            array_filter(\$this->searchFilters(\$data), static fn (\$v) => \$v !== null && \$v !== ''),\n"
+                    . "            \$page,\n"
+                    . "            \$pageSize\n"
+                    . "        ));\n",
+            'tree_service_method' => $isTree ? str_replace(
+                ['{{STUDLY}}', '{{SEARCH_WHERES}}'],
+                [$studly, implode("\n", $searchWheres) ?: '        // 未配置搜索字段'],
+                <<<'PHP'
+    /**
+     * 全量列表（树形模块）：不分页，按 parent_id、id 排序，树结构由前端组装。
+     */
+    public function listAll(array $filters): array
+    {
+        $query = {{STUDLY}}::query()->orderBy('parent_id')->orderBy('id');
+
+{{SEARCH_WHERES}}
+
+        $items = $query->get();
+
+        return ['items' => $items, 'total' => $items->count()];
+    }
+
+PHP
+            ) : '',
+            'tree_update_guard' => $isTree ? "        if (isset(\$data['parent_id']) && (int) \$data['parent_id'] === \$id) {\n            throw new BusinessException(ApiCode::VALIDATION_FAILED, '上级不能选择自己');\n        }\n\n" : '',
+            'tree_delete_guard' => $isTree ? "        if ({$studly}::query()->where('parent_id', \$id)->exists()) {\n            throw new BusinessException(ApiCode::VALIDATION_FAILED, '存在下级，请先删除下级');\n        }\n\n" : '',
             'dict_method' => $hasDict ? <<<PHP
     /** 字典字段值校验：与字典项比对（DictService 走缓存） */
     private function validateDictValues(array \$data): array
@@ -659,7 +737,7 @@ class {$ctx['studly']}Service
             'items' => \$query->forPage(\$page, \$pageSize)->get(),
         ];
     }
-
+{$ctx['tree_service_method']}
     /**
      * 导出全量数据：与列表共用筛选条件，按 id 升序每批 500 条产出（Generator，内存友好）。
      */
@@ -710,7 +788,7 @@ class {$ctx['studly']}Service
 
     public function update(int \$id, array \$data): {$ctx['studly']}
     {
-        /** @var {$ctx['studly']} \$model */
+{$ctx['tree_update_guard']}        /** @var {$ctx['studly']} \$model */
         \$model = {$ctx['studly']}::query()->findOrFail(\$id);
         \$model->fill(\$data)->save();
 
@@ -719,7 +797,7 @@ class {$ctx['studly']}Service
 
     public function delete(int \$id): void
     {
-        {$ctx['studly']}::query()->where('id', \$id)->delete();
+{$ctx['tree_delete_guard']}        {$ctx['studly']}::query()->where('id', \$id)->delete();
     }
 
     /**
@@ -877,16 +955,7 @@ class {$ctx['studly']}Controller extends AbstractController
             'page' => 'nullable|integer|min:1',
             'page_size' => 'nullable|integer|between:1,100',
         ] + \$this->searchRules())->validate();
-
-        \$page = max(1, (int) (\$data['page'] ?? 1));
-        \$pageSize = min(100, max(1, (int) (\$data['page_size'] ?? 20)));
-
-        return ApiResponse::success(\$this->service->paginate(
-            array_filter(\$this->searchFilters(\$data), static fn (\$v) => \$v !== null && \$v !== ''),
-            \$page,
-            \$pageSize
-        ));
-    }
+{$ctx['index_body']}    }
 
 {$swShow}
     public function show(int \$id): ResponseInterface
@@ -1173,8 +1242,7 @@ async function load(): Promise<void> {
   loading.value = true
   try {
     const result = await fetch{$studly}List({ ...query })
-    items.value = result.items
-    total.value = result.total
+{{LOAD_ASSIGN}}
   } catch {
     // 错误由请求层统一提示
   } finally {
@@ -1231,10 +1299,13 @@ const form = reactive<Record<string, any>>({})
 const rules: Record<string, unknown> = {$ctx['form_rules']}
 const emptyForm: Record<string, any> = {$ctx['form_defaults']}
 
-function openCreate(): void {
+function openCreate(parentId?: number): void {
   editingId.value = 0
   resetForm()
   Object.assign(form, JSON.parse(JSON.stringify(emptyForm)))
+  if (parentId) {
+    form.parent_id = parentId
+  }
   dialogVisible.value = true
 }
 
@@ -1360,6 +1431,7 @@ async function onImportFile(e: Event): Promise<void> {
     importing.value = false
   }
 }
+{{PAGE_EXTRAS}}
 </script>
 
 <template>
@@ -1379,13 +1451,14 @@ async function onImportFile(e: Event): Promise<void> {
 
     <el-card shadow="never">
 {{SEARCH_BLOCK}}
-      <el-table v-loading="loading" :data="items" row-key="id" @selection-change="onSelectionChange">
+      <el-table v-loading="loading" :data="items" row-key="id"{{TREE_TABLE_ATTRS}} @selection-change="onSelectionChange">
         <el-table-column type="selection" width="45" />
         <el-table-column prop="id" label="ID" width="80" />
 {$ctx['table_columns']}
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="{{OPS_WIDTH}}" fixed="right">
           <template #default="{ row }">
-            <el-button v-permission="'{$module}.edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button v-permission="'{$module}.view'" link @click="openDetail(row)">详情</el-button>
+{{TREE_CHILD_BUTTON}}            <el-button v-permission="'{$module}.edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button v-permission="'{$module}.delete'" link type="danger" @click="remove(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -1394,20 +1467,11 @@ async function onImportFile(e: Event): Promise<void> {
         </template>
       </el-table>
 
-      <div class="pagination">
-        <el-pagination
-          v-model:current-page="query.page"
-          :total="total"
-          :page-size="query.page_size"
-          layout="total, prev, pager, next"
-          background
-          @current-change="load"
-        />
-      </div>
-    </el-card>
+{{PAGINATION_BLOCK}}    </el-card>
 
     <el-dialog v-model="dialogVisible" :title="editingId > 0 ? '编辑' : '新增'" width="560px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
+{{PARENT_FORM_ITEM}}
 {$ctx['form_items']}
       </el-form>
       <template #footer>
@@ -1416,6 +1480,7 @@ async function onImportFile(e: Event): Promise<void> {
       </template>
     </el-dialog>
 
+{{DETAIL_DRAWER}}
     <el-dialog v-model="importResult.visible" title="导入结果" width="520px">
       <p>
         共处理 {{ importResult.success + importResult.failed.length }} 行：
@@ -1484,7 +1549,104 @@ VUE;
                 . "        </el-form-item>\n"
                 . "      </el-form>\n";
 
-        return str_replace('{{SEARCH_BLOCK}}', $searchBlock, $template);
+        $isTree = $ctx['is_tree'];
+
+        // 详情抽屉（所有模块）：列表字段逐项展示，select/switch 复用标签映射
+        $detailDrawer = str_replace(
+            '{{DETAIL_ITEMS}}',
+            $ctx['detail_items'],
+            <<<'VUE'
+    <el-drawer v-model="detailVisible" title="详情" size="420px">
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="ID">{{ detailRow.id ?? '-' }}</el-descriptions-item>
+{{DETAIL_ITEMS}}
+      </el-descriptions>
+    </el-drawer>
+VUE
+        );
+
+        // 详情抽屉脚本（所有模块）
+        $pageExtras = <<<'TS'
+/* ---------------- 详情抽屉 ---------------- */
+
+const detailVisible = ref(false)
+const detailRow = ref<Record<string, any>>({})
+
+function openDetail(row: any): void {
+  detailRow.value = row
+  detailVisible.value = true
+}
+TS;
+
+        // 树形脚本（仅树形模块）
+        $treeScript = str_replace(
+            '{{LABEL_FIELD}}',
+            $ctx['tree_label_field'],
+            <<<'TS'
+
+/* ---------------- 树形构建 ---------------- */
+
+function buildTree(rows: any[]): any[] {
+  const nodes = new Map<number, any>()
+  for (const row of rows) {
+    nodes.set(Number(row.id), { ...row, children: [] })
+  }
+  const roots: any[] = []
+  for (const node of nodes.values()) {
+    const parent = node.parent_id ? nodes.get(Number(node.parent_id)) : null
+    if (parent) {
+      parent.children.push(node)
+    } else {
+      roots.push(node)
+    }
+  }
+  return roots
+}
+
+const parentTreeOptions = computed(() => {
+  const clone = (nodes: any[], excludeId: number): any[] =>
+    nodes
+      .filter((node) => node.id !== excludeId)
+      .map((node) => ({
+        value: node.id,
+        label: node.{{LABEL_FIELD}} ?? `#${node.id}`,
+        children: clone(node.children ?? [], excludeId),
+      }))
+  return clone(items.value, editingId.value)
+})
+TS
+        );
+
+        $paginationBlock = $isTree
+            ? ''
+            : "      <div class=\"pagination\">\n"
+                . "        <el-pagination\n"
+                . "          v-model:current-page=\"query.page\"\n"
+                . "          :total=\"total\"\n"
+                . "          :page-size=\"query.page_size\"\n"
+                . "          layout=\"total, prev, pager, next\"\n"
+                . "          background\n"
+                . "          @current-change=\"load\"\n"
+                . "        />\n"
+                . "      </div>\n";
+
+        $replacements = [
+            '{{SEARCH_BLOCK}}' => $searchBlock,
+            '{{PAGE_EXTRAS}}' => rtrim($pageExtras . ($isTree ? $treeScript : '')),
+            '{{LOAD_ASSIGN}}' => $isTree
+                ? "    items.value = buildTree(result.items)\n    total.value = result.total"
+                : "    items.value = result.items\n    total.value = result.total",
+            '{{TREE_TABLE_ATTRS}}' => $isTree ? " :tree-props=\"{ children: 'children' }\" default-expand-all" : '',
+            '{{OPS_WIDTH}}' => $isTree ? '220' : '180',
+            '{{TREE_CHILD_BUTTON}}' => $isTree
+                ? "            <el-button v-permission=\"'{$module}.add'\" link type=\"primary\" @click=\"openCreate(row.id)\">子级</el-button>\n"
+                : '',
+            '{{PAGINATION_BLOCK}}' => $paginationBlock,
+            '{{PARENT_FORM_ITEM}}' => $ctx['parent_form_item'],
+            '{{DETAIL_DRAWER}}' => $detailDrawer,
+        ];
+
+        return str_replace(array_keys($replacements), array_values($replacements), $template);
     }
 
     /** 选项校验规则：有选项时按值做 in 校验（兼容数字/字符串提交），否则退回字符串 */

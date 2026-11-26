@@ -213,6 +213,59 @@ class GeneratorTest extends TestCase
         $this->assertStringContainsString('批量删除', $page);
     }
 
+    public function testGeneratedDetailDrawerPieces(): void
+    {
+        $result = $this->gen->generate($this->config(), dryRun: true);
+        $page = $result['files']['frontend/src/views/gen/gen_test_items/index.vue'];
+
+        // 每个生成页都带详情抽屉：入口按钮 + 抽屉模板 + 描述列表
+        $this->assertStringContainsString('@click="openDetail(row)">详情', $page);
+        $this->assertStringContainsString('<el-drawer v-model="detailVisible" title="详情"', $page);
+        $this->assertStringContainsString('<el-descriptions-item label="名称">', $page);
+        $this->assertStringContainsString('const detailRow = ref', $page);
+    }
+
+    public function testGeneratedTreeTablePieces(): void
+    {
+        if (! Schema::hasTable('gen_test_tree')) {
+            Schema::create('gen_test_tree', static function (Blueprint $table): void {
+                $table->increments('id');
+                $table->unsignedInteger('parent_id')->default(0)->comment('上级');
+                $table->string('name', 128)->comment('名称');
+                $table->unsignedInteger('sort')->default(0)->comment('排序');
+                $table->timestamps();
+            });
+        }
+
+        $cfg = $this->config('gen_test_tree');
+        $cfg['module'] = 'gen_test_tree';
+        $cfg['menu']['name'] = '树形测试';
+        $cfg['menu']['path'] = 'gen/test_tree';
+        $cfg['fields'] = [
+            ['name' => 'name', 'label' => '名称', 'form_type' => 'input', 'required' => true, 'list' => true, 'search' => true, 'form' => true],
+            ['name' => 'sort', 'label' => '排序', 'form_type' => 'number', 'required' => false, 'list' => true, 'search' => false, 'form' => true],
+        ];
+        $result = $this->gen->generate($cfg, dryRun: true);
+
+        $controller = $result['files']['app/Controller/Api/GenTestTreeController.php'];
+        $service = $result['files']['app/Service/GenTestTreeService.php'];
+        $page = $result['files']['frontend/src/views/gen/gen_test_tree/index.vue'];
+
+        // 后端：全量 listAll + 自我挂树守卫 + 下级守卫
+        $this->assertStringContainsString('public function listAll(array $filters): array', $service);
+        $this->assertStringContainsString('$this->service->listAll(', $controller);
+        $this->assertStringNotContainsString('$this->service->paginate(', $controller);
+        $this->assertStringContainsString('上级不能选择自己', $service);
+        $this->assertStringContainsString("where('parent_id', \$id)->exists()", $service);
+
+        // 前端：树形表格 + 前端组树 + 上级选择 + 子级按钮 + 无分页
+        $this->assertStringContainsString(':tree-props="{ children: \'children\' }" default-expand-all', $page);
+        $this->assertStringContainsString('function buildTree(', $page);
+        $this->assertStringContainsString('el-tree-select', $page);
+        $this->assertStringContainsString('openCreate(row.id)', $page);
+        $this->assertStringNotContainsString('el-pagination', $page);
+    }
+
     private function config(string $table = self::TABLE): array
     {
         $physical = Db::connection()->getTablePrefix() . $table;
