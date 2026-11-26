@@ -24,6 +24,7 @@ class Role extends Model
         'code',
         'name',
         'description',
+        'data_scope',
         'is_system',
         'sort',
     ];

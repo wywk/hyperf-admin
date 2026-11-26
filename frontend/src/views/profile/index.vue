@@ -219,6 +219,8 @@ async function submitTotp(): Promise<void> {
                 <el-tag v-for="role in auth.roles" :key="role" size="small" class="mono">{{ role }}</el-tag>
               </el-space>
             </el-descriptions-item>
+            <el-descriptions-item label="所属部门">{{ auth.user?.dept_name || '未分配' }}</el-descriptions-item>
+            <el-descriptions-item label="数据范围">{{ auth.user?.data_scope_text || '全部数据' }}</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{ auth.user?.created_at || '—' }}</el-descriptions-item>
           </el-descriptions>
         </el-card>

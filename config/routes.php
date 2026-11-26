@@ -13,6 +13,7 @@ use App\Controller\Api\AuthController;
 use App\Controller\Api\ConfigController;
 use App\Controller\Api\CrontabController;
 use App\Controller\Api\DashboardController;
+use App\Controller\Api\DepartmentController;
 use App\Controller\Api\DictController;
 use App\Controller\Api\DocsController;
 use App\Controller\Api\FileController;
@@ -95,6 +96,12 @@ Router::addGroup('/api', function () {
     Router::put('/users/{id:\d+}/status', [UserController::class, 'updateStatus']);
     Router::put('/users/{id:\d+}/password', [UserController::class, 'resetPassword']);
     Router::delete('/users/{id:\d+}', [UserController::class, 'destroy']);
+
+    // 部门（数据权限的基础数据）
+    Router::get('/departments', [DepartmentController::class, 'index']);
+    Router::post('/departments', [DepartmentController::class, 'store']);
+    Router::put('/departments/{id:\d+}', [DepartmentController::class, 'update']);
+    Router::delete('/departments/{id:\d+}', [DepartmentController::class, 'destroy']);
 
     // 在线会话（接口内部做 session.* 权限校验）
     Router::get('/sessions', [SessionController::class, 'index']);

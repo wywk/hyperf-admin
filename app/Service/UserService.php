@@ -12,6 +12,7 @@ namespace App\Service;
 
 use App\Common\ApiCode;
 use App\Exception\BusinessException;
+use App\Model\Department;
 use App\Model\Notification;
 use App\Model\Role;
 use App\Model\User;
@@ -30,17 +31,23 @@ class UserService
     public function __construct(
         protected TokenService $tokenService,
         protected NotificationService $notificationService,
-        protected PasswordPolicyService $passwordPolicy
+        protected PasswordPolicyService $passwordPolicy,
+        protected DataScopeService $dataScope
     ) {
     }
 
     /**
-     * @param array{keyword?: null|string, role?: null|string, status?: null|int} $filters
+     * @param array{keyword?: null|string, role?: null|string, status?: null|int, dept_id?: null|int} $filters
+     * @param null|User $operator 传了就按该用户的数据范围过滤，null = 不过滤（内部/测试用）
      * @return array{total: int, page: int, page_size: int, items: array<int, array<string, mixed>>}
      */
-    public function paginate(array $filters, int $page, int $pageSize): array
+    public function paginate(array $filters, int $page, int $pageSize, ?User $operator = null): array
     {
         $query = User::query();
+
+        if ($operator !== null) {
+            $this->dataScope->applyToUsers($query, $operator);
+        }
 
         $keyword = trim((string) ($filters['keyword'] ?? ''));
         if ($keyword !== '') {
@@ -61,6 +68,11 @@ class UserService
             $query->where('status', (int) $filters['status']);
         }
 
+        $deptId = (int) ($filters['dept_id'] ?? 0);
+        if ($deptId > 0) {
+            $query->where('dept_id', $deptId);
+        }
+
         $total = (int) $query->count();
 
         /** @var array<int, User> $rows */
@@ -71,11 +83,13 @@ class UserService
             ->all();
 
         $roleNames = Role::query()->pluck('name', 'code')->all();
+        $deptNames = Department::query()->pluck('name', 'id')->all();
 
         $items = [];
         foreach ($rows as $row) {
             $items[] = $this->format($row) + [
                 'role_name' => (string) ($roleNames[(string) $row->role] ?? ''),
+                'dept_name' => $row->dept_id !== null ? (string) ($deptNames[(int) $row->dept_id] ?? '') : '',
             ];
         }
 
@@ -83,7 +97,7 @@ class UserService
     }
 
     /**
-     * @param array{username: string, password: string, nickname?: string, email?: string, role: string, status?: int} $data
+     * @param array{username: string, password: string, nickname?: string, email?: string, role: string, dept_id?: null|int, status?: int} $data
      * @return array<string, mixed>
      */
     public function create(array $data): array
@@ -102,6 +116,7 @@ class UserService
             'nickname' => (string) ($data['nickname'] ?? ''),
             'email' => (string) ($data['email'] ?? ''),
             'role' => $data['role'],
+            'dept_id' => isset($data['dept_id']) && (int) $data['dept_id'] > 0 ? (int) $data['dept_id'] : null,
             'status' => (int) ($data['status'] ?? 1),
         ]);
         $user->password_changed_at = date('Y-m-d H:i:s');
@@ -122,12 +137,13 @@ class UserService
     /**
      * 部分更新：传哪些改哪些。改角色/停用会吊销该用户的会话。
      *
-     * @param array{username?: string, nickname?: string, email?: string, role?: string, status?: int} $data
+     * @param array{username?: string, nickname?: string, email?: string, role?: string, dept_id?: null|int, status?: int} $data
      * @return array<string, mixed>
      */
     public function update(int $id, array $data, int $operatorId): array
     {
         $user = $this->findOrFail($id);
+        $this->assertCanManage($operatorId, $user);
 
         if (isset($data['username']) && $data['username'] !== (string) $user->username) {
             if (User::query()->where('username', $data['username'])->where('id', '<>', $id)->exists()) {
@@ -156,6 +172,15 @@ class UserService
             if (array_key_exists($field, $data) && $data[$field] !== null) {
                 $user->{$field} = (string) $data[$field];
             }
+        }
+
+        // 部门可以清空（传 0 或 null），传了就校验存在
+        if (array_key_exists('dept_id', $data)) {
+            $deptId = (int) ($data['dept_id'] ?? 0);
+            if ($deptId > 0 && ! Department::query()->where('id', $deptId)->exists()) {
+                throw new BusinessException(ApiCode::VALIDATION_FAILED, '所选部门不存在');
+            }
+            $user->dept_id = $deptId > 0 ? $deptId : null;
         }
 
         $roleChanged = $user->isDirty('role');
@@ -198,6 +223,7 @@ class UserService
     public function updateStatus(int $id, int $status, int $operatorId): array
     {
         $user = $this->findOrFail($id);
+        $this->assertCanManage($operatorId, $user);
         $status = $status === 1 ? 1 : 0;
 
         if ($status === (int) $user->status) {
@@ -226,9 +252,13 @@ class UserService
         return $this->format($user);
     }
 
-    public function resetPassword(int $id, string $password): void
+    public function resetPassword(int $id, string $password, ?int $operatorId = null): void
     {
         $user = $this->findOrFail($id);
+
+        if ($operatorId !== null) {
+            $this->assertCanManage($operatorId, $user);
+        }
 
         $this->passwordPolicy->validate($password, (string) $user->username);
 
@@ -253,6 +283,7 @@ class UserService
     {
         $user = $this->findOrFail($id);
 
+        $this->assertCanManage($operatorId, $user);
         $this->assertNotSelf($id, $operatorId, '不能删除自己的账号');
         $this->assertNotLastAdmin($user, '不能删除最后一个可用管理员');
 
@@ -276,6 +307,7 @@ class UserService
             'nickname' => (string) $user->nickname,
             'email' => (string) $user->email,
             'role' => (string) $user->role,
+            'dept_id' => $user->dept_id !== null ? (int) $user->dept_id : null,
             'status' => (int) $user->status,
             'totp_enabled' => (int) $user->totp_enabled === 1,
             'last_login_at' => $user->last_login_at?->toDateTimeString(),
@@ -305,6 +337,27 @@ class UserService
     {
         if ($id === $operatorId) {
             throw new BusinessException(ApiCode::FAILED, $message);
+        }
+    }
+
+    /**
+     * 数据权限守卫：操作者只能动自己范围内的用户。
+     * 操作者不存在（系统任务/测试里传的假 ID）时不做限制。
+     */
+    private function assertCanManage(int $operatorId, User $target): void
+    {
+        if ($operatorId <= 0) {
+            return;
+        }
+
+        /** @var null|User $operator */
+        $operator = User::query()->find($operatorId);
+        if ($operator === null) {
+            return;
+        }
+
+        if (! $this->dataScope->allows($operator, $target)) {
+            throw new BusinessException(ApiCode::FORBIDDEN, '无权操作该用户：不在你的数据权限范围内');
         }
     }
 

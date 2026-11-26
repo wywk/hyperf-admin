@@ -28,7 +28,8 @@ class AuthService
         protected RbacService $rbac,
         protected CaptchaService $captcha,
         protected PasswordPolicyService $passwordPolicy,
-        protected TotpService $totpService
+        protected TotpService $totpService,
+        protected DataScopeService $dataScope
     ) {
     }
 
@@ -238,6 +239,7 @@ class AuthService
     public function profile(User $user): array
     {
         $role = (string) ($user->role ?: 'user');
+        $scope = $this->dataScope->describe($user);
 
         return [
             'id' => (int) $user->id,
@@ -247,6 +249,11 @@ class AuthService
             'status' => (int) $user->status,
             'role' => $role,
             'roles' => [$role],
+            // 数据权限：前端用它展示「你能看到的数据范围」，也方便排查越权
+            'data_scope' => $scope['scope'],
+            'data_scope_text' => $scope['scope_text'],
+            'dept_id' => $scope['dept_id'],
+            'dept_name' => $scope['dept_name'],
             // 按钮码：前端 v-permission / 路由守卫用它判断
             'permissions' => $this->rbac->permissionsForRole($role),
             // 菜单树：前端侧边栏直接渲染它

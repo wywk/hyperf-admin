@@ -12,7 +12,7 @@ import {
   syncRolePermissions,
   updateRole,
 } from '@/api/rbac'
-import type { PermissionNode, RoleItem } from '@/types'
+import type { DataScope, PermissionNode, RoleItem } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -24,7 +24,31 @@ const dialogVisible = ref(false)
 const submitting = ref(false)
 const editing = ref<RoleItem | null>(null)
 const formRef = ref<FormInstance>()
-const form = reactive({ code: '', name: '', description: '', sort: 0 })
+const form = reactive({ code: '', name: '', description: '', sort: 0, data_scope: 'all' as DataScope })
+
+const SCOPE_OPTIONS: Array<{ value: DataScope; label: string; desc: string }> = [
+  { value: 'all', label: '全部数据', desc: '不受部门限制，能看到所有数据' },
+  { value: 'dept', label: '本部门', desc: '只看同部门的数据' },
+  { value: 'dept_and_children', label: '本部门及下级', desc: '本部门 + 所有下级部门' },
+  { value: 'self', label: '仅本人', desc: '只能看到自己的数据' },
+]
+
+const SCOPE_TEXT: Record<DataScope, string> = {
+  all: '全部数据',
+  dept: '本部门',
+  dept_and_children: '本部门及下级',
+  self: '仅本人',
+}
+
+function scopeText(scope?: DataScope): string {
+  return scope ? SCOPE_TEXT[scope] ?? scope : '全部数据'
+}
+
+function scopeTagType(scope?: DataScope): 'success' | 'warning' | 'info' | 'primary' {
+  if (scope === 'self') return 'info'
+  if (scope === 'dept' || scope === 'dept_and_children') return 'warning'
+  return 'success'
+}
 
 const codeLocked = computed(() => editing.value?.is_system === 1)
 
@@ -65,6 +89,7 @@ function openCreate(): void {
   form.name = ''
   form.description = ''
   form.sort = (roles.value[roles.value.length - 1]?.sort ?? 0) + 10
+  form.data_scope = 'all'
   dialogVisible.value = true
 }
 
@@ -74,6 +99,7 @@ function openEdit(row: RoleItem): void {
   form.name = row.name
   form.description = row.description
   form.sort = row.sort
+  form.data_scope = row.data_scope ?? 'all'
   dialogVisible.value = true
 }
 
@@ -94,6 +120,7 @@ async function submit(): Promise<void> {
       name: form.name.trim(),
       description: form.description.trim(),
       sort: form.sort,
+      data_scope: form.data_scope,
     }
 
     if (editing.value) {
@@ -292,6 +319,13 @@ onMounted(() => {
             <span :class="row.description ? '' : 'text-muted'">{{ row.description || '—' }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="数据范围" width="120">
+          <template #default="{ row }">
+            <el-tag :type="scopeTagType(row.data_scope)" effect="plain" size="small">
+              {{ scopeText(row.data_scope) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="用户数" width="90" align="center">
           <template #default="{ row }">
             <el-tag type="info" effect="plain" size="small">{{ row.user_count ?? 0 }}</el-tag>
@@ -358,6 +392,21 @@ onMounted(() => {
         </el-form-item>
         <el-form-item label="排序" prop="sort">
           <el-input-number v-model="form.sort" :min="0" :max="99999" :step="10" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="数据范围">
+          <el-select v-model="form.data_scope" class="w-full">
+            <el-option
+              v-for="option in SCOPE_OPTIONS"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            >
+              <div class="scope-option">
+                <span>{{ option.label }}</span>
+                <small>{{ option.desc }}</small>
+              </div>
+            </el-option>
+          </el-select>
         </el-form-item>
         <el-form-item label="说明" prop="description">
           <el-input
@@ -506,5 +555,19 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.w-full {
+  width: 100%;
+}
+
+.scope-option {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.scope-option small {
+  color: var(--app-muted);
+  font-size: 11.5px;
 }
 </style>

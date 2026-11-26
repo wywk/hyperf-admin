@@ -40,6 +40,12 @@ export const layoutRoutes: RouteRecordRaw[] = [
     meta: { title: '用户管理', permission: 'user' },
   },
   {
+    path: 'system/departments',
+    name: 'departments',
+    component: () => import('@/views/system/departments/index.vue'),
+    meta: { title: '部门管理', permission: 'dept' },
+  },
+  {
     path: 'system/roles',
     name: 'roles',
     component: () => import('@/views/system/roles/index.vue'),

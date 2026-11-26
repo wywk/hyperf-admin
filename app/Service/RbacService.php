@@ -340,7 +340,7 @@ class RbacService
     }
 
     /**
-     * @param array{code: string, name: string, description?: string, sort?: int} $data
+     * @param array{code: string, name: string, description?: string, sort?: int, data_scope?: string} $data
      * @return array<string, mixed>
      */
     public function createRole(array $data): array
@@ -351,6 +351,7 @@ class RbacService
             'description' => $data['description'] ?? '',
             'is_system' => 0,
             'sort' => (int) ($data['sort'] ?? 0),
+            'data_scope' => $data['data_scope'] ?? 'all',
         ]);
 
         $this->flushCache();
@@ -359,7 +360,7 @@ class RbacService
     }
 
     /**
-     * @param array{code?: string, name?: string, description?: string, sort?: int} $data
+     * @param array{code?: string, name?: string, description?: string, sort?: int, data_scope?: string} $data
      * @return array<string, mixed>
      */
     public function updateRole(int $id, array $data): array
@@ -387,6 +388,9 @@ class RbacService
         }
         if (isset($data['sort'])) {
             $role->sort = (int) $data['sort'];
+        }
+        if (isset($data['data_scope']) && $data['data_scope'] !== '') {
+            $role->data_scope = $data['data_scope'];
         }
 
         Db::transaction(function () use ($role, $oldCode) {
@@ -633,6 +637,7 @@ class RbacService
             'code' => (string) $role->code,
             'name' => (string) $role->name,
             'description' => (string) $role->description,
+            'data_scope' => (string) ($role->data_scope ?: 'all'),
             'is_system' => (int) $role->is_system,
             'sort' => (int) $role->sort,
             'created_at' => $role->created_at?->toDateTimeString(),

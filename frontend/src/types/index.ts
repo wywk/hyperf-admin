@@ -36,6 +36,11 @@ export interface UserProfile {
   /** 距离密码过期还剩几天；未开启有效期策略为 null */
   password_expires_in?: number | null
   password_changed_at?: string | null
+  /** 数据权限范围与所属部门（后端 /auth/me 返回） */
+  data_scope?: DataScope
+  data_scope_text?: string
+  dept_id?: number | null
+  dept_name?: string
 }
 
 export interface LoginResult extends TokenPair {
@@ -210,6 +215,8 @@ export interface RoleItem {
   code: string
   name: string
   description: string
+  /** 数据范围：all/dept/dept_and_children/self */
+  data_scope: DataScope
   /** 1=内置：不可删除、不可改标识 */
   is_system: number
   sort: number
@@ -218,11 +225,15 @@ export interface RoleItem {
   created_at: string | null
 }
 
+/** 数据权限范围 */
+export type DataScope = 'all' | 'dept' | 'dept_and_children' | 'self'
+
 export interface RolePayload {
   code?: string
   name?: string
   description?: string
   sort?: number
+  data_scope?: DataScope
 }
 
 /* ===================== 用户管理 ===================== */
@@ -235,6 +246,8 @@ export interface UserItem {
   email: string
   role: string
   role_name?: string
+  dept_id: number | null
+  dept_name?: string
   status: number
   last_login_at: string | null
   created_at: string | null
@@ -246,6 +259,7 @@ export interface UserQuery {
   keyword?: string
   role?: string
   status?: number | ''
+  dept_id?: number | ''
 }
 
 export interface UserPayload {
@@ -254,6 +268,34 @@ export interface UserPayload {
   nickname?: string
   email?: string
   role?: string
+  dept_id?: number | null
+  status?: number
+}
+
+/* ===================== 部门 ===================== */
+
+export interface DepartmentNode {
+  id: number
+  parent_id: number
+  name: string
+  code: string
+  leader: string
+  phone: string
+  sort: number
+  status: number
+  path: string
+  user_count?: number
+  created_at?: string | null
+  children: DepartmentNode[]
+}
+
+export interface DepartmentPayload {
+  parent_id?: number
+  name?: string
+  code?: string
+  leader?: string
+  phone?: string
+  sort?: number
   status?: number
 }
 

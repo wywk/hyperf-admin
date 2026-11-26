@@ -1134,6 +1134,269 @@
                 ]
             }
         },
+        "/api/departments": {
+            "get": {
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "部门树",
+                "description": "返回完整部门树（含每个部门的用户数）。需要 dept.view 权限。",
+                "operationId": "departmentTree",
+                "responses": {
+                    "200": {
+                        "description": "部门树",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "parent_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "user_count": {
+                                                        "type": "integer"
+                                                    },
+                                                    "children": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "object"
+                                                        }
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "创建部门",
+                "description": "parent_id 为 0 表示顶级部门。需要 dept.add 权限。",
+                "operationId": "departmentStore",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "code"
+                                ],
+                                "properties": {
+                                    "parent_id": {
+                                        "description": "上级部门 ID，0=顶级",
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "name": {
+                                        "description": "部门名称",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "code": {
+                                        "description": "唯一标识，字母开头",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "leader": {
+                                        "description": "负责人",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "phone": {
+                                        "description": "联系电话",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "sort": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ],
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "创建成功的部门"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/departments/{id}": {
+            "put": {
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "更新部门",
+                "description": "可调整上级部门（不能选自己或自己的下级），移动后子树路径自动重算。需要 dept.edit 权限。",
+                "operationId": "departmentUpdate",
+                "requestBody": {
+                    "description": null,
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parent_id": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "leader": {
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "sort": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ],
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "更新后的部门"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "删除部门",
+                "description": "有子部门或仍有关联用户时拒绝删除。需要 dept.delete 权限。",
+                "operationId": "departmentDestroy",
+                "responses": {
+                    "200": {
+                        "description": "已删除"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/dict/types": {
             "get": {
                 "tags": [
@@ -7126,6 +7389,10 @@
         {
             "name": "仪表盘",
             "description": "仪表盘"
+        },
+        {
+            "name": "部门管理",
+            "description": "部门管理"
         },
         {
             "name": "数据字典",

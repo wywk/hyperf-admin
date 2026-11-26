@@ -23,6 +23,7 @@ class User extends Model
         'email',
         'status',
         'role',
+        'dept_id',
     ];
 
     /**

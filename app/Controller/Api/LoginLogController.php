@@ -14,26 +14,31 @@ namespace App\Controller\Api;
 
 use App\Common\ApiResponse;
 use App\Controller\AbstractController;
+use App\Model\User;
+use App\Service\DataScopeService;
 use App\Service\LoginLogService;
 use App\Swagger\Attributes\SwGet;
 use App\Swagger\Attributes\SwQuery;
 use App\Swagger\Attributes\SwResp;
 use App\Swagger\Attributes\SwProp;
+use Hyperf\Context\Context;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * 登录审计日志查询（需登录）。
+ * 登录审计日志查询（需登录）。非「全部数据」的账号只能看到自己范围内的日志。
  */
 class LoginLogController extends AbstractController
 {
     #[Inject]
     protected ValidatorFactoryInterface $validatorFactory;
 
-    public function __construct(protected LoginLogService $loginLogService)
-    {
+    public function __construct(
+        protected LoginLogService $loginLogService,
+        protected DataScopeService $dataScope
+    ) {
     }
 
     /**
@@ -79,7 +84,18 @@ class LoginLogController extends AbstractController
         return ApiResponse::success($this->loginLogService->paginate(
             $filters,
             max(1, (int) ($data['page'] ?? 1)),
-            min(100, max(1, (int) ($data['page_size'] ?? 20)))
+            min(100, max(1, (int) ($data['page_size'] ?? 20))),
+            $this->visibleUserIds()
         ));
+    }
+
+    /**
+     * @return null|array<int, int>
+     */
+    private function visibleUserIds(): ?array
+    {
+        $user = Context::get('user');
+
+        return $user instanceof User ? $this->dataScope->visibleUserIds($user) : null;
     }
 }

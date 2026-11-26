@@ -62,11 +62,16 @@ class LoginLogService
      * 分页查询，供后台排查。
      *
      * @param array{event?: string, username?: string, user_id?: int, ip?: string} $filters
+     * @param null|array<int, int> $visibleUserIds 数据权限：null=不限；数组=只看这些用户（含空数组=什么都看不到）
      * @return array{total: int, page: int, page_size: int, items: array<int, array<string, mixed>>}
      */
-    public function paginate(array $filters, int $page, int $pageSize): array
+    public function paginate(array $filters, int $page, int $pageSize, ?array $visibleUserIds = null): array
     {
         $query = LoginLog::query();
+
+        if ($visibleUserIds !== null) {
+            $query->whereIn('user_id', $visibleUserIds === [] ? [0] : $visibleUserIds);
+        }
 
         if (! empty($filters['event'])) {
             $query->where('event', $filters['event']);

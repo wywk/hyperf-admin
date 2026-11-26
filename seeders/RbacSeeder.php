@@ -50,6 +50,12 @@ class RbacSeeder extends Seeder
         'user.delete' => ['user', 'button', '删除用户', '', '', 40],
         'user.reset' => ['user', 'button', '重置密码', '', '', 50],
 
+        'dept' => ['system', 'menu', '部门管理', 'system/departments', 'OfficeBuilding', 18],
+        'dept.view' => ['dept', 'button', '查看部门', '', '', 10],
+        'dept.add' => ['dept', 'button', '新增部门', '', '', 20],
+        'dept.edit' => ['dept', 'button', '编辑部门', '', '', 30],
+        'dept.delete' => ['dept', 'button', '删除部门', '', '', 40],
+
         'role' => ['system', 'menu', '角色管理', 'system/roles', 'UserFilled', 20],
         'role.view' => ['role', 'button', '查看角色', '', '', 10],
         'role.add' => ['role', 'button', '新增角色', '', '', 20],
