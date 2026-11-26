@@ -35,7 +35,7 @@
 | 📊 Excel 导入导出 | 通用服务（openspout 流式读写）；代码生成器为每个模块自动生成 `/export` + `/import` 端点与前端按钮：按筛选导出全量、回导模板文件，导入逐行校验并返回失败行明细 |
 | 📖 接口文档 | 零依赖 OpenAPI 3.0 文档页（`/api/docs` 内置离线视图 + `/api/docs/redoc` Redoc 视图），随代码维护 |
 | 🎨 界面 | 仪表盘系统统计（用户/登录/操作/任务卡片 + 近 7 日操作趋势）、深色模式（跟随系统 + 手动切换，偏好持久化） |
-| 🐳 部署 | 生产 Dockerfile（分层缓存 / 健康检查 / 启动自动迁移）+ `docker-compose.prod.yml` 一键拉起整套服务 |
+| 🐳 部署 | 一键部署：`docker compose` 拉起 前端(Nginx 反代) + 后端(Swoole) + MySQL + Redis，启动自动迁移/填充，镜像分层缓存 + 健康检查 |
 
 **技术栈**：Hyperf 3.1 · Swoole · MySQL 5.7+ · Redis · Vue 3.5 · Vite 6 · Pinia · Vue Router 4 · Element Plus 2.11 · TypeScript
 
@@ -64,13 +64,18 @@ docker compose -f docker-compose.dev.yml exec app php bin/hyperf.php db:seed
 git clone https://github.com/wywk/hyperf-admin.git
 cd hyperf-admin
 
-# 配置环境变量（JWT_SECRET 必填）
-cp .env.example .env.prod
-# 生成密钥：openssl rand -base64 48
+# 配置环境变量：填 JWT_SECRET（openssl rand -base64 48 生成）与数据库密码
+cp .env.prod.example .env.prod
 
+# 一条命令拉起 前端(Nginx) + 后端 + MySQL + Redis
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
-# 看到 app 容器 healthy 即就绪，首次启动自动建表 + 填充基础数据
+
+# 首次启动自动建表 + 填充基础数据；等 web 容器就绪后访问 http://<主机>:8000
 ```
+
+- 访问入口：`http://<主机>:${WEB_PORT:-8000}`（Nginx 托管前端并反代 `/api`，无需跨域配置）
+- 后端 API 直连：`http://<主机>:${APP_PORT:-9501}`（文档 `/api/docs`，可按需关闭映射）
+- 默认账号 `admin`，密码为 `.env.prod` 里的 `SEED_ADMIN_PASSWORD`（请部署后立即修改）
 
 ### 本地开发
 

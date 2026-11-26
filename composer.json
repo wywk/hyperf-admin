@@ -33,6 +33,7 @@
         "hyperf/redis": "~3.1.0",
         "hyperf/validation": "^3.1",
         "openspout/openspout": "^4.25",
+        "symfony/polyfill-php83": "^1.43",
         "zircote/swagger-php": "^5.8"
     },
     "require-dev": {
