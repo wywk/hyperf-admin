@@ -19,6 +19,7 @@ use App\Controller\Api\FileController;
 use App\Controller\Api\FormController;
 use App\Controller\Api\GenController;
 use App\Controller\Api\LoginLogController;
+use App\Controller\Api\NotificationController;
 use App\Controller\Api\OperationLogController;
 use App\Controller\Api\PermissionController;
 use App\Controller\Api\RoleController;
@@ -58,6 +59,14 @@ Router::addGroup('/api', function () {
     Router::get('/auth/login-logs', [LoginLogController::class, 'index']);
     Router::get('/operation-logs', [OperationLogController::class, 'index']);
     Router::get('/operation-logs/export', [OperationLogController::class, 'export']);
+
+    // 站内消息：只操作自己的消息，登录即可
+    Router::get('/notifications', [NotificationController::class, 'index']);
+    Router::get('/notifications/summary', [NotificationController::class, 'summary']);
+    Router::post('/notifications/read-all', [NotificationController::class, 'readAll']);
+    Router::post('/notifications/{id:\d+}/read', [NotificationController::class, 'read']);
+    Router::delete('/notifications/read', [NotificationController::class, 'clearRead']);
+    Router::delete('/notifications/{id:\d+}', [NotificationController::class, 'destroy']);
 
     // 定时任务（接口内部做 crontab.* 权限校验）
     Router::get('/crontabs', [CrontabController::class, 'index']);

@@ -339,3 +339,34 @@ export interface FormSubmissionItem {
   client_ip: string
   created_at: string | null
 }
+
+/** 站内消息 */
+export type NotificationType = 'system' | 'crontab' | 'account' | 'security'
+export type NotificationLevel = 'info' | 'success' | 'warning' | 'error'
+
+export interface NotificationItem {
+  id: number
+  type: NotificationType
+  type_text: string
+  level: NotificationLevel
+  title: string
+  content: string
+  link: string
+  is_read: boolean
+  read_at: string | null
+  created_at: string | null
+}
+
+export interface NotificationResult {
+  total: number
+  page: number
+  page_size: number
+  unread: number
+  items: NotificationItem[]
+}
+
+export interface NotificationSummary {
+  unread: number
+  total: number
+  by_type: Partial<Record<NotificationType, number>>
+}

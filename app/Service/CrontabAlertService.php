@@ -12,6 +12,7 @@ namespace App\Service;
 
 use App\Model\CrontabLog;
 use App\Model\CrontabTask;
+use App\Model\Notification;
 use Hyperf\Contract\StdoutLoggerInterface;
 use Hyperf\Guzzle\ClientFactory;
 use Throwable;
@@ -28,7 +29,8 @@ class CrontabAlertService
     public function __construct(
         protected StdoutLoggerInterface $logger,
         protected ClientFactory $clientFactory,
-        protected ConfigService $configService
+        protected ConfigService $configService,
+        protected NotificationService $notificationService
     ) {
     }
 
@@ -54,6 +56,16 @@ class CrontabAlertService
             mb_substr((string) $log->output, 0, 200)
         );
         $this->logger->warning('【任务告警】' . $message);
+
+        // 站内消息是主渠道（管理员登录就能看到），webhook 作为外发补充
+        $this->notificationService->pushToRole(
+            'admin',
+            '定时任务连续失败：' . $task->name,
+            $message,
+            Notification::TYPE_CRONTAB,
+            Notification::LEVEL_ERROR,
+            '/system/crontabs'
+        );
 
         $webhook = $this->configService->string('alert_webhook_url', (string) config('security.alert_webhook_url', ''));
         if ($webhook === '') {

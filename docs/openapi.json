@@ -4458,6 +4458,270 @@
                 ]
             }
         },
+        "/api/notifications": {
+            "get": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "我的消息列表",
+                "description": "只返回当前登录用户的消息，按时间倒序；支持按已读状态与类型过滤。",
+                "operationId": "notificationIndex",
+                "parameters": [
+                    {
+                        "name": "is_read",
+                        "in": "query",
+                        "description": "1=已读 0=未读，不传则全部",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "类型：system / crontab / account / security",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分页结果：{total, page, page_size, unread, items[]}",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "unread": {
+                                                    "type": "integer"
+                                                },
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/summary": {
+            "get": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "未读汇总",
+                "description": "顶栏铃铛用：未读总数 + 各类型未读数，一次请求拿全。",
+                "operationId": "notificationSummary",
+                "responses": {
+                    "200": {
+                        "description": "{unread, total, by_type}",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "unread": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "by_type": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/{id}/read": {
+            "post": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "标记单条已读",
+                "description": "只能标记自己的消息；重复标记不报错。",
+                "operationId": "notificationRead",
+                "responses": {
+                    "200": {
+                        "description": "已读"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/read-all": {
+            "post": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "全部标记已读",
+                "description": "把当前用户所有未读消息置为已读，返回影响条数。",
+                "operationId": "notificationReadAll",
+                "responses": {
+                    "200": {
+                        "description": "已读条数"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/read": {
+            "delete": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "清空已读消息",
+                "description": "删除当前用户所有已读消息，未读消息不受影响。",
+                "operationId": "notificationClearRead",
+                "responses": {
+                    "200": {
+                        "description": "删除条数"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/{id}": {
+            "delete": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "删除单条消息",
+                "description": "只能删除自己的消息。",
+                "operationId": "notificationDelete",
+                "responses": {
+                    "200": {
+                        "description": "已删除"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/operation-logs": {
             "get": {
                 "tags": [
@@ -6704,6 +6968,10 @@
         {
             "name": "订单明细",
             "description": "订单明细"
+        },
+        {
+            "name": "消息中心",
+            "description": "消息中心"
         },
         {
             "name": "操作日志",

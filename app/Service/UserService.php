@@ -12,6 +12,7 @@ namespace App\Service;
 
 use App\Common\ApiCode;
 use App\Exception\BusinessException;
+use App\Model\Notification;
 use App\Model\Role;
 use App\Model\User;
 use Hyperf\DbConnection\Db;
@@ -26,8 +27,10 @@ use Hyperf\DbConnection\Db;
  */
 class UserService
 {
-    public function __construct(protected TokenService $tokenService)
-    {
+    public function __construct(
+        protected TokenService $tokenService,
+        protected NotificationService $notificationService
+    ) {
     }
 
     /**
@@ -99,6 +102,15 @@ class UserService
             'status' => (int) ($data['status'] ?? 1),
         ]);
 
+        $this->notificationService->push(
+            (int) $user->id,
+            '欢迎加入 Hyperf Admin',
+            '账号已创建，首次登录后建议到「个人中心」修改初始密码。',
+            Notification::TYPE_SYSTEM,
+            Notification::LEVEL_SUCCESS,
+            '/profile'
+        );
+
         return $this->format($user);
     }
 
@@ -150,6 +162,28 @@ class UserService
             $this->tokenService->revokeAllForUser($id);
         }
 
+        if ($roleChanged) {
+            $roleName = (string) Role::query()->where('code', (string) $user->role)->value('name');
+            $this->notificationService->push(
+                $id,
+                '你的角色已变更',
+                sprintf('角色已调整为「%s」，相关菜单与权限立即生效。', $roleName !== '' ? $roleName : (string) $user->role),
+                Notification::TYPE_ACCOUNT,
+                Notification::LEVEL_INFO,
+                '/profile'
+            );
+        }
+
+        if ($disabled) {
+            $this->notificationService->push(
+                $id,
+                '账号已被停用',
+                '你的账号已被管理员停用，当前所有登录会话已失效。如有疑问请联系系统管理员。',
+                Notification::TYPE_ACCOUNT,
+                Notification::LEVEL_WARNING
+            );
+        }
+
         return $this->format($user);
     }
 
@@ -175,6 +209,13 @@ class UserService
 
         if ($status === 0) {
             $this->tokenService->revokeAllForUser($id);
+            $this->notificationService->push(
+                $id,
+                '账号已被停用',
+                '你的账号已被管理员停用，当前所有登录会话已失效。如有疑问请联系系统管理员。',
+                Notification::TYPE_ACCOUNT,
+                Notification::LEVEL_WARNING
+            );
         }
 
         return $this->format($user);
@@ -189,6 +230,15 @@ class UserService
 
         // 管理员重置密码意味着账号可能已被接管，直接踢掉所有会话
         $this->tokenService->revokeAllForUser($id);
+
+        $this->notificationService->push(
+            $id,
+            '登录密码已被管理员重置',
+            '你的登录密码已由管理员重置，所有设备均已强制下线，请使用新密码重新登录。',
+            Notification::TYPE_SECURITY,
+            Notification::LEVEL_WARNING,
+            '/profile'
+        );
     }
 
     public function delete(int $id, int $operatorId): void
@@ -200,6 +250,8 @@ class UserService
 
         Db::transaction(static function () use ($id) {
             User::query()->where('id', $id)->delete();
+            // 消息跟着人走：账号删了，留着孤儿消息只会占表
+            Notification::query()->where('user_id', $id)->delete();
         });
 
         $this->tokenService->revokeAllForUser($id);
