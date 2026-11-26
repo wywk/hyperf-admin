@@ -116,4 +116,15 @@ class ProductService
     {
         Product::query()->where('id', $id)->delete();
     }
+
+    /**
+     * 批量删除。
+     *
+     * @param array<int, int> $ids
+     * @return int 实际删除的行数
+     */
+    public function deleteByIds(array $ids): int
+    {
+        return Product::query()->whereIn('id', $ids)->delete();
+    }
 }

@@ -155,6 +155,30 @@ class GeneratorTest extends TestCase
         $this->gen->generate($config, dryRun: true);
     }
 
+    public function testGeneratedBatchDeletePieces(): void
+    {
+        $result = $this->gen->generate($this->config(), dryRun: true);
+        $controller = $result['files']['app/Controller/Api/GenTestItemsController.php'];
+        $service = $result['files']['app/Service/GenTestItemsService.php'];
+        $api = $result['files']['frontend/src/api/gen/gen_test_items.ts'];
+        $page = $result['files']['frontend/src/views/gen/gen_test_items/index.vue'];
+
+        // 控制器：批量删除端点 + ids 校验
+        $this->assertStringContainsString("path: '/api/gen_test_items/batch-delete'", $controller);
+        $this->assertStringContainsString('public function batchDestroy(): ResponseInterface', $controller);
+        $this->assertStringContainsString("'ids.*' => 'integer|min:1'", $controller);
+
+        // Service：批量删除实现
+        $this->assertStringContainsString('public function deleteByIds(array $ids): int', $service);
+        $this->assertStringContainsString("->whereIn('id', \$ids)->delete()", $service);
+
+        // 前端：批量 API + 多选 + 批量按钮
+        $this->assertStringContainsString('batchDeleteGenTestItems', $api);
+        $this->assertStringContainsString('type="selection"', $page);
+        $this->assertStringContainsString('onSelectionChange', $page);
+        $this->assertStringContainsString('批量删除', $page);
+    }
+
     private function config(string $table = self::TABLE): array
     {
         $physical = Db::connection()->getTablePrefix() . $table;

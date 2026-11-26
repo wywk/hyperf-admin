@@ -25,6 +25,11 @@ export function deleteProduct(id: number) {
   return http.delete<null>(`/product/${id}`)
 }
 
+/** 批量删除，返回实际删除数量 */
+export function batchDeleteProduct(ids: number[]) {
+  return http.post<{ deleted: number }>(`/product/batch-delete`, { ids })
+}
+
 /** 导出 Excel（xlsx Blob），与列表共用搜索参数 */
 export function exportProductExcel(params?: Record<string, unknown>): Promise<Blob> {
   return downloadFile('/product/export', params)

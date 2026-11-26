@@ -24,6 +24,7 @@ use App\Swagger\Attributes\SwPost;
 use App\Swagger\Attributes\SwProp;
 use App\Swagger\Attributes\SwPut;
 use App\Swagger\Attributes\SwQuery;
+use App\Swagger\Attributes\SwResp;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -142,6 +143,33 @@ class ProductController extends AbstractController
         $this->service->delete($id);
 
         return ApiResponse::success(null, '已删除');
+    }
+
+    #[SwPost(path: '/api/product/batch-delete', operationId: 'productBatchDestroy', summary: '批量删除示例商品', tag: '示例商品',
+        desc: '按 ID 数组批量删除，返回实际删除数量。需要 product.delete 权限。',
+        body: new SwBody(props: [
+            new SwProp('ids', type: 'array', desc: '待删除的 ID 数组（1-100 个）'),
+        ], requiredProps: ['ids']),
+        responses: [new SwResp(desc: '删除数量', props: [
+            new SwProp('deleted', type: 'integer'),
+        ])]
+    )]
+    public function batchDestroy(): ResponseInterface
+    {
+        $this->authorize('product.delete');
+
+        $data = $this->validatorFactory->make($this->request->all(), [
+            'ids' => 'required|array|min:1|max:100',
+            'ids.*' => 'integer|min:1',
+        ], [
+            'ids.required' => 'ids 不能为空',
+            'ids.array' => 'ids 必须是数组',
+            'ids.max' => '单次最多删除 100 条',
+        ])->validate();
+
+        $deleted = $this->service->deleteByIds(array_map('intval', $data['ids']));
+
+        return ApiResponse::success(['deleted' => $deleted], '已删除');
     }
 
     #[SwGet(path: '/api/product/export', operationId: 'productExport', summary: '导出示例商品 Excel', tag: '示例商品',

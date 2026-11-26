@@ -5,6 +5,7 @@
  */
 import { onMounted, reactive, ref } from 'vue'
 import {
+  batchDeleteProduct,
   createProduct,
   deleteProduct,
   exportProductExcel,
@@ -16,6 +17,7 @@ import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
 const exporting = ref(false)
+const selectedIds = ref<number[]>([])
 const statusLabels: Record<string, string> = {
   '1': '上架',
   '0': '下架',
@@ -164,6 +166,34 @@ async function remove(row: any): Promise<void> {
   }
 }
 
+function onSelectionChange(rows: any[]): void {
+  selectedIds.value = rows.map((row) => row.id)
+}
+
+async function batchRemove(): Promise<void> {
+  if (selectedIds.value.length === 0) {
+    return
+  }
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条记录吗？`, '批量删除', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+    })
+  } catch {
+    return
+  }
+
+  try {
+    const result = await batchDeleteProduct(selectedIds.value)
+    ElMessage.success(`已删除 ${result.deleted} 条`)
+    selectedIds.value = []
+    await load()
+  } catch {
+    // 错误提示由请求层统一处理
+  }
+}
+
 /* ---------------- 导入 Excel ---------------- */
 
 const importing = ref(false)
@@ -209,6 +239,9 @@ async function onImportFile(e: Event): Promise<void> {
         <el-button :loading="exporting" @click="exportExcel">导出 Excel</el-button>
         <el-button v-permission="'product.add'" :loading="importing" @click="triggerImport">导入 Excel</el-button>
         <input ref="fileInput" type="file" accept=".xlsx" class="hidden-import-input" @change="onImportFile" />
+        <el-button v-permission="'product.delete'" :disabled="selectedIds.length === 0" type="danger" plain @click="batchRemove">
+          批量删除{{ selectedIds.length > 0 ? `(${selectedIds.length})` : '' }}
+        </el-button>
         <el-button v-permission="'product.add'" type="primary" @click="openCreate">新增</el-button>
       </div>
     </div>
@@ -233,7 +266,8 @@ async function onImportFile(e: Event): Promise<void> {
         </el-form-item>
       </el-form>
 
-      <el-table v-loading="loading" :data="items" row-key="id">
+      <el-table v-loading="loading" :data="items" row-key="id" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="45" />
         <el-table-column prop="id" label="ID" width="80" />
     <el-table-column prop="name" label="名称" min-width="130" show-overflow-tooltip />
     <el-table-column prop="price" label="价格" min-width="130" show-overflow-tooltip />

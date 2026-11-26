@@ -197,5 +197,6 @@ Router::addGroup('/api', function () {
     Router::get('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'show']);
     Router::put('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'update']);
     Router::delete('/product/{id:\d+}', [\App\Controller\Api\ProductController::class, 'destroy']);
+    Router::post('/product/batch-delete', [\App\Controller\Api\ProductController::class, 'batchDestroy']);
 }, ['middleware' => [AuthMiddleware::class]]);
 // [gen:product] end

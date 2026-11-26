@@ -495,6 +495,7 @@ class CodeGeneratorService
             . "    Router::get('/{$module}/{id:\\d+}', [{$c}, 'show']);\n"
             . "    Router::put('/{$module}/{id:\\d+}', [{$c}, 'update']);\n"
             . "    Router::delete('/{$module}/{id:\\d+}', [{$c}, 'destroy']);\n"
+            . "    Router::post('/{$module}/batch-delete', [{$c}, 'batchDestroy']);\n"
             . "}, ['middleware' => [AuthMiddleware::class]]);";
     }
 
@@ -654,6 +655,17 @@ class {$ctx['studly']}Service
     {
         {$ctx['studly']}::query()->where('id', \$id)->delete();
     }
+
+    /**
+     * 批量删除。
+     *
+     * @param array<int, int> \$ids
+     * @return int 实际删除的行数
+     */
+    public function deleteByIds(array \$ids): int
+    {
+        return {$ctx['studly']}::query()->whereIn('id', \$ids)->delete();
+    }
 }
 
 PHP;
@@ -765,6 +777,7 @@ use App\\Swagger\\Attributes\\SwPost;
 use App\\Swagger\\Attributes\\SwProp;
 use App\\Swagger\\Attributes\\SwPut;
 use App\\Swagger\\Attributes\\SwQuery;
+use App\\Swagger\\Attributes\\SwResp;
 use Hyperf\\Di\\Annotation\\Inject;
 use Hyperf\\Validation\\Contract\\ValidatorFactoryInterface;
 use Psr\\Http\\Message\\ResponseInterface;
@@ -851,6 +864,33 @@ class {$ctx['studly']}Controller extends AbstractController
         \$this->service->delete(\$id);
 
         return ApiResponse::success(null, '已删除');
+    }
+
+    #[SwPost(path: '/api/{$ctx['module']}/batch-delete', operationId: '{$ctx['module']}BatchDestroy', summary: '批量删除{$tag}', tag: '{$tag}',
+        desc: '按 ID 数组批量删除，返回实际删除数量。需要 {$ctx['module']}.delete 权限。',
+        body: new SwBody(props: [
+            new SwProp('ids', type: 'array', desc: '待删除的 ID 数组（1-100 个）'),
+        ], requiredProps: ['ids']),
+        responses: [new SwResp(desc: '删除数量', props: [
+            new SwProp('deleted', type: 'integer'),
+        ])]
+    )]
+    public function batchDestroy(): ResponseInterface
+    {
+        \$this->authorize('{$ctx['module']}.delete');
+
+        \$data = \$this->validatorFactory->make(\$this->request->all(), [
+            'ids' => 'required|array|min:1|max:100',
+            'ids.*' => 'integer|min:1',
+        ], [
+            'ids.required' => 'ids 不能为空',
+            'ids.array' => 'ids 必须是数组',
+            'ids.max' => '单次最多删除 100 条',
+        ])->validate();
+
+        \$deleted = \$this->service->deleteByIds(array_map('intval', \$data['ids']));
+
+        return ApiResponse::success(['deleted' => \$deleted], '已删除');
     }
 
 {$swExport}
@@ -999,6 +1039,11 @@ export function delete{$ctx['studly']}(id: number) {
   return http.delete<null>(`/{$ctx['module']}/\${id}`)
 }
 
+/** 批量删除，返回实际删除数量 */
+export function batchDelete{$ctx['studly']}(ids: number[]) {
+  return http.post<{ deleted: number }>(`/{$ctx['module']}/batch-delete`, { ids })
+}
+
 /** 导出 Excel（xlsx Blob），与列表共用搜索参数 */
 export function export{$ctx['studly']}Excel(params?: Record<string, unknown>): Promise<Blob> {
   return downloadFile('/{$ctx['module']}/export', params)
@@ -1035,6 +1080,7 @@ TS;
  */
 import { onMounted, reactive, ref } from 'vue'
 import {
+  batchDelete{$studly},
   create{$studly},
   delete{$studly},
   export{$studly}Excel,
@@ -1046,6 +1092,7 @@ import { ElMessage, ElMessageBox } from '@/plugins/element'
 
 const loading = ref(false)
 const exporting = ref(false)
+const selectedIds = ref<number[]>([])
 {$ctx['option_maps']}
 const items = ref<any[]>([])
 const total = ref(0)
@@ -1182,6 +1229,34 @@ async function remove(row: any): Promise<void> {
   }
 }
 
+function onSelectionChange(rows: any[]): void {
+  selectedIds.value = rows.map((row) => row.id)
+}
+
+async function batchRemove(): Promise<void> {
+  if (selectedIds.value.length === 0) {
+    return
+  }
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 \${selectedIds.value.length} 条记录吗？`, '批量删除', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+    })
+  } catch {
+    return
+  }
+
+  try {
+    const result = await batchDelete{$studly}(selectedIds.value)
+    ElMessage.success(`已删除 \${result.deleted} 条`)
+    selectedIds.value = []
+    await load()
+  } catch {
+    // 错误提示由请求层统一处理
+  }
+}
+
 /* ---------------- 导入 Excel ---------------- */
 
 const importing = ref(false)
@@ -1227,13 +1302,17 @@ async function onImportFile(e: Event): Promise<void> {
         <el-button :loading="exporting" @click="exportExcel">导出 Excel</el-button>
         <el-button v-permission="'{$module}.add'" :loading="importing" @click="triggerImport">导入 Excel</el-button>
         <input ref="fileInput" type="file" accept=".xlsx" class="hidden-import-input" @change="onImportFile" />
+        <el-button v-permission="'{$module}.delete'" :disabled="selectedIds.length === 0" type="danger" plain @click="batchRemove">
+          批量删除{{ selectedIds.length > 0 ? `(\${selectedIds.length})` : '' }}
+        </el-button>
         <el-button v-permission="'{$module}.add'" type="primary" @click="openCreate">新增</el-button>
       </div>
     </div>
 
     <el-card shadow="never">
 {{SEARCH_BLOCK}}
-      <el-table v-loading="loading" :data="items" row-key="id">
+      <el-table v-loading="loading" :data="items" row-key="id" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="45" />
         <el-table-column prop="id" label="ID" width="80" />
 {$ctx['table_columns']}
         <el-table-column label="操作" width="160" fixed="right">
