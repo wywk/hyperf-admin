@@ -64,6 +64,16 @@ class RbacSeeder extends Seeder
         'dict.edit' => ['dict', 'button', '编辑字典', '', '', 30],
         'dict.delete' => ['dict', 'button', '删除字典', '', '', 40],
 
+        'oplog' => ['system', 'menu', '操作日志', 'system/oplogs', 'Document', 60],
+        'oplog.view' => ['oplog', 'button', '查看操作日志', '', '', 10],
+
+        'crontab' => ['system', 'menu', '定时任务', 'system/crontabs', 'Timer', 70],
+        'crontab.view' => ['crontab', 'button', '查看任务', '', '', 10],
+        'crontab.add' => ['crontab', 'button', '新增任务', '', '', 20],
+        'crontab.edit' => ['crontab', 'button', '编辑任务', '', '', 30],
+        'crontab.delete' => ['crontab', 'button', '删除任务', '', '', 40],
+        'crontab.run' => ['crontab', 'button', '手动执行', '', '', 50],
+
         'tool' => ['', 'menu', '工具开发', 'tool', 'SetUp', 40],
 
         'form' => ['tool', 'menu', '表单管理', 'tool/forms', 'EditPen', 10],

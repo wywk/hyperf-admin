@@ -67,6 +67,63 @@ export interface LoginLogQuery {
   ip?: string
 }
 
+export interface OperationLogItem {
+  id: number
+  user_id: number
+  username: string
+  method: string
+  path: string
+  action: string
+  params: Record<string, unknown> | null
+  status_code: number
+  cost_ms: number
+  ip: string
+  user_agent: string
+  created_at: string | null
+}
+
+export interface OperationLogQuery {
+  page?: number
+  page_size?: number
+  user_id?: number
+  username?: string
+  method?: string
+  path?: string
+  status_code?: number
+}
+
+export interface CrontabTaskItem {
+  id: number
+  name: string
+  handler: string
+  rule: string
+  params: Record<string, unknown> | null
+  status: number
+  consecutive_failures: number
+  last_run_at: string | null
+  next_run_at: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface CrontabLogItem {
+  id: number
+  task_id: number
+  status: number
+  status_text: string
+  output: string
+  cost_ms: number
+  created_at: string | null
+}
+
+export interface CrontabPayload {
+  name: string
+  handler: string
+  rule: string
+  params?: Record<string, unknown> | null
+  status?: number
+}
+
 /** 后端返回的菜单树节点（type=menu 的权限节点，已按角色过滤） */
 export interface MenuNode {
   id: number

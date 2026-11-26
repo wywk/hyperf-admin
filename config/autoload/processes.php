@@ -9,4 +9,7 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
-return [];
+return [
+    // 定时任务调度进程：每秒扫描到期任务并执行
+    \App\Process\CrontabProcess::class,
+];

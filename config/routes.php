@@ -10,15 +10,18 @@ declare(strict_types=1);
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 use App\Controller\Api\AuthController;
+use App\Controller\Api\CrontabController;
 use App\Controller\Api\DictController;
 use App\Controller\Api\DocsController;
 use App\Controller\Api\FileController;
 use App\Controller\Api\FormController;
 use App\Controller\Api\GenController;
 use App\Controller\Api\LoginLogController;
+use App\Controller\Api\OperationLogController;
 use App\Controller\Api\PermissionController;
 use App\Controller\Api\RoleController;
 use App\Middleware\AuthMiddleware;
+use App\Middleware\OperationLogMiddleware;
 use Hyperf\HttpServer\Router\Router;
 
 Router::addRoute(['GET', 'POST', 'HEAD'], '/', 'App\Controller\IndexController@index');
@@ -46,6 +49,15 @@ Router::addGroup('/api', function () {
     Router::get('/auth/me', [AuthController::class, 'me']);
     Router::post('/auth/logout', [AuthController::class, 'logout']);
     Router::get('/auth/login-logs', [LoginLogController::class, 'index']);
+    Router::get('/operation-logs', [OperationLogController::class, 'index']);
+
+    // 定时任务（接口内部做 crontab.* 权限校验）
+    Router::get('/crontabs', [CrontabController::class, 'index']);
+    Router::post('/crontabs', [CrontabController::class, 'store']);
+    Router::put('/crontabs/{id:\d+}', [CrontabController::class, 'update']);
+    Router::delete('/crontabs/{id:\d+}', [CrontabController::class, 'destroy']);
+    Router::post('/crontabs/{id:\d+}/run', [CrontabController::class, 'run']);
+    Router::get('/crontabs/{id:\d+}/logs', [CrontabController::class, 'logs']);
 
     // 权限树（接口内部再做 permission.* 权限校验；角色授权弹窗也读它）
     Router::get('/permissions', [PermissionController::class, 'index']);
@@ -93,7 +105,8 @@ Router::addGroup('/api', function () {
     Router::delete('/dict/items/{id:\d+}', [DictController::class, 'destroyItem']);
     Router::post('/dict/batch', [DictController::class, 'batch']);
     Router::get('/dict/{code:[a-z][a-z0-9_]*}', [DictController::class, 'data']);
-}, ['middleware' => [AuthMiddleware::class]]);
+    // 操作日志中间件放 AuthMiddleware 之后：保证 user 已解析进协程上下文
+}, ['middleware' => [AuthMiddleware::class, OperationLogMiddleware::class]]);
 
 // 本地上传文件的公开访问（文件名为随机 UUID，路径由 LocalDriver::absolute 校验防穿越）
 Router::get('/uploads/{path:.*}', [\App\Controller\UploadServeController::class, 'show']);
