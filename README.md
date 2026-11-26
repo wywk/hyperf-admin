@@ -14,6 +14,33 @@
 
 [English](README_EN.md) | 简体中文
 
+### ✨ 界面预览
+
+<img src="docs/screenshots/preview.gif" width="720" alt="Hyperf Admin 核心页面轮播（登录 / 仪表盘 / 用户 / 部门 / 角色 / 会话 / 消息 / 配置 / 代码生成器）"/>
+
+| 仪表盘 | 用户管理 |
+|---|---|
+| ![](docs/screenshots/dashboard.png) | ![](docs/screenshots/users.png) |
+
+| 部门与数据权限 | 代码生成器 |
+|---|---|
+| ![](docs/screenshots/departments.png) | ![](docs/screenshots/gen.png) |
+
+<details>
+<summary>📋 更多界面截图</summary>
+
+| 角色管理与数据范围 | 在线会话管理 |
+|---|---|
+| ![](docs/screenshots/roles.png) | ![](docs/screenshots/sessions.png) |
+
+| 消息中心 | 系统配置 |
+|---|---|
+| ![](docs/screenshots/notifications.png) | ![](docs/screenshots/configs.png) |
+
+登录页：![](docs/screenshots/login.png)
+
+</details>
+
 </div>
 
 ---
