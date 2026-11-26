@@ -14,6 +14,33 @@ Tree-based RBAC (menus + buttons) · JWT dual-token auth · login audit · form 
 
 English | [简体中文](README.md)
 
+### ✨ Screenshots
+
+<img src="docs/screenshots/preview.gif" width="720" alt="Hyperf Admin core pages tour (login / dashboard / users / departments / roles / sessions / notifications / configs / code generator)"/>
+
+| Dashboard | User Management |
+|---|---|
+| ![](docs/screenshots/dashboard.png) | ![](docs/screenshots/users.png) |
+
+| Departments & Data Scope | Code Generator |
+|---|---|
+| ![](docs/screenshots/departments.png) | ![](docs/screenshots/gen.png) |
+
+<details>
+<summary>📋 More screenshots</summary>
+
+| Roles & Data Scope | Online Sessions |
+|---|---|
+| ![](docs/screenshots/roles.png) | ![](docs/screenshots/sessions.png) |
+
+| Notifications | System Config |
+|---|---|
+| ![](docs/screenshots/notifications.png) | ![](docs/screenshots/configs.png) |
+
+Login page: ![](docs/screenshots/login.png)
+
+</details>
+
 </div>
 
 ---
