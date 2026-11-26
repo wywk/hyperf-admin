@@ -62,11 +62,12 @@ class LoginLogService
      * 分页查询，供后台排查。
      *
      * @param array{event?: string, username?: string, user_id?: int, ip?: string} $filters
+     * @param null|array<int, int> $visibleUserIds 数据权限：null=不限；数组=只看这些用户（含空数组=什么都看不到）
      * @return array{total: int, page: int, page_size: int, items: array<int, array<string, mixed>>}
      */
-    public function paginate(array $filters, int $page, int $pageSize): array
+    public function paginate(array $filters, int $page, int $pageSize, ?array $visibleUserIds = null): array
     {
-        $query = $this->filteredQuery($filters);
+        $query = $this->filteredQuery($filters, $visibleUserIds);
 
         $total = (int) $query->count();
         $rows = $query->orderByDesc('id')->forPage($page, $pageSize)->get();
@@ -101,9 +102,9 @@ class LoginLogService
      * @param array{event?: string, username?: string, user_id?: int, ip?: string} $filters
      * @return \Generator<int, array<string, null|string>>
      */
-    public function exportRows(array $filters): \Generator
+    public function exportRows(array $filters, ?array $visibleUserIds = null): \Generator
     {
-        $rows = $this->filteredQuery($filters)->orderBy('id')->limit(5000)->get();
+        $rows = $this->filteredQuery($filters, $visibleUserIds)->orderBy('id')->limit(5000)->get();
 
         foreach ($rows as $row) {
             /* @var LoginLog $row */
@@ -120,10 +121,16 @@ class LoginLogService
 
     /**
      * 列表/导出共用的筛选查询。
+     *
+     * @param null|array<int, int> $visibleUserIds 数据权限：null=不限；数组=只看这些用户（含空数组=什么都看不到）
      */
-    private function filteredQuery(array $filters): \Hyperf\Database\Model\Builder
+    private function filteredQuery(array $filters, ?array $visibleUserIds = null): \Hyperf\Database\Model\Builder
     {
         $query = LoginLog::query();
+
+        if ($visibleUserIds !== null) {
+            $query->whereIn('user_id', $visibleUserIds === [] ? [0] : $visibleUserIds);
+        }
 
         if (! empty($filters['event'])) {
             $query->where('event', $filters['event']);

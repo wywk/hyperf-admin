@@ -90,6 +90,212 @@
                 }
             }
         },
+        "/api/auth/captcha": {
+            "get": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "获取图形验证码",
+                "description": "先判断当前用户名/IP 是否需要验证码：不需要时只返回 required=false；需要时返回 SVG 图片（data URI）与一次性 captcha_id。",
+                "operationId": "authCaptcha",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "正在登录的用户名，用于判断失败次数",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{required, captcha_id?, image?, expires_in?}"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                }
+            }
+        },
+        "/api/auth/totp/verify": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "校验动态验证码完成登录",
+                "description": "用登录接口返回的 totp_token + 6 位动态码换取正式 token 对；凭证 5 分钟内有效且只能用一次。",
+                "operationId": "authTotpVerify",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "totp_token",
+                                    "code"
+                                ],
+                                "properties": {
+                                    "totp_token": {
+                                        "description": "登录第一步返回的一次性凭证",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "code": {
+                                        "description": "认证器 App 中的 6 位动态码",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "登录成功，返回 token 对与用户信息"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                }
+            }
+        },
+        "/api/auth/totp/setup": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "生成两步验证密钥",
+                "description": "返回 Base32 密钥与 otpauth 链接（前端可自行渲染二维码）。密钥 10 分钟内有效，验证通过后才写入账号。",
+                "operationId": "authTotpSetup",
+                "responses": {
+                    "200": {
+                        "description": "{secret, otpauth_url, issuer}"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/totp/enable": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "开启两步验证",
+                "description": "校验动态码通过后把密钥写入账号，下次登录需要两步验证。",
+                "operationId": "authTotpEnable",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "description": "6 位动态码",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "已开启"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/totp/disable": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "关闭两步验证",
+                "description": "需要提供当前动态码，避免 token 被盗后直接关掉二次验证。",
+                "operationId": "authTotpDisable",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "description": "6 位动态码",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "已关闭"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/auth/refresh": {
             "post": {
                 "tags": [
@@ -919,6 +1125,269 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/departments": {
+            "get": {
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "部门树",
+                "description": "返回完整部门树（含每个部门的用户数）。需要 dept.view 权限。",
+                "operationId": "departmentTree",
+                "responses": {
+                    "200": {
+                        "description": "部门树",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "parent_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "user_count": {
+                                                        "type": "integer"
+                                                    },
+                                                    "children": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "object"
+                                                        }
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "创建部门",
+                "description": "parent_id 为 0 表示顶级部门。需要 dept.add 权限。",
+                "operationId": "departmentStore",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "code"
+                                ],
+                                "properties": {
+                                    "parent_id": {
+                                        "description": "上级部门 ID，0=顶级",
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "name": {
+                                        "description": "部门名称",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "code": {
+                                        "description": "唯一标识，字母开头",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "leader": {
+                                        "description": "负责人",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "phone": {
+                                        "description": "联系电话",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "sort": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ],
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "创建成功的部门"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/departments/{id}": {
+            "put": {
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "更新部门",
+                "description": "可调整上级部门（不能选自己或自己的下级），移动后子树路径自动重算。需要 dept.edit 权限。",
+                "operationId": "departmentUpdate",
+                "requestBody": {
+                    "description": null,
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "parent_id": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "code": {
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "leader": {
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "sort": {
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ],
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "更新后的部门"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "删除部门",
+                "description": "有子部门或仍有关联用户时拒绝删除。需要 dept.delete 权限。",
+                "operationId": "departmentDestroy",
+                "responses": {
+                    "200": {
+                        "description": "已删除"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
                     }
                 },
                 "security": [
@@ -4458,6 +4927,270 @@
                 ]
             }
         },
+        "/api/notifications": {
+            "get": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "我的消息列表",
+                "description": "只返回当前登录用户的消息，按时间倒序；支持按已读状态与类型过滤。",
+                "operationId": "notificationIndex",
+                "parameters": [
+                    {
+                        "name": "is_read",
+                        "in": "query",
+                        "description": "1=已读 0=未读，不传则全部",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "类型：system / crontab / account / security",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分页结果：{total, page, page_size, unread, items[]}",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "unread": {
+                                                    "type": "integer"
+                                                },
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/summary": {
+            "get": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "未读汇总",
+                "description": "顶栏铃铛用：未读总数 + 各类型未读数，一次请求拿全。",
+                "operationId": "notificationSummary",
+                "responses": {
+                    "200": {
+                        "description": "{unread, total, by_type}",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "unread": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "by_type": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/{id}/read": {
+            "post": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "标记单条已读",
+                "description": "只能标记自己的消息；重复标记不报错。",
+                "operationId": "notificationRead",
+                "responses": {
+                    "200": {
+                        "description": "已读"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/read-all": {
+            "post": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "全部标记已读",
+                "description": "把当前用户所有未读消息置为已读，返回影响条数。",
+                "operationId": "notificationReadAll",
+                "responses": {
+                    "200": {
+                        "description": "已读条数"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/read": {
+            "delete": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "清空已读消息",
+                "description": "删除当前用户所有已读消息，未读消息不受影响。",
+                "operationId": "notificationClearRead",
+                "responses": {
+                    "200": {
+                        "description": "删除条数"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/{id}": {
+            "delete": {
+                "tags": [
+                    "消息中心"
+                ],
+                "summary": "删除单条消息",
+                "description": "只能删除自己的消息。",
+                "operationId": "notificationDelete",
+                "responses": {
+                    "200": {
+                        "description": "已删除"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/operation-logs": {
             "get": {
                 "tags": [
@@ -6658,6 +7391,10 @@
             "description": "仪表盘"
         },
         {
+            "name": "部门管理",
+            "description": "部门管理"
+        },
+        {
             "name": "数据字典",
             "description": "数据字典"
         },
@@ -6704,6 +7441,10 @@
         {
             "name": "订单明细",
             "description": "订单明细"
+        },
+        {
+            "name": "消息中心",
+            "description": "消息中心"
         },
         {
             "name": "操作日志",

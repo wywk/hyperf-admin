@@ -21,6 +21,13 @@ export const layoutRoutes: RouteRecordRaw[] = [
     meta: { title: '登录审计', permission: 'audit' },
   },
   {
+    // 个人消息：只返回自己的数据，不需要权限码，所有登录用户都能进
+    path: 'system/notifications',
+    name: 'notifications',
+    component: () => import('@/views/system/notifications/index.vue'),
+    meta: { title: '消息中心' },
+  },
+  {
     path: 'system/permissions',
     name: 'permissions',
     component: () => import('@/views/system/permissions/index.vue'),
@@ -31,6 +38,12 @@ export const layoutRoutes: RouteRecordRaw[] = [
     name: 'users',
     component: () => import('@/views/system/users/index.vue'),
     meta: { title: '用户管理', permission: 'user' },
+  },
+  {
+    path: 'system/departments',
+    name: 'departments',
+    component: () => import('@/views/system/departments/index.vue'),
+    meta: { title: '部门管理', permission: 'dept' },
   },
   {
     path: 'system/roles',

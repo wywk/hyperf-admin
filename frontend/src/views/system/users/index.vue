@@ -20,7 +20,8 @@ import {
   updateUserStatus,
 } from '@/api/users'
 import { fetchRoles } from '@/api/rbac'
-import type { RoleItem, UserItem, UserPayload } from '@/types'
+import { fetchDepartments } from '@/api/departments'
+import type { DepartmentNode, RoleItem, UserItem, UserPayload } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -29,6 +30,7 @@ const loading = ref(false)
 const items = ref<UserItem[]>([])
 const total = ref(0)
 const roles = ref<RoleItem[]>([])
+const departments = ref<DepartmentNode[]>([])
 
 const query = reactive({
   page: 1,
@@ -36,6 +38,7 @@ const query = reactive({
   keyword: '',
   role: '',
   status: '' as number | '',
+  dept_id: '' as number | '',
 })
 
 const currentUserId = computed(() => auth.user?.id ?? 0)
@@ -49,6 +52,7 @@ async function load(): Promise<void> {
       keyword: query.keyword.trim() || undefined,
       role: query.role || undefined,
       status: query.status === '' ? undefined : query.status,
+      dept_id: query.dept_id === '' ? undefined : query.dept_id,
     })
     items.value = result.items
     total.value = result.total
@@ -68,6 +72,26 @@ async function loadRoles(): Promise<void> {
   }
 }
 
+interface DeptSelectNode {
+  value: number
+  label: string
+  children: DeptSelectNode[]
+}
+
+function toDeptSelect(nodes: DepartmentNode[]): DeptSelectNode[] {
+  return nodes.map((node) => ({ value: node.id, label: node.name, children: toDeptSelect(node.children ?? []) }))
+}
+
+const deptTree = computed(() => toDeptSelect(departments.value))
+
+async function loadDepartments(): Promise<void> {
+  try {
+    departments.value = await fetchDepartments()
+  } catch {
+    // 部门树加载失败不影响用户列表
+  }
+}
+
 function search(): void {
   query.page = 1
   void load()
@@ -77,6 +101,7 @@ function reset(): void {
   query.keyword = ''
   query.role = ''
   query.status = ''
+  query.dept_id = ''
   query.page = 1
   void load()
 }
@@ -108,6 +133,7 @@ const form = reactive({
   nickname: '',
   email: '',
   role: 'user',
+  dept_id: null as number | null,
   status: 1,
 })
 
@@ -121,7 +147,7 @@ const rules: FormRules = {
       trigger: 'blur',
     },
   ],
-  password: [{ min: 6, max: 64, message: '密码长度需为 6-64 个字符', trigger: 'blur' }],
+  password: [{ min: 8, max: 64, message: '至少 8 位，且需包含字母和数字', trigger: 'blur' }],
   email: [{ type: 'email', message: '邮箱格式不正确', trigger: 'blur' }],
   role: [{ required: true, message: '请选择角色', trigger: 'change' }],
 }
@@ -135,6 +161,7 @@ function openCreate(): void {
   form.nickname = ''
   form.email = ''
   form.role = roles.value.find((role) => role.code === 'user')?.code ?? roles.value[0]?.code ?? 'user'
+  form.dept_id = null
   form.status = 1
   dialogVisible.value = true
 }
@@ -146,6 +173,7 @@ function openEdit(row: UserItem): void {
   form.nickname = row.nickname
   form.email = row.email
   form.role = row.role
+  form.dept_id = row.dept_id ?? null
   form.status = row.status
   dialogVisible.value = true
 }
@@ -154,8 +182,8 @@ async function submit(): Promise<void> {
   if (!formRef.value) return
 
   // 新增才校验密码必填，编辑时密码走「重置密码」入口
-  if (!editing.value && form.password.trim().length < 6) {
-    ElMessage.warning('请设置至少 6 位的初始密码')
+  if (!editing.value && form.password.trim().length < 8) {
+    ElMessage.warning('请设置至少 8 位、且包含字母和数字的初始密码')
     return
   }
 
@@ -170,6 +198,7 @@ async function submit(): Promise<void> {
         nickname: form.nickname.trim(),
         email: form.email.trim(),
         role: form.role,
+        dept_id: form.dept_id ?? 0,
         status: form.status,
       }
       await updateUser(editing.value.id, payload)
@@ -181,6 +210,7 @@ async function submit(): Promise<void> {
         nickname: form.nickname.trim(),
         email: form.email.trim(),
         role: form.role,
+        dept_id: form.dept_id ?? 0,
         status: form.status,
       })
       ElMessage.success('已创建')
@@ -298,6 +328,7 @@ async function remove(row: UserItem): Promise<void> {
 
 onMounted(() => {
   void load()
+  void loadDepartments()
   void loadRoles()
 })
 </script>
@@ -339,6 +370,15 @@ onMounted(() => {
           <el-option label="启用" :value="1" />
           <el-option label="禁用" :value="0" />
         </el-select>
+        <el-tree-select
+          v-model="query.dept_id"
+          :data="deptTree"
+          :props="{ value: 'value', label: 'label', children: 'children' }"
+          placeholder="全部部门"
+          check-strictly
+          clearable
+          class="w-180"
+        />
         <el-button type="primary" @click="search">
           <el-icon><Search /></el-icon>
           <span>查询</span>
@@ -362,6 +402,11 @@ onMounted(() => {
         <el-table-column label="角色" width="130">
           <template #default="{ row }">
             <el-tag :type="roleTagType(row.role)" effect="light" size="small">{{ roleName(row.role) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="部门" width="140">
+          <template #default="{ row }">
+            <span :class="row.dept_name ? '' : 'text-muted'">{{ row.dept_name || '未分配' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="邮箱" min-width="180" show-overflow-tooltip>
@@ -453,6 +498,18 @@ onMounted(() => {
           </el-select>
           <p v-if="isSelf" class="field-tip">不能修改自己的角色，避免把自己锁在后台外面。</p>
         </el-form-item>
+        <el-form-item label="所属部门">
+          <el-tree-select
+            v-model="form.dept_id"
+            :data="deptTree"
+            :props="{ value: 'value', label: 'label', children: 'children' }"
+            placeholder="不选则不归属任何部门"
+            check-strictly
+            clearable
+            class="w-full"
+          />
+          <p class="field-tip">部门会影响数据权限：配了「本部门」的角色只能看到同部门用户。</p>
+        </el-form-item>
         <el-form-item label="状态">
           <el-switch v-model="form.status" :active-value="1" :inactive-value="0" :disabled="isSelf" />
           <span class="field-tip inline">停用后该用户无法登录，已有会话立即失效</span>
@@ -529,6 +586,10 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+
+.w-180 {
+  width: 180px;
 }
 
 .w-220 {

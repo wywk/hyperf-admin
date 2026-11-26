@@ -13,12 +13,14 @@ use App\Controller\Api\AuthController;
 use App\Controller\Api\ConfigController;
 use App\Controller\Api\CrontabController;
 use App\Controller\Api\DashboardController;
+use App\Controller\Api\DepartmentController;
 use App\Controller\Api\DictController;
 use App\Controller\Api\DocsController;
 use App\Controller\Api\FileController;
 use App\Controller\Api\FormController;
 use App\Controller\Api\GenController;
 use App\Controller\Api\LoginLogController;
+use App\Controller\Api\NotificationController;
 use App\Controller\Api\OperationLogController;
 use App\Controller\Api\PermissionController;
 use App\Controller\Api\RoleController;
@@ -43,6 +45,8 @@ Router::get('/api/docs/openapi.json', [DocsController::class, 'json']);
 Router::addGroup('/api', function () {
     Router::post('/auth/login', [AuthController::class, 'login']);
     Router::post('/auth/refresh', [AuthController::class, 'refresh']);
+    Router::get('/auth/captcha', [AuthController::class, 'captcha']);
+    Router::post('/auth/totp/verify', [AuthController::class, 'verifyTotp']);
 
     // 表单公开接口：按标识取已发布 Schema、提交数据（渲染方可以是任意前端/静态页）
     Router::get('/form/{code:[a-z][a-z0-9_-]*}', [FormController::class, 'publicSchema']);
@@ -55,10 +59,21 @@ Router::addGroup('/api', function () {
     Router::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Router::post('/auth/logout', [AuthController::class, 'logout']);
     Router::post('/auth/password', [AuthController::class, 'changePassword']);
+    Router::post('/auth/totp/setup', [AuthController::class, 'setupTotp']);
+    Router::post('/auth/totp/enable', [AuthController::class, 'enableTotp']);
+    Router::post('/auth/totp/disable', [AuthController::class, 'disableTotp']);
     Router::get('/auth/login-logs', [LoginLogController::class, 'index']);
     Router::get('/auth/login-logs/export', [LoginLogController::class, 'export']);
     Router::get('/operation-logs', [OperationLogController::class, 'index']);
     Router::get('/operation-logs/export', [OperationLogController::class, 'export']);
+
+    // 站内消息：只操作自己的消息，登录即可
+    Router::get('/notifications', [NotificationController::class, 'index']);
+    Router::get('/notifications/summary', [NotificationController::class, 'summary']);
+    Router::post('/notifications/read-all', [NotificationController::class, 'readAll']);
+    Router::post('/notifications/{id:\d+}/read', [NotificationController::class, 'read']);
+    Router::delete('/notifications/read', [NotificationController::class, 'clearRead']);
+    Router::delete('/notifications/{id:\d+}', [NotificationController::class, 'destroy']);
 
     // 定时任务（接口内部做 crontab.* 权限校验）
     Router::get('/crontabs', [CrontabController::class, 'index']);
@@ -82,6 +97,12 @@ Router::addGroup('/api', function () {
     Router::put('/users/{id:\d+}/status', [UserController::class, 'updateStatus']);
     Router::put('/users/{id:\d+}/password', [UserController::class, 'resetPassword']);
     Router::delete('/users/{id:\d+}', [UserController::class, 'destroy']);
+
+    // 部门（数据权限的基础数据）
+    Router::get('/departments', [DepartmentController::class, 'index']);
+    Router::post('/departments', [DepartmentController::class, 'store']);
+    Router::put('/departments/{id:\d+}', [DepartmentController::class, 'update']);
+    Router::delete('/departments/{id:\d+}', [DepartmentController::class, 'destroy']);
 
     // 在线会话（接口内部做 session.* 权限校验）
     Router::get('/sessions', [SessionController::class, 'index']);

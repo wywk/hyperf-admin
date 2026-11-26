@@ -2,10 +2,11 @@
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Lock } from '@element-plus/icons-vue'
+import { Lock, Iphone } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 import { useAuthStore } from '@/stores/auth'
 import { changeOwnPassword } from '@/api/users'
+import { disableTotpApi, enableTotpApi, setupTotpApi } from '@/api/auth'
 import { getExpiresAt, getRefreshToken } from '@/utils/token'
 
 const auth = useAuthStore()
@@ -50,7 +51,7 @@ const pwdRules: FormRules = {
   ],
   new_password: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, max: 64, message: '密码长度需为 6-64 个字符', trigger: 'blur' },
+    { min: 8, max: 64, message: '新密码至少 8 位，且需同时包含字母和数字', trigger: 'blur' },
     {
       validator: (_rule: unknown, value: string, callback: (error?: Error) => void): void => {
         if (value && value === pwdForm.old_password) {
@@ -95,10 +96,80 @@ async function submitChangePassword(): Promise<void> {
     await changeOwnPassword(pwdForm.old_password, pwdForm.new_password)
     pwdVisible.value = false
     ElMessage.success('密码已更新，其他设备的登录已失效')
+    await auth.fetchProfile(true)
   } catch {
     // 旧密码错误等提示由请求层统一处理
   } finally {
     pwdSubmitting.value = false
+  }
+}
+
+/* ---------------- 两步验证 ---------------- */
+
+const totpEnabled = computed(() => Boolean(auth.user?.totp_enabled))
+const totpVisible = ref(false)
+const totpMode = ref<'setup' | 'disable'>('setup')
+const totpSecret = ref('')
+const totpUri = ref('')
+const totpCode = ref('')
+const totpBusy = ref(false)
+
+async function openTotp(): Promise<void> {
+  totpCode.value = ''
+  totpSecret.value = ''
+  totpUri.value = ''
+
+  if (totpEnabled.value) {
+    totpMode.value = 'disable'
+    totpVisible.value = true
+    return
+  }
+
+  totpMode.value = 'setup'
+  totpBusy.value = true
+  try {
+    const result = await setupTotpApi()
+    totpSecret.value = result.secret
+    totpUri.value = result.otpauth_url
+    totpVisible.value = true
+  } catch {
+    // 请求层已提示
+  } finally {
+    totpBusy.value = false
+  }
+}
+
+async function copySecret(): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(totpSecret.value)
+    ElMessage.success('密钥已复制')
+  } catch {
+    ElMessage.warning('复制失败，请手动选择密钥文本')
+  }
+}
+
+async function submitTotp(): Promise<void> {
+  if (!/^\d{6}$/.test(totpCode.value.trim())) {
+    ElMessage.warning('请输入 6 位动态验证码')
+    return
+  }
+
+  totpBusy.value = true
+  try {
+    if (totpMode.value === 'setup') {
+      await enableTotpApi(totpCode.value.trim())
+      ElMessage.success('两步验证已开启，下次登录需要输入动态码')
+    } else {
+      await disableTotpApi(totpCode.value.trim())
+      ElMessage.success('两步验证已关闭')
+    }
+    totpVisible.value = false
+    await auth.fetchProfile(true)
+  } catch {
+    // 错误提示由请求层处理，动态码错误时保留弹窗让用户重试
+    totpCode.value = ''
+  } finally {
+    totpBusy.value = false
   }
 }
 </script>
@@ -148,6 +219,8 @@ async function submitChangePassword(): Promise<void> {
                 <el-tag v-for="role in auth.roles" :key="role" size="small" class="mono">{{ role }}</el-tag>
               </el-space>
             </el-descriptions-item>
+            <el-descriptions-item label="所属部门">{{ auth.user?.dept_name || '未分配' }}</el-descriptions-item>
+            <el-descriptions-item label="数据范围">{{ auth.user?.data_scope_text || '全部数据' }}</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{ auth.user?.created_at || '—' }}</el-descriptions-item>
           </el-descriptions>
         </el-card>
@@ -179,6 +252,52 @@ async function submitChangePassword(): Promise<void> {
             <span class="text-muted pwd-tip">修改后其他设备上的登录会立即失效，当前设备保持登录。</span>
           </div>
         </el-card>
+
+        <el-card shadow="never" class="card">
+          <template #header>
+            <div class="card-head">安全设置</div>
+          </template>
+
+          <el-alert
+            v-if="auth.user?.password_expired"
+            title="登录密码已超过有效期，建议立即修改"
+            type="warning"
+            show-icon
+            :closable="false"
+            class="pwd-alert"
+          />
+
+          <el-descriptions :column="1" border size="small">
+            <el-descriptions-item label="密码最近修改">
+              {{ auth.user?.password_changed_at || '—' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="密码有效期">
+              <template v-if="auth.user?.password_expires_in === null || auth.user?.password_expires_in === undefined">
+                未开启有效期限制
+              </template>
+              <template v-else>
+                还剩 {{ auth.user?.password_expires_in }} 天
+              </template>
+            </el-descriptions-item>
+            <el-descriptions-item label="两步验证">
+              <el-space>
+                <el-tag :type="totpEnabled ? 'success' : 'info'" effect="plain" size="small">
+                  {{ totpEnabled ? '已开启' : '未开启' }}
+                </el-tag>
+                <span class="text-muted pwd-tip">
+                  {{ totpEnabled ? '登录时需要输入认证器 App 的动态码' : '建议管理员账号开启，防止密码泄露后被直接登录' }}
+                </span>
+              </el-space>
+            </el-descriptions-item>
+          </el-descriptions>
+
+          <div class="pwd-row">
+            <el-button :type="totpEnabled ? 'danger' : 'primary'" plain :loading="totpBusy" @click="openTotp">
+              <el-icon><Iphone /></el-icon>
+              <span>{{ totpEnabled ? '关闭两步验证' : '开启两步验证' }}</span>
+            </el-button>
+          </div>
+        </el-card>
       </el-col>
     </el-row>
 
@@ -195,7 +314,7 @@ async function submitChangePassword(): Promise<void> {
           <el-input v-model="pwdForm.old_password" type="password" show-password />
         </el-form-item>
         <el-form-item label="新密码" prop="new_password">
-          <el-input v-model="pwdForm.new_password" type="password" show-password placeholder="至少 6 位" />
+          <el-input v-model="pwdForm.new_password" type="password" show-password placeholder="至少 8 位，含字母和数字" />
         </el-form-item>
         <el-form-item label="确认密码" prop="confirm">
           <el-input v-model="pwdForm.confirm" type="password" show-password placeholder="再输一次" />
@@ -205,6 +324,53 @@ async function submitChangePassword(): Promise<void> {
       <template #footer>
         <el-button @click="pwdVisible = false">取消</el-button>
         <el-button type="primary" :loading="pwdSubmitting" @click="submitChangePassword">确认修改</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 两步验证 -->
+    <el-dialog
+      v-model="totpVisible"
+      :title="totpMode === 'setup' ? '开启两步验证' : '关闭两步验证'"
+      width="460px"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <template v-if="totpMode === 'setup'">
+        <el-alert
+          title="在认证器 App（如 Google Authenticator / 1Password）中手动添加以下密钥"
+          type="info"
+          show-icon
+          :closable="false"
+        />
+
+        <div class="secret-box">
+          <span class="mono secret">{{ totpSecret }}</span>
+          <el-button link type="primary" size="small" @click="copySecret">复制</el-button>
+        </div>
+
+        <p class="text-muted hint">也可以把下面的链接粘贴到支持 otpauth 的工具里：</p>
+        <p class="mono uri">{{ totpUri }}</p>
+      </template>
+
+      <el-alert
+        v-else
+        title="关闭后登录将不再需要动态验证码，账号安全性会下降"
+        type="warning"
+        show-icon
+        :closable="false"
+      />
+
+      <el-form label-position="top" class="totp-form">
+        <el-form-item :label="totpMode === 'setup' ? '输入 App 中显示的动态码完成绑定' : '输入当前动态码以确认'">
+          <el-input v-model="totpCode" maxlength="6" placeholder="6 位数字" class="mono-input" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="totpVisible = false">取消</el-button>
+        <el-button :type="totpMode === 'setup' ? 'primary' : 'danger'" :loading="totpBusy" @click="submitTotp">
+          {{ totpMode === 'setup' ? '确认开启' : '确认关闭' }}
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -288,6 +454,49 @@ async function submitChangePassword(): Promise<void> {
 
 .pwd-tip {
   font-size: 12px;
+}
+
+.pwd-alert {
+  margin-bottom: 14px;
+}
+
+.secret-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--app-border);
+  border-radius: 8px;
+  background: var(--el-fill-color-lighter);
+}
+
+.secret {
+  font-size: 13px;
+  letter-spacing: 1px;
+  word-break: break-all;
+}
+
+.hint {
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+
+.uri {
+  margin: 0;
+  font-size: 11px;
+  color: var(--app-muted);
+  word-break: break-all;
+}
+
+.totp-form {
+  margin-top: 14px;
+}
+
+.mono-input :deep(input) {
+  letter-spacing: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 code.mono {

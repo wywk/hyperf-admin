@@ -80,9 +80,13 @@ class OperationLogService
      * @param array{user_id?: int, username?: string, method?: string, path?: string, status_code?: int} $filters
      * @return array{total: int, page: int, page_size: int, items: array<int, array<string, mixed>>}
      */
-    public function paginate(array $filters, int $page, int $pageSize): array
+    public function paginate(array $filters, int $page, int $pageSize, ?array $visibleUserIds = null): array
     {
         $query = OperationLog::query();
+
+        if ($visibleUserIds !== null) {
+            $query->whereIn('user_id', $visibleUserIds === [] ? [0] : $visibleUserIds);
+        }
 
         if (! empty($filters['user_id'])) {
             $query->where('user_id', $filters['user_id']);
@@ -135,9 +139,13 @@ class OperationLogService
      *
      * @return iterable<int, array<int, string>>
      */
-    public function exportRows(array $filters, int $limit = 5000): iterable
+    public function exportRows(array $filters, int $limit = 5000, ?array $visibleUserIds = null): iterable
     {
         $query = OperationLog::query();
+
+        if ($visibleUserIds !== null) {
+            $query->whereIn('user_id', $visibleUserIds === [] ? [0] : $visibleUserIds);
+        }
 
         if (! empty($filters['user_id'])) {
             $query->where('user_id', $filters['user_id']);

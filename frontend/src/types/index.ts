@@ -29,15 +29,45 @@ export interface UserProfile {
   menus: MenuNode[]
   last_login_at: string | null
   created_at: string | null
+  /** 是否开启两步验证 */
+  totp_enabled?: boolean
+  /** 密码是否已过期（过期不阻断登录，仅提示改密） */
+  password_expired?: boolean
+  /** 距离密码过期还剩几天；未开启有效期策略为 null */
+  password_expires_in?: number | null
+  password_changed_at?: string | null
+  /** 数据权限范围与所属部门（后端 /auth/me 返回） */
+  data_scope?: DataScope
+  data_scope_text?: string
+  dept_id?: number | null
+  dept_name?: string
 }
 
 export interface LoginResult extends TokenPair {
   user: UserProfile
 }
 
+/** 开启两步验证的账号：密码通过后先拿一次性凭证，再换正式 token */
+export interface TotpChallenge {
+  requires_totp: true
+  totp_token: string
+  expires_in: number
+}
+
+export type LoginResponse = LoginResult | TotpChallenge
+
 export interface LoginPayload {
   username: string
   password: string
+  captcha_id?: string
+  captcha_code?: string
+}
+
+export interface CaptchaChallenge {
+  required: boolean
+  captcha_id?: string
+  image?: string
+  expires_in?: number
 }
 
 export interface LoginLogItem {
@@ -185,6 +215,8 @@ export interface RoleItem {
   code: string
   name: string
   description: string
+  /** 数据范围：all/dept/dept_and_children/self */
+  data_scope: DataScope
   /** 1=内置：不可删除、不可改标识 */
   is_system: number
   sort: number
@@ -193,11 +225,15 @@ export interface RoleItem {
   created_at: string | null
 }
 
+/** 数据权限范围 */
+export type DataScope = 'all' | 'dept' | 'dept_and_children' | 'self'
+
 export interface RolePayload {
   code?: string
   name?: string
   description?: string
   sort?: number
+  data_scope?: DataScope
 }
 
 /* ===================== 用户管理 ===================== */
@@ -210,6 +246,8 @@ export interface UserItem {
   email: string
   role: string
   role_name?: string
+  dept_id: number | null
+  dept_name?: string
   status: number
   last_login_at: string | null
   created_at: string | null
@@ -221,6 +259,7 @@ export interface UserQuery {
   keyword?: string
   role?: string
   status?: number | ''
+  dept_id?: number | ''
 }
 
 export interface UserPayload {
@@ -229,6 +268,34 @@ export interface UserPayload {
   nickname?: string
   email?: string
   role?: string
+  dept_id?: number | null
+  status?: number
+}
+
+/* ===================== 部门 ===================== */
+
+export interface DepartmentNode {
+  id: number
+  parent_id: number
+  name: string
+  code: string
+  leader: string
+  phone: string
+  sort: number
+  status: number
+  path: string
+  user_count?: number
+  created_at?: string | null
+  children: DepartmentNode[]
+}
+
+export interface DepartmentPayload {
+  parent_id?: number
+  name?: string
+  code?: string
+  leader?: string
+  phone?: string
+  sort?: number
   status?: number
 }
 
@@ -338,4 +405,35 @@ export interface FormSubmissionItem {
   data: Record<string, unknown>
   client_ip: string
   created_at: string | null
+}
+
+/** 站内消息 */
+export type NotificationType = 'system' | 'crontab' | 'account' | 'security'
+export type NotificationLevel = 'info' | 'success' | 'warning' | 'error'
+
+export interface NotificationItem {
+  id: number
+  type: NotificationType
+  type_text: string
+  level: NotificationLevel
+  title: string
+  content: string
+  link: string
+  is_read: boolean
+  read_at: string | null
+  created_at: string | null
+}
+
+export interface NotificationResult {
+  total: number
+  page: number
+  page_size: number
+  unread: number
+  items: NotificationItem[]
+}
+
+export interface NotificationSummary {
+  unread: number
+  total: number
+  by_type: Partial<Record<NotificationType, number>>
 }

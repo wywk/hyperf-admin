@@ -12,6 +12,8 @@ namespace App\Service;
 
 use App\Common\ApiCode;
 use App\Exception\BusinessException;
+use App\Model\Department;
+use App\Model\Notification;
 use App\Model\Role;
 use App\Model\User;
 use Hyperf\DbConnection\Db;
@@ -26,17 +28,26 @@ use Hyperf\DbConnection\Db;
  */
 class UserService
 {
-    public function __construct(protected TokenService $tokenService)
-    {
+    public function __construct(
+        protected TokenService $tokenService,
+        protected NotificationService $notificationService,
+        protected PasswordPolicyService $passwordPolicy,
+        protected DataScopeService $dataScope
+    ) {
     }
 
     /**
-     * @param array{keyword?: null|string, role?: null|string, status?: null|int} $filters
+     * @param array{keyword?: null|string, role?: null|string, status?: null|int, dept_id?: null|int} $filters
+     * @param null|User $operator 传了就按该用户的数据范围过滤，null = 不过滤（内部/测试用）
      * @return array{total: int, page: int, page_size: int, items: array<int, array<string, mixed>>}
      */
-    public function paginate(array $filters, int $page, int $pageSize): array
+    public function paginate(array $filters, int $page, int $pageSize, ?User $operator = null): array
     {
         $query = User::query();
+
+        if ($operator !== null) {
+            $this->dataScope->applyToUsers($query, $operator);
+        }
 
         $keyword = trim((string) ($filters['keyword'] ?? ''));
         if ($keyword !== '') {
@@ -57,6 +68,11 @@ class UserService
             $query->where('status', (int) $filters['status']);
         }
 
+        $deptId = (int) ($filters['dept_id'] ?? 0);
+        if ($deptId > 0) {
+            $query->where('dept_id', $deptId);
+        }
+
         $total = (int) $query->count();
 
         /** @var array<int, User> $rows */
@@ -67,11 +83,13 @@ class UserService
             ->all();
 
         $roleNames = Role::query()->pluck('name', 'code')->all();
+        $deptNames = Department::query()->pluck('name', 'id')->all();
 
         $items = [];
         foreach ($rows as $row) {
             $items[] = $this->format($row) + [
                 'role_name' => (string) ($roleNames[(string) $row->role] ?? ''),
+                'dept_name' => $row->dept_id !== null ? (string) ($deptNames[(int) $row->dept_id] ?? '') : '',
             ];
         }
 
@@ -79,7 +97,7 @@ class UserService
     }
 
     /**
-     * @param array{username: string, password: string, nickname?: string, email?: string, role: string, status?: int} $data
+     * @param array{username: string, password: string, nickname?: string, email?: string, role: string, dept_id?: null|int, status?: int} $data
      * @return array<string, mixed>
      */
     public function create(array $data): array
@@ -90,14 +108,28 @@ class UserService
             throw new BusinessException(ApiCode::VALIDATION_FAILED, '该用户名已被占用');
         }
 
+        $this->passwordPolicy->validate($data['password'], $data['username']);
+
         $user = User::query()->create([
             'username' => $data['username'],
             'password' => password_hash($data['password'], PASSWORD_BCRYPT),
             'nickname' => (string) ($data['nickname'] ?? ''),
             'email' => (string) ($data['email'] ?? ''),
             'role' => $data['role'],
+            'dept_id' => isset($data['dept_id']) && (int) $data['dept_id'] > 0 ? (int) $data['dept_id'] : null,
             'status' => (int) ($data['status'] ?? 1),
         ]);
+        $user->password_changed_at = date('Y-m-d H:i:s');
+        $user->save();
+
+        $this->notificationService->push(
+            (int) $user->id,
+            '欢迎加入 Hyperf Admin',
+            '账号已创建，首次登录后建议到「个人中心」修改初始密码。',
+            Notification::TYPE_SYSTEM,
+            Notification::LEVEL_SUCCESS,
+            '/profile'
+        );
 
         return $this->format($user);
     }
@@ -105,12 +137,13 @@ class UserService
     /**
      * 部分更新：传哪些改哪些。改角色/停用会吊销该用户的会话。
      *
-     * @param array{username?: string, nickname?: string, email?: string, role?: string, status?: int} $data
+     * @param array{username?: string, nickname?: string, email?: string, role?: string, dept_id?: null|int, status?: int} $data
      * @return array<string, mixed>
      */
     public function update(int $id, array $data, int $operatorId): array
     {
         $user = $this->findOrFail($id);
+        $this->assertCanManage($operatorId, $user);
 
         if (isset($data['username']) && $data['username'] !== (string) $user->username) {
             if (User::query()->where('username', $data['username'])->where('id', '<>', $id)->exists()) {
@@ -141,6 +174,15 @@ class UserService
             }
         }
 
+        // 部门可以清空（传 0 或 null），传了就校验存在
+        if (array_key_exists('dept_id', $data)) {
+            $deptId = (int) ($data['dept_id'] ?? 0);
+            if ($deptId > 0 && ! Department::query()->where('id', $deptId)->exists()) {
+                throw new BusinessException(ApiCode::VALIDATION_FAILED, '所选部门不存在');
+            }
+            $user->dept_id = $deptId > 0 ? $deptId : null;
+        }
+
         $roleChanged = $user->isDirty('role');
         $disabled = $user->isDirty('status') && (int) $user->status === 0;
         $user->save();
@@ -148,6 +190,28 @@ class UserService
         if ($roleChanged || $disabled) {
             // 权限或账号状态变了，旧 token 不能继续用
             $this->tokenService->revokeAllForUser($id);
+        }
+
+        if ($roleChanged) {
+            $roleName = (string) Role::query()->where('code', (string) $user->role)->value('name');
+            $this->notificationService->push(
+                $id,
+                '你的角色已变更',
+                sprintf('角色已调整为「%s」，相关菜单与权限立即生效。', $roleName !== '' ? $roleName : (string) $user->role),
+                Notification::TYPE_ACCOUNT,
+                Notification::LEVEL_INFO,
+                '/profile'
+            );
+        }
+
+        if ($disabled) {
+            $this->notificationService->push(
+                $id,
+                '账号已被停用',
+                '你的账号已被管理员停用，当前所有登录会话已失效。如有疑问请联系系统管理员。',
+                Notification::TYPE_ACCOUNT,
+                Notification::LEVEL_WARNING
+            );
         }
 
         return $this->format($user);
@@ -159,6 +223,7 @@ class UserService
     public function updateStatus(int $id, int $status, int $operatorId): array
     {
         $user = $this->findOrFail($id);
+        $this->assertCanManage($operatorId, $user);
         $status = $status === 1 ? 1 : 0;
 
         if ($status === (int) $user->status) {
@@ -175,31 +240,57 @@ class UserService
 
         if ($status === 0) {
             $this->tokenService->revokeAllForUser($id);
+            $this->notificationService->push(
+                $id,
+                '账号已被停用',
+                '你的账号已被管理员停用，当前所有登录会话已失效。如有疑问请联系系统管理员。',
+                Notification::TYPE_ACCOUNT,
+                Notification::LEVEL_WARNING
+            );
         }
 
         return $this->format($user);
     }
 
-    public function resetPassword(int $id, string $password): void
+    public function resetPassword(int $id, string $password, ?int $operatorId = null): void
     {
         $user = $this->findOrFail($id);
 
+        if ($operatorId !== null) {
+            $this->assertCanManage($operatorId, $user);
+        }
+
+        $this->passwordPolicy->validate($password, (string) $user->username);
+
         $user->password = password_hash($password, PASSWORD_BCRYPT);
+        $user->password_changed_at = date('Y-m-d H:i:s');
         $user->save();
 
         // 管理员重置密码意味着账号可能已被接管，直接踢掉所有会话
         $this->tokenService->revokeAllForUser($id);
+
+        $this->notificationService->push(
+            $id,
+            '登录密码已被管理员重置',
+            '你的登录密码已由管理员重置，所有设备均已强制下线，请使用新密码重新登录。',
+            Notification::TYPE_SECURITY,
+            Notification::LEVEL_WARNING,
+            '/profile'
+        );
     }
 
     public function delete(int $id, int $operatorId): void
     {
         $user = $this->findOrFail($id);
 
+        $this->assertCanManage($operatorId, $user);
         $this->assertNotSelf($id, $operatorId, '不能删除自己的账号');
         $this->assertNotLastAdmin($user, '不能删除最后一个可用管理员');
 
         Db::transaction(static function () use ($id) {
             User::query()->where('id', $id)->delete();
+            // 消息跟着人走：账号删了，留着孤儿消息只会占表
+            Notification::query()->where('user_id', $id)->delete();
         });
 
         $this->tokenService->revokeAllForUser($id);
@@ -216,7 +307,9 @@ class UserService
             'nickname' => (string) $user->nickname,
             'email' => (string) $user->email,
             'role' => (string) $user->role,
+            'dept_id' => $user->dept_id !== null ? (int) $user->dept_id : null,
             'status' => (int) $user->status,
+            'totp_enabled' => (int) $user->totp_enabled === 1,
             'last_login_at' => $user->last_login_at?->toDateTimeString(),
             'created_at' => $user->created_at?->toDateTimeString(),
         ];
@@ -244,6 +337,27 @@ class UserService
     {
         if ($id === $operatorId) {
             throw new BusinessException(ApiCode::FAILED, $message);
+        }
+    }
+
+    /**
+     * 数据权限守卫：操作者只能动自己范围内的用户。
+     * 操作者不存在（系统任务/测试里传的假 ID）时不做限制。
+     */
+    private function assertCanManage(int $operatorId, User $target): void
+    {
+        if ($operatorId <= 0) {
+            return;
+        }
+
+        /** @var null|User $operator */
+        $operator = User::query()->find($operatorId);
+        if ($operator === null) {
+            return;
+        }
+
+        if (! $this->dataScope->allows($operator, $target)) {
+            throw new BusinessException(ApiCode::FORBIDDEN, '无权操作该用户：不在你的数据权限范围内');
         }
     }
 

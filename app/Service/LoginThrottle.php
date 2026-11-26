@@ -69,6 +69,20 @@ class LoginThrottle
     }
 
     /**
+     * 当前窗口内的失败次数（验证码阈值判断用）。
+     */
+    public function attempts(string $ip, string $username): int
+    {
+        try {
+            return (int) $this->redis->get($this->key($ip, $username));
+        } catch (Throwable $e) {
+            $this->logger->warning('登录失败次数读取失败：' . $e->getMessage());
+
+            return 0;
+        }
+    }
+
+    /**
      * 记录一次登录失败。
      */
     public function hit(string $ip, string $username): void

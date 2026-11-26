@@ -13,18 +13,21 @@ namespace App\Controller\Api;
 use App\Common\ApiResponse;
 use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
+use App\Model\User;
+use App\Service\DataScopeService;
 use App\Service\Excel\ExcelService;
 use App\Service\OperationLogService;
 use App\Swagger\Attributes\SwGet;
 use App\Swagger\Attributes\SwQuery;
 use App\Swagger\Attributes\SwResp;
+use Hyperf\Context\Context;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * 操作日志查询（需登录 + oplog.view 权限）。
+ * 操作日志查询（需登录 + oplog.view 权限）。非「全部数据」的账号只能看到自己范围内的记录。
  */
 class OperationLogController extends AbstractController
 {
@@ -36,8 +39,10 @@ class OperationLogController extends AbstractController
     #[Inject]
     protected ExcelService $excel;
 
-    public function __construct(protected OperationLogService $operationLogService)
-    {
+    public function __construct(
+        protected OperationLogService $operationLogService,
+        protected DataScopeService $dataScope
+    ) {
     }
 
     /**
@@ -90,8 +95,19 @@ class OperationLogController extends AbstractController
         return ApiResponse::success($this->operationLogService->paginate(
             $filters,
             max(1, (int) ($data['page'] ?? 1)),
-            min(100, max(1, (int) ($data['page_size'] ?? 20)))
+            min(100, max(1, (int) ($data['page_size'] ?? 20))),
+            $this->visibleUserIds()
         ));
+    }
+
+    /**
+     * @return null|array<int, int>
+     */
+    private function visibleUserIds(): ?array
+    {
+        $user = Context::get('user');
+
+        return $user instanceof User ? $this->dataScope->visibleUserIds($user) : null;
     }
 
     /**
@@ -133,7 +149,7 @@ class OperationLogController extends AbstractController
 
         $binary = $this->excel->export('operation-logs.xlsx', [
             'ID', '操作人', '用户 ID', '方法', '路径', '参数(已脱敏)', '状态码', '耗时(ms)', 'IP', '时间',
-        ], $this->operationLogService->exportRows($filters));
+        ], $this->operationLogService->exportRows($filters, 5000, $this->visibleUserIds()));
 
         return $this->response->raw($binary)
             ->withHeader('Content-Type', ExcelService::XLSX_MIME)

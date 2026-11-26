@@ -92,6 +92,7 @@ class RoleController extends AbstractController
             'name' => 'required|string|max:64',
             'description' => 'nullable|string|max:255',
             'sort' => 'nullable|integer|min:0|max:99999',
+            'data_scope' => 'nullable|string|in:all,dept,dept_and_children,self',
         ], $this->messages())->validate();
 
         return ApiResponse::success($this->rbacService->createRole([
@@ -99,6 +100,7 @@ class RoleController extends AbstractController
             'name' => (string) $data['name'],
             'description' => (string) ($data['description'] ?? ''),
             'sort' => (int) ($data['sort'] ?? 0),
+            'data_scope' => (string) ($data['data_scope'] ?? 'all'),
         ]), '创建成功');
     }
 
@@ -128,6 +130,7 @@ class RoleController extends AbstractController
             'name' => 'nullable|string|max:64',
             'description' => 'nullable|string|max:255',
             'sort' => 'nullable|integer|min:0|max:99999',
+            'data_scope' => 'nullable|string|in:all,dept,dept_and_children,self',
         ], $this->messages())->validate();
 
         $payload = [];
@@ -142,6 +145,9 @@ class RoleController extends AbstractController
         }
         if (isset($data['sort'])) {
             $payload['sort'] = (int) $data['sort'];
+        }
+        if (isset($data['data_scope']) && $data['data_scope'] !== '') {
+            $payload['data_scope'] = (string) $data['data_scope'];
         }
 
         return ApiResponse::success($this->rbacService->updateRole($id, $payload), '保存成功');

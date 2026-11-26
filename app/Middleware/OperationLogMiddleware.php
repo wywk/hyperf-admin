@@ -29,6 +29,12 @@ class OperationLogMiddleware implements MiddlewareInterface
 {
     private const RECORDED_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
 
+    /**
+     * 这些路径不记操作日志：消息中心的「标记已读 / 删除消息」是高频个人操作，
+     * 记下来只会把审计日志冲成流水账。
+     */
+    private const SKIP_PREFIXES = ['/api/notifications'];
+
     public function __construct(protected OperationLogService $operationLogService)
     {
     }
@@ -38,6 +44,13 @@ class OperationLogMiddleware implements MiddlewareInterface
         $method = strtoupper($request->getMethod());
         if (! in_array($method, self::RECORDED_METHODS, true)) {
             return $handler->handle($request);
+        }
+
+        $path = $request->getUri()->getPath();
+        foreach (self::SKIP_PREFIXES as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return $handler->handle($request);
+            }
         }
 
         $start = microtime(true);

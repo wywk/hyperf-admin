@@ -73,19 +73,24 @@ class UserController extends AbstractController
             'keyword' => 'nullable|string|max:64',
             'role' => 'nullable|string|max:32',
             'status' => 'nullable|integer|in:0,1',
+            'dept_id' => 'nullable|integer|min:0',
         ], [
             'page_size.between' => 'page_size 取值范围 1-100',
             'status.in' => 'status 只能是 0 或 1',
         ])->validate();
+
+        $operator = Context::get('user');
 
         return ApiResponse::success($this->userService->paginate(
             [
                 'keyword' => $data['keyword'] ?? null,
                 'role' => $data['role'] ?? null,
                 'status' => $data['status'] ?? null,
+                'dept_id' => $data['dept_id'] ?? null,
             ],
             max(1, (int) ($data['page'] ?? 1)),
-            min(100, max(1, (int) ($data['page_size'] ?? 20)))
+            min(100, max(1, (int) ($data['page_size'] ?? 20))),
+            $operator instanceof User ? $operator : null
         ));
     }
 
@@ -117,6 +122,7 @@ class UserController extends AbstractController
             'nickname' => 'nullable|string|max:64',
             'email' => 'nullable|email|max:128',
             'role' => 'required|string|max:32',
+            'dept_id' => 'nullable|integer|min:0',
             'status' => 'nullable|integer|in:0,1',
         ], $this->messages())->validate();
 
@@ -126,6 +132,7 @@ class UserController extends AbstractController
             'nickname' => (string) ($data['nickname'] ?? ''),
             'email' => (string) ($data['email'] ?? ''),
             'role' => (string) $data['role'],
+            'dept_id' => (int) ($data['dept_id'] ?? 0),
             'status' => (int) ($data['status'] ?? 1),
         ]), '创建成功');
     }
@@ -157,6 +164,7 @@ class UserController extends AbstractController
             'nickname' => 'nullable|string|max:64',
             'email' => 'nullable|email|max:128',
             'role' => 'nullable|string|max:32',
+            'dept_id' => 'nullable|integer|min:0',
             'status' => 'nullable|integer|in:0,1',
         ];
 
@@ -172,6 +180,10 @@ class UserController extends AbstractController
             if (array_key_exists($field, $data) && $data[$field] !== null) {
                 $payload[$field] = (string) $data[$field];
             }
+        }
+        if (array_key_exists('dept_id', $data)) {
+            // 0 或 null 表示清空部门
+            $payload['dept_id'] = (int) ($data['dept_id'] ?? 0);
         }
         if (isset($data['status'])) {
             $payload['status'] = (int) $data['status'];
@@ -232,7 +244,7 @@ class UserController extends AbstractController
             'password.between' => '新密码长度需为 6-64 个字符',
         ])->validate();
 
-        $this->userService->resetPassword($id, (string) $data['password']);
+        $this->userService->resetPassword($id, (string) $data['password'], $this->operatorId());
 
         return ApiResponse::success(null, '密码已重置，该用户的登录会话已全部失效');
     }
