@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { Download, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from '@/plugins/element'
-import { fetchLoginLogs } from '@/api/audit'
+import { exportLoginLogs, fetchLoginLogs } from '@/api/audit'
+import { saveBlob } from '@/utils/download'
 import type { LoginLogItem } from '@/types'
 
 type TagType = 'success' | 'warning' | 'danger' | 'info' | 'primary'
@@ -75,6 +76,25 @@ function refresh(): void {
   void load()
   ElMessage.success('已刷新')
 }
+
+const exporting = ref(false)
+
+/** 按当前筛选条件导出全量 Excel（后端上限 5000 行） */
+async function exportLogs(): Promise<void> {
+  exporting.value = true
+  try {
+    const blob = await exportLoginLogs({
+      event: query.event || undefined,
+      username: query.username.trim() || undefined,
+    })
+    saveBlob(blob, 'login-logs.xlsx')
+    ElMessage.success('已导出（最多 5000 条）')
+  } catch {
+    // 错误提示已由请求层统一处理
+  } finally {
+    exporting.value = false
+  }
+}
 </script>
 
 <template>
@@ -87,6 +107,10 @@ function refresh(): void {
       <el-button :loading="loading" @click="refresh">
         <el-icon><Refresh /></el-icon>
         <span>刷新</span>
+      </el-button>
+      <el-button :loading="exporting" @click="exportLogs">
+        <el-icon><Download /></el-icon>
+        <span>导出 Excel</span>
       </el-button>
     </div>
 

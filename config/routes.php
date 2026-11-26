@@ -52,6 +52,7 @@ Router::addGroup('/api', function () {
     Router::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Router::post('/auth/logout', [AuthController::class, 'logout']);
     Router::get('/auth/login-logs', [LoginLogController::class, 'index']);
+    Router::get('/auth/login-logs/export', [LoginLogController::class, 'export']);
     Router::get('/operation-logs', [OperationLogController::class, 'index']);
     Router::get('/operation-logs/export', [OperationLogController::class, 'export']);
 
