@@ -51,6 +51,12 @@ export const layoutRoutes: RouteRecordRaw[] = [
     meta: { title: '操作日志', permission: 'oplog' },
   },
   {
+    path: 'system/crontabs',
+    name: 'crontabs',
+    component: () => import('@/views/system/crontabs/index.vue'),
+    meta: { title: '定时任务', permission: 'crontab' },
+  },
+  {
     path: 'tool/forms',
     name: 'forms',
     component: () => import('@/views/tool/forms/index.vue'),

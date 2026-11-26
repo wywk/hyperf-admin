@@ -10,6 +10,7 @@ declare(strict_types=1);
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 use App\Controller\Api\AuthController;
+use App\Controller\Api\CrontabController;
 use App\Controller\Api\DictController;
 use App\Controller\Api\DocsController;
 use App\Controller\Api\FileController;
@@ -49,6 +50,14 @@ Router::addGroup('/api', function () {
     Router::post('/auth/logout', [AuthController::class, 'logout']);
     Router::get('/auth/login-logs', [LoginLogController::class, 'index']);
     Router::get('/operation-logs', [OperationLogController::class, 'index']);
+
+    // 定时任务（接口内部做 crontab.* 权限校验）
+    Router::get('/crontabs', [CrontabController::class, 'index']);
+    Router::post('/crontabs', [CrontabController::class, 'store']);
+    Router::put('/crontabs/{id:\d+}', [CrontabController::class, 'update']);
+    Router::delete('/crontabs/{id:\d+}', [CrontabController::class, 'destroy']);
+    Router::post('/crontabs/{id:\d+}/run', [CrontabController::class, 'run']);
+    Router::get('/crontabs/{id:\d+}/logs', [CrontabController::class, 'logs']);
 
     // 权限树（接口内部再做 permission.* 权限校验；角色授权弹窗也读它）
     Router::get('/permissions', [PermissionController::class, 'index']);
