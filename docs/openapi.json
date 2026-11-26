@@ -221,6 +221,173 @@
                 ]
             }
         },
+        "/api/auth/password": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "修改自己的密码",
+                "description": "校验旧密码后设置新密码；修改成功后除当前设备外的其他登录会话立即失效。",
+                "operationId": "authChangePassword",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "old_password",
+                                    "new_password"
+                                ],
+                                "properties": {
+                                    "old_password": {
+                                        "description": "当前密码",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "new_password": {
+                                        "description": "新密码，6-64 位",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "密码已更新"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/configs": {
+            "get": {
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "系统配置（分组）",
+                "description": "返回按 group 分组的配置项，含 type/name/description，前端据此渲染动态表单。需要 config.view 权限。",
+                "operationId": "configIndex",
+                "responses": {
+                    "200": {
+                        "description": "分组配置",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "group": {
+                                                        "type": "string",
+                                                        "example": "security"
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "安全策略"
+                                                    },
+                                                    "items": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "object"
+                                                        }
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "批量保存配置",
+                "description": "body.items 为 {key: value} 映射；值按各自的 type 校验与转换后落库，保存后立即生效（Redis 缓存失效）。需要 config.edit 权限。",
+                "operationId": "configUpdate",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "items"
+                                ],
+                                "properties": {
+                                    "items": {
+                                        "description": "配置键值对，如 {\"login_max_attempts\": 8}",
+                                        "type": "object",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "保存后的全量配置（已按类型转换）"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/crontabs": {
             "get": {
                 "tags": [
@@ -4953,7 +5120,7 @@
                                         "nullable": false
                                     },
                                     "status": {
-                                        "description": "状态",
+                                        "description": "状态（字典 common_status）",
                                         "type": "string",
                                         "example": null,
                                         "nullable": false
@@ -5067,7 +5234,7 @@
                                         "nullable": false
                                     },
                                     "status": {
-                                        "description": "状态",
+                                        "description": "状态（字典 common_status）",
                                         "type": "string",
                                         "example": null,
                                         "nullable": false
@@ -5132,6 +5299,76 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/product/batch-delete": {
+            "post": {
+                "tags": [
+                    "示例商品"
+                ],
+                "summary": "批量删除示例商品",
+                "description": "按 ID 数组批量删除，返回实际删除数量。需要 product.delete 权限。",
+                "operationId": "productBatchDestroy",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "ids"
+                                ],
+                                "properties": {
+                                    "ids": {
+                                        "description": "待删除的 ID 数组（1-100 个）",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "删除数量",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "deleted": {
+                                            "type": "integer",
+                                            "example": null,
+                                            "nullable": false
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
                     }
                 },
                 "security": [
@@ -5637,6 +5874,597 @@
                     }
                 ]
             }
+        },
+        "/api/sessions": {
+            "get": {
+                "tags": [
+                    "在线会话"
+                ],
+                "summary": "在线会话列表",
+                "description": "基于 Redis 会话表，返回每个登录会话的用户、IP、浏览器、登录时间与最后活跃时间，当前会话置顶。需要 session.view 权限。",
+                "operationId": "sessionIndex",
+                "parameters": [
+                    {
+                        "name": "keyword",
+                        "in": "query",
+                        "description": "用户名 / 昵称模糊匹配",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "only_online",
+                        "in": "query",
+                        "description": "1=只看最近 15 分钟活跃的会话",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "会话列表",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "online": {
+                                                    "description": "在线会话数",
+                                                    "type": "integer"
+                                                },
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/sessions/{userId}/{familyId}": {
+            "delete": {
+                "tags": [
+                    "在线会话"
+                ],
+                "summary": "踢掉单个会话",
+                "description": "吊销该次登录签发的整条凭证链，对方下一次请求即返回 401。需要 session.kick 权限。",
+                "operationId": "sessionKick",
+                "responses": {
+                    "200": {
+                        "description": "已踢下线"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/sessions/user/{userId}": {
+            "delete": {
+                "tags": [
+                    "在线会话"
+                ],
+                "summary": "踢掉用户的全部会话",
+                "description": "吊销该用户所有登录会话；若操作的是自己，会保留当前会话。需要 session.kick 权限。",
+                "operationId": "sessionKickUser",
+                "responses": {
+                    "200": {
+                        "description": "已下线"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users": {
+            "get": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "用户分页列表",
+                "description": "支持按用户名/昵称/邮箱模糊搜索，按角色与状态过滤。需要 user.view 权限。",
+                "operationId": "userIndex",
+                "parameters": [
+                    {
+                        "name": "keyword",
+                        "in": "query",
+                        "description": "用户名 / 昵称 / 邮箱模糊匹配",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "description": "角色标识（精确匹配）",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "状态 1=启用 0=禁用",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分页结果：{total, page, page_size, items[]}",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "创建用户",
+                "description": "密码使用 bcrypt 哈希存储。需要 user.add 权限。",
+                "operationId": "userStore",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "username",
+                                    "password",
+                                    "role"
+                                ],
+                                "properties": {
+                                    "username": {
+                                        "description": "登录名，字母开头，3-64 位",
+                                        "type": "string",
+                                        "example": "auditor",
+                                        "nullable": false
+                                    },
+                                    "password": {
+                                        "description": "密码，6-64 位",
+                                        "type": "string",
+                                        "example": "audit123456",
+                                        "nullable": false
+                                    },
+                                    "nickname": {
+                                        "description": "昵称",
+                                        "type": "string",
+                                        "example": "审计员",
+                                        "nullable": false
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "auditor@example.com",
+                                        "nullable": false
+                                    },
+                                    "role": {
+                                        "description": "角色标识",
+                                        "type": "string",
+                                        "example": "user",
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "description": "默认 1=启用",
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ],
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "返回创建的用户（不含密码）"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users/{id}": {
+            "put": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "更新用户",
+                "description": "部分更新。改角色或停用会立即吊销该用户的全部登录会话。需要 user.edit 权限。",
+                "operationId": "userUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": null,
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "username": {
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "nickname": {
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "role": {
+                                        "description": "角色标识",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ],
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "返回更新后的用户"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "删除用户",
+                "description": "不能删除自己或最后一个可用管理员；删除后会话立即失效。需要 user.delete 权限。",
+                "operationId": "userDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "已删除"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users/{id}/status": {
+            "put": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "启用或停用用户",
+                "description": "停用后该用户立即无法登录，已登录的会话全部失效；不能停用自己或最后一个可用管理员。需要 user.edit 权限。",
+                "operationId": "userUpdateStatus",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "integer",
+                                        "enum": [
+                                            0,
+                                            1
+                                        ],
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "返回更新后的用户"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users/{id}/password": {
+            "put": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "重置用户密码",
+                "description": "管理员直接设置新密码，无需旧密码；重置后该用户全部会话下线，需用新密码重新登录。需要 user.reset 权限。",
+                "operationId": "userResetPassword",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "password"
+                                ],
+                                "properties": {
+                                    "password": {
+                                        "description": "新密码，6-64 位",
+                                        "type": "string",
+                                        "example": "newpass123456",
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "已重置"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -5818,6 +6646,10 @@
             "description": "认证"
         },
         {
+            "name": "系统配置",
+            "description": "系统配置"
+        },
+        {
             "name": "定时任务",
             "description": "定时任务"
         },
@@ -5888,6 +6720,14 @@
         {
             "name": "角色管理",
             "description": "角色管理"
+        },
+        {
+            "name": "在线会话",
+            "description": "在线会话"
+        },
+        {
+            "name": "用户管理",
+            "description": "用户管理"
         }
     ]
 }

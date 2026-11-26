@@ -200,6 +200,83 @@ export interface RolePayload {
   sort?: number
 }
 
+/* ===================== 用户管理 ===================== */
+
+/** 用户列表项（后端 users 表，不含密码） */
+export interface UserItem {
+  id: number
+  username: string
+  nickname: string
+  email: string
+  role: string
+  role_name?: string
+  status: number
+  last_login_at: string | null
+  created_at: string | null
+}
+
+export interface UserQuery {
+  page?: number
+  page_size?: number
+  keyword?: string
+  role?: string
+  status?: number | ''
+}
+
+export interface UserPayload {
+  username?: string
+  password?: string
+  nickname?: string
+  email?: string
+  role?: string
+  status?: number
+}
+
+/* ===================== 在线会话 ===================== */
+
+export interface SessionItem {
+  user_id: number
+  username: string
+  nickname: string
+  role: string
+  user_status: number
+  family_id: string
+  ip: string
+  user_agent: string
+  browser: string
+  os: string
+  login_at: string
+  last_seen: string
+  online: boolean
+  is_current: boolean
+}
+
+export interface SessionResult {
+  total: number
+  online: number
+  items: SessionItem[]
+}
+
+/* ===================== 系统配置 ===================== */
+
+export type ConfigValueType = 'string' | 'text' | 'number' | 'boolean' | 'json'
+
+export interface ConfigItem {
+  key: string
+  value: string | number | boolean | unknown
+  type: ConfigValueType
+  name: string
+  description: string
+  sort: number
+  is_system: number
+}
+
+export interface ConfigGroup {
+  group: string
+  name: string
+  items: ConfigItem[]
+}
+
 /* ===================== 表单设计器 ===================== */
 
 /** 表单字段控件类型 */

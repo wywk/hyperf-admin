@@ -24,7 +24,7 @@ use function Hyperf\Config\config;
  */
 class LoginLogService
 {
-    public function __construct(protected StdoutLoggerInterface $logger)
+    public function __construct(protected StdoutLoggerInterface $logger, protected ConfigService $configService)
     {
     }
 
@@ -39,7 +39,7 @@ class LoginLogService
         string $message = '',
         string $userAgent = ''
     ): void {
-        if (! (bool) config('security.login_log_enabled', true)) {
+        if (! $this->configService->bool('login_log_enabled', (bool) config('security.login_log_enabled', true))) {
             return;
         }
 

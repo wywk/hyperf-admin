@@ -27,7 +27,8 @@ class CrontabAlertService
 {
     public function __construct(
         protected StdoutLoggerInterface $logger,
-        protected ClientFactory $clientFactory
+        protected ClientFactory $clientFactory,
+        protected ConfigService $configService
     ) {
     }
 
@@ -36,7 +37,10 @@ class CrontabAlertService
      */
     public function maybeAlert(CrontabTask $task, CrontabLog $log): void
     {
-        $threshold = max(1, (int) config('security.crontab_fail_alert_threshold', 3));
+        $threshold = max(1, $this->configService->int(
+            'crontab_fail_alert_threshold',
+            (int) config('security.crontab_fail_alert_threshold', 3)
+        ));
         if ((int) $task->consecutive_failures !== $threshold) {
             // 只在恰好达到阈值时告警一次；此后保持静默，直到下一次成功清零
             return;
@@ -51,7 +55,7 @@ class CrontabAlertService
         );
         $this->logger->warning('【任务告警】' . $message);
 
-        $webhook = (string) config('security.alert_webhook_url', '');
+        $webhook = $this->configService->string('alert_webhook_url', (string) config('security.alert_webhook_url', ''));
         if ($webhook === '') {
             return;
         }

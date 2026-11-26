@@ -75,6 +75,9 @@ class AuthMiddleware implements MiddlewareInterface
         Context::set('user', $user);
         Context::set('token_payload', $payload);
 
+        // 刷新「在线会话」里的最后活跃时间，顺带续期会话表 TTL
+        $this->tokenService->touchSession($userId, (string) ($payload['fid'] ?? ''));
+
         return $handler->handle(
             $request->withAttribute('user_id', $userId)
                 ->withAttribute('user', $user)

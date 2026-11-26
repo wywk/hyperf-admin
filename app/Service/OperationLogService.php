@@ -30,7 +30,7 @@ class OperationLogService
         'token', 'access_token', 'refresh_token', 'secret', 'authorization',
     ];
 
-    public function __construct(protected StdoutLoggerInterface $logger)
+    public function __construct(protected StdoutLoggerInterface $logger, protected ConfigService $configService)
     {
     }
 
@@ -51,7 +51,7 @@ class OperationLogService
         string $ip,
         string $userAgent
     ): void {
-        if (! (bool) config('security.operation_log_enabled', true)) {
+        if (! $this->configService->bool('operation_log_enabled', (bool) config('security.operation_log_enabled', true))) {
             return;
         }
 

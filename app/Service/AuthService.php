@@ -75,7 +75,7 @@ class AuthService
 
         $this->audit->record(LoginLog::EVENT_LOGIN_SUCCESS, $username, $ip, (int) $user->id, '登录成功', $userAgent);
 
-        return array_merge($this->tokenService->issue($user), ['user' => $this->profile($user)]);
+        return array_merge($this->tokenService->issue($user, null, $ip, $userAgent), ['user' => $this->profile($user)]);
     }
 
     /**
@@ -125,7 +125,29 @@ class AuthService
         // 旋转：旧的 refresh token 立刻作废，防止被重复使用
         $this->tokenService->revoke($jti, (int) ($payload['exp'] ?? 0) - time());
 
-        return array_merge($this->tokenService->issue($user, $familyId), ['user' => $this->profile($user)]);
+        return array_merge($this->tokenService->issue($user, $familyId, $ip, $userAgent), ['user' => $this->profile($user)]);
+    }
+
+    /**
+     * 修改自己的密码：校验旧密码，改完后除当前会话外的其他设备全部下线。
+     *
+     * @param array<string, mixed> $payload 当前请求的 token payload（用来保留当前会话）
+     */
+    public function changePassword(User $user, string $oldPassword, string $newPassword, array $payload = []): void
+    {
+        if (! password_verify($oldPassword, (string) $user->password)) {
+            throw new BusinessException(ApiCode::VALIDATION_FAILED, '当前密码不正确');
+        }
+
+        if (password_verify($newPassword, (string) $user->password)) {
+            throw new BusinessException(ApiCode::VALIDATION_FAILED, '新密码不能与当前密码相同');
+        }
+
+        $user->password = password_hash($newPassword, PASSWORD_BCRYPT);
+        $user->save();
+
+        // 当前这台设备保持登录，其它设备上的会话立即失效
+        $this->tokenService->revokeAllForUser((int) $user->id, (string) ($payload['fid'] ?? '') ?: null);
     }
 
     /**
@@ -140,6 +162,8 @@ class AuthService
             (int) ($payload['exp'] ?? 0) - time()
         );
         $this->tokenService->revokeFamily((string) ($payload['fid'] ?? ''));
+        // 会话表里也同步移除，否则「在线会话」会残留一条已退出的记录
+        $this->tokenService->kickSession((int) ($payload['sub'] ?? 0), (string) ($payload['fid'] ?? ''));
 
         $this->audit->record(
             LoginLog::EVENT_LOGOUT,

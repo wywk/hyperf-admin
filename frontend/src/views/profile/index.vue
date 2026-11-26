@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import type { FormInstance, FormRules } from 'element-plus'
+import { Lock } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from '@/plugins/element'
 import { useAuthStore } from '@/stores/auth'
+import { changeOwnPassword } from '@/api/users'
 import { getExpiresAt, getRefreshToken } from '@/utils/token'
 
 const auth = useAuthStore()
@@ -31,6 +34,72 @@ async function logout(): Promise<void> {
   await auth.logout()
   ElMessage.success('已退出登录')
   await router.replace({ name: 'login' })
+}
+
+/* ---------------- 修改密码 ---------------- */
+
+const pwdVisible = ref(false)
+const pwdSubmitting = ref(false)
+const pwdFormRef = ref<FormInstance>()
+const pwdForm = reactive({ old_password: '', new_password: '', confirm: '' })
+
+const pwdRules: FormRules = {
+  old_password: [
+    { required: true, message: '请输入当前密码', trigger: 'blur' },
+    { min: 6, max: 64, message: '密码长度需为 6-64 个字符', trigger: 'blur' },
+  ],
+  new_password: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, max: 64, message: '密码长度需为 6-64 个字符', trigger: 'blur' },
+    {
+      validator: (_rule: unknown, value: string, callback: (error?: Error) => void): void => {
+        if (value && value === pwdForm.old_password) {
+          callback(new Error('新密码不能与当前密码相同'))
+          return
+        }
+        callback()
+      },
+      trigger: 'blur',
+    },
+  ],
+  confirm: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (_rule: unknown, value: string, callback: (error?: Error) => void): void => {
+        if (value !== pwdForm.new_password) {
+          callback(new Error('两次输入的新密码不一致'))
+          return
+        }
+        callback()
+      },
+      trigger: 'blur',
+    },
+  ],
+}
+
+function openChangePassword(): void {
+  pwdForm.old_password = ''
+  pwdForm.new_password = ''
+  pwdForm.confirm = ''
+  pwdVisible.value = true
+}
+
+async function submitChangePassword(): Promise<void> {
+  if (!pwdFormRef.value) return
+
+  const valid = await pwdFormRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  pwdSubmitting.value = true
+  try {
+    await changeOwnPassword(pwdForm.old_password, pwdForm.new_password)
+    pwdVisible.value = false
+    ElMessage.success('密码已更新，其他设备的登录已失效')
+  } catch {
+    // 旧密码错误等提示由请求层统一处理
+  } finally {
+    pwdSubmitting.value = false
+  }
 }
 </script>
 
@@ -101,9 +170,43 @@ async function logout(): Promise<void> {
               {{ hasRefreshToken ? '已持有，过期自动续期' : '未持有' }}
             </el-descriptions-item>
           </el-descriptions>
+
+          <div class="pwd-row">
+            <el-button type="primary" plain @click="openChangePassword">
+              <el-icon><Lock /></el-icon>
+              <span>修改密码</span>
+            </el-button>
+            <span class="text-muted pwd-tip">修改后其他设备上的登录会立即失效，当前设备保持登录。</span>
+          </div>
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 修改密码 -->
+    <el-dialog
+      v-model="pwdVisible"
+      title="修改密码"
+      width="440px"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-width="90px">
+        <el-form-item label="当前密码" prop="old_password">
+          <el-input v-model="pwdForm.old_password" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="新密码" prop="new_password">
+          <el-input v-model="pwdForm.new_password" type="password" show-password placeholder="至少 6 位" />
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirm">
+          <el-input v-model="pwdForm.confirm" type="password" show-password placeholder="再输一次" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="pwdVisible = false">取消</el-button>
+        <el-button type="primary" :loading="pwdSubmitting" @click="submitChangePassword">确认修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -173,6 +276,18 @@ async function logout(): Promise<void> {
 
 .session {
   margin-top: 16px;
+}
+
+.pwd-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.pwd-tip {
+  font-size: 12px;
 }
 
 code.mono {

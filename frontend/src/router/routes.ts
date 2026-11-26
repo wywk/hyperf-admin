@@ -27,10 +27,22 @@ export const layoutRoutes: RouteRecordRaw[] = [
     meta: { title: '权限管理', permission: 'permission' },
   },
   {
+    path: 'system/users',
+    name: 'users',
+    component: () => import('@/views/system/users/index.vue'),
+    meta: { title: '用户管理', permission: 'user' },
+  },
+  {
     path: 'system/roles',
     name: 'roles',
     component: () => import('@/views/system/roles/index.vue'),
     meta: { title: '角色管理', permission: 'role' },
+  },
+  {
+    path: 'system/sessions',
+    name: 'sessions',
+    component: () => import('@/views/system/sessions/index.vue'),
+    meta: { title: '在线会话', permission: 'session' },
   },
   {
     path: 'system/files',
@@ -43,6 +55,12 @@ export const layoutRoutes: RouteRecordRaw[] = [
     name: 'dicts',
     component: () => import('@/views/system/dict/index.vue'),
     meta: { title: '数据字典', permission: 'dict' },
+  },
+  {
+    path: 'system/configs',
+    name: 'configs',
+    component: () => import('@/views/system/configs/index.vue'),
+    meta: { title: '系统配置', permission: 'config' },
   },
   {
     path: 'system/oplogs',

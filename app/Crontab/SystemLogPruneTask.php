@@ -13,6 +13,7 @@ namespace App\Crontab;
 use App\Model\CrontabLog;
 use App\Model\LoginLog;
 use App\Model\OperationLog;
+use App\Service\ConfigService;
 use Hyperf\Contract\StdoutLoggerInterface;
 
 use function Hyperf\Config\config;
@@ -28,15 +29,25 @@ use function Hyperf\Config\config;
  */
 class SystemLogPruneTask implements TaskInterface
 {
-    public function __construct(protected StdoutLoggerInterface $logger)
+    public function __construct(protected StdoutLoggerInterface $logger, protected ConfigService $configService)
     {
     }
 
     public function execute(array $params): string
     {
-        $loginDays = max(1, (int) ($params['login_days'] ?? config('security.login_log_retention_days', 90)));
-        $operationDays = max(1, (int) ($params['operation_days'] ?? config('security.operation_log_retention_days', 180)));
-        $crontabDays = max(1, (int) ($params['crontab_days'] ?? config('security.operation_log_retention_days', 180)));
+        // 优先用任务参数，其次系统配置，最后 .env
+        $loginDays = max(1, (int) ($params['login_days'] ?? $this->configService->int(
+            'login_log_retention_days',
+            (int) config('security.login_log_retention_days', 90)
+        )));
+        $operationDays = max(1, (int) ($params['operation_days'] ?? $this->configService->int(
+            'operation_log_retention_days',
+            (int) config('security.operation_log_retention_days', 180)
+        )));
+        $crontabDays = max(1, (int) ($params['crontab_days'] ?? $this->configService->int(
+            'operation_log_retention_days',
+            (int) config('security.operation_log_retention_days', 180)
+        )));
 
         $threshold = static fn (int $days): string => date('Y-m-d H:i:s', time() - $days * 86400);
 
