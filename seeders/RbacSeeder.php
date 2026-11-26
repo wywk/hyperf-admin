@@ -64,6 +64,9 @@ class RbacSeeder extends Seeder
         'dict.edit' => ['dict', 'button', '编辑字典', '', '', 30],
         'dict.delete' => ['dict', 'button', '删除字典', '', '', 40],
 
+        'oplog' => ['system', 'menu', '操作日志', 'system/oplogs', 'Document', 60],
+        'oplog.view' => ['oplog', 'button', '查看操作日志', '', '', 10],
+
         'tool' => ['', 'menu', '工具开发', 'tool', 'SetUp', 40],
 
         'form' => ['tool', 'menu', '表单管理', 'tool/forms', 'EditPen', 10],

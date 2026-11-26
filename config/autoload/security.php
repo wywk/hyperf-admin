@@ -27,4 +27,10 @@ return [
 
     // 审计日志保留天数，配合 `php bin/hyperf.php login-log:prune` 清理
     'login_log_retention_days' => (int) env('LOGIN_LOG_RETENTION_DAYS', 90),
+
+    // 是否写操作日志（operation_logs 表，记录登录用户的写操作）。写入失败只告警。
+    'operation_log_enabled' => (bool) env('OPERATION_LOG_ENABLED', true),
+
+    // 操作日志保留天数，预留清理任务使用
+    'operation_log_retention_days' => (int) env('OPERATION_LOG_RETENTION_DAYS', 180),
 ];

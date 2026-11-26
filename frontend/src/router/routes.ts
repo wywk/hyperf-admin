@@ -45,6 +45,12 @@ export const layoutRoutes: RouteRecordRaw[] = [
     meta: { title: '数据字典', permission: 'dict' },
   },
   {
+    path: 'system/oplogs',
+    name: 'oplogs',
+    component: () => import('@/views/system/oplogs/index.vue'),
+    meta: { title: '操作日志', permission: 'oplog' },
+  },
+  {
     path: 'tool/forms',
     name: 'forms',
     component: () => import('@/views/tool/forms/index.vue'),
