@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hyperf Skeleton API · Redoc</title>
+<style>
+  .fallback {
+    max-width: 560px;
+    margin: 60px auto;
+    font: 14px/1.7 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #6b7280;
+    border: 1px dashed #d1d5db;
+    border-radius: 10px;
+    padding: 20px 24px;
+  }
+  .fallback code { background: #f4f6f8; padding: 1px 5px; border-radius: 4px; }
+  .fallback a { color: #2563eb; }
+</style>
+</head>
+<body>
+<!-- 需要联网加载 Redoc 渲染器；离线时提示回退到内置文档页 -->
+<div class="fallback" id="fallback" hidden>
+  <b>Redoc 渲染器加载失败（可能处于离线环境）。</b>
+  <p>请改用内置的离线文档页 <a href="/api/docs">/api/docs</a>，
+    或把 <code>/api/docs/openapi.json</code> 导入 Swagger UI / Postman / Apifox。</p>
+</div>
+<redoc spec-url="/api/docs/openapi.json" hide-download-button="true"></redoc>
+<script>
+  // 若 8 秒内 Redoc 没有渲染出来（离线），展示回退提示
+  window.setTimeout(function () {
+    var el = document.querySelector('redoc');
+    var rendered = el && el.shadowRoot && el.shadowRoot.childElementCount > 0;
+    if (!rendered) {
+      document.getElementById('fallback').hidden = false;
+    }
+  }, 8000);
+</script>
+<script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js" onerror="document.getElementById('fallback').hidden=false"></script>
+</body>
+</html>

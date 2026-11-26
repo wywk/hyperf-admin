@@ -221,6 +221,546 @@
                 ]
             }
         },
+        "/api/crontabs": {
+            "get": {
+                "tags": [
+                    "定时任务"
+                ],
+                "summary": "定时任务分页",
+                "description": "任务定义与调度状态（最近/下次运行时间、连续失败数）。需要 crontab.view 权限。",
+                "operationId": "crontabIndex",
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "任务名称（模糊匹配）",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "1=启用 0=停用",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分页结果，item 含 name/handler/rule/params/status/consecutive_failures/last_run_at/next_run_at",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "定时任务"
+                ],
+                "summary": "新增定时任务",
+                "operationId": "crontabStore",
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "任务名称",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "handler": {
+                                        "description": "任务处理类，须实现 App\\Crontab\\TaskInterface",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "rule": {
+                                        "description": "标准 cron 表达式（5 位），如 */5 * * * *",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "params": {
+                                        "description": "任务参数（可选），透传给 execute()",
+                                        "type": "object",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "description": "1=启用（默认）0=停用",
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "创建后的任务",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "example": null,
+                                            "nullable": false
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/crontabs/{id}": {
+            "put": {
+                "tags": [
+                    "定时任务"
+                ],
+                "summary": "更新定时任务",
+                "operationId": "crontabUpdate",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "任务 ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": null,
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "任务名称",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "handler": {
+                                        "description": "任务处理类",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "rule": {
+                                        "description": "cron 表达式",
+                                        "type": "string",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "params": {
+                                        "description": "任务参数",
+                                        "type": "object",
+                                        "example": null,
+                                        "nullable": false
+                                    },
+                                    "status": {
+                                        "description": "1=启用 0=停用",
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": false
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "example": null
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "更新后的任务",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "example": null,
+                                            "nullable": false
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "定时任务"
+                ],
+                "summary": "删除定时任务",
+                "description": "删除任务定义与其执行日志。",
+                "operationId": "crontabDestroy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "任务 ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "空"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/crontabs/{id}/run": {
+            "post": {
+                "tags": [
+                    "定时任务"
+                ],
+                "summary": "手动触发执行",
+                "description": "绕过调度立即执行一次任务（同步），返回执行日志。需要 crontab.run 权限。",
+                "operationId": "crontabRun",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "任务 ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "执行日志：status/status_text/output/cost_ms",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "example": null,
+                                            "nullable": false
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/crontabs/{id}/logs": {
+            "get": {
+                "tags": [
+                    "定时任务"
+                ],
+                "summary": "执行日志分页",
+                "description": "任务的执行流水（含手动触发）。需要 crontab.view 权限。",
+                "operationId": "crontabLogs",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "任务 ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分页结果，item 含 status/status_text/output/cost_ms/created_at",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/dashboard/stats": {
+            "get": {
+                "tags": [
+                    "仪表盘"
+                ],
+                "summary": "仪表盘统计",
+                "description": "系统聚合统计：用户/角色/文件数、今日登录与操作数、定时任务状态、近 7 日操作趋势。仅需登录。",
+                "operationId": "dashboardStats",
+                "responses": {
+                    "200": {
+                        "description": "聚合统计对象",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "users_total": {
+                                                    "description": "用户总数",
+                                                    "type": "integer"
+                                                },
+                                                "users_enabled": {
+                                                    "description": "启用用户数",
+                                                    "type": "integer"
+                                                },
+                                                "roles_total": {
+                                                    "type": "integer"
+                                                },
+                                                "files_total": {
+                                                    "type": "integer"
+                                                },
+                                                "logins_today": {
+                                                    "description": "今日登录成功次数",
+                                                    "type": "integer"
+                                                },
+                                                "operations_today": {
+                                                    "description": "今日写操作数",
+                                                    "type": "integer"
+                                                },
+                                                "operations_total": {
+                                                    "type": "integer"
+                                                },
+                                                "crontab_enabled": {
+                                                    "type": "integer"
+                                                },
+                                                "crontab_failing": {
+                                                    "description": "连续失败中的任务数",
+                                                    "type": "integer"
+                                                },
+                                                "trend": {
+                                                    "description": "近 7 日操作数 [{date,count}]",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/dict/types": {
             "get": {
                 "tags": [
@@ -875,6 +1415,21 @@
                         "bearerAuth": []
                     }
                 ]
+            }
+        },
+        "/api/docs/redoc": {
+            "get": {
+                "tags": [
+                    "文档"
+                ],
+                "summary": "【公开】接口文档页（Redoc 视图）",
+                "description": "Redoc 渲染的文档视图（渲染器走 CDN）；离线请用 /api/docs 内置页面。",
+                "operationId": "docsRedoc",
+                "responses": {
+                    "200": {
+                        "description": "HTML 文档页"
+                    }
+                }
             }
         },
         "/api/docs": {
@@ -3736,6 +4291,217 @@
                 ]
             }
         },
+        "/api/operation-logs": {
+            "get": {
+                "tags": [
+                    "操作日志"
+                ],
+                "summary": "操作日志分页",
+                "description": "登录用户写操作（POST/PUT/DELETE/PATCH）的审计流水，参数已脱敏（password/token 等敏感字段剔除）。需要 oplog.view 权限。",
+                "operationId": "operationLogIndex",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "操作人用户 ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "操作人用户名（精确匹配）",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "method",
+                        "in": "query",
+                        "description": "请求方法 POST/PUT/DELETE/PATCH",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "path",
+                        "in": "query",
+                        "description": "请求路径（模糊匹配）",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "status_code",
+                        "in": "query",
+                        "description": "响应状态码，如 200/422/500",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "页码，默认 1",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "in": "query",
+                        "description": "每页条数，默认 20",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分页结果：{total, page, page_size, items[]}，item 含 user_id/username/method/path/action/params/status_code/cost_ms/ip/created_at",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/operation-logs/export": {
+            "get": {
+                "tags": [
+                    "操作日志"
+                ],
+                "summary": "操作日志导出 Excel",
+                "description": "按当前过滤条件导出 xlsx（最多 5000 条，按 ID 倒序）。需要 oplog.view 权限。",
+                "operationId": "operationLogExport",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "操作人用户 ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "操作人用户名（精确匹配）",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "method",
+                        "in": "query",
+                        "description": "请求方法 POST/PUT/DELETE/PATCH",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "path",
+                        "in": "query",
+                        "description": "请求路径（模糊匹配）",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": null,
+                            "example": null
+                        }
+                    },
+                    {
+                        "name": "status_code",
+                        "in": "query",
+                        "description": "响应状态码",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": null,
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "xlsx 二进制流（Content-Disposition: attachment）"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/permissions": {
             "get": {
                 "tags": [
@@ -5052,6 +5818,14 @@
             "description": "认证"
         },
         {
+            "name": "定时任务",
+            "description": "定时任务"
+        },
+        {
+            "name": "仪表盘",
+            "description": "仪表盘"
+        },
+        {
             "name": "数据字典",
             "description": "数据字典"
         },
@@ -5098,6 +5872,10 @@
         {
             "name": "订单明细",
             "description": "订单明细"
+        },
+        {
+            "name": "操作日志",
+            "description": "操作日志"
         },
         {
             "name": "权限管理",

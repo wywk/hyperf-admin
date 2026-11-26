@@ -27,6 +27,25 @@ class DocsController extends AbstractController
 
     private const PAGE_FILE = BASE_PATH . '/docs/api-docs.html';
 
+    private const REDOC_FILE = BASE_PATH . '/docs/api-docs-redoc.html';
+
+    /**
+     * GET /api/docs/redoc：Redoc 视图（渲染器走 CDN，离线时页面内提示回退）.
+     */
+    #[SwGet(path: '/api/docs/redoc', operationId: 'docsRedoc', summary: '【公开】接口文档页（Redoc 视图）',
+        tag: '文档', auth: false, errors: [],
+        desc: 'Redoc 渲染的文档视图（渲染器走 CDN）；离线请用 /api/docs 内置页面。',
+        responses: [new \App\Swagger\Attributes\SwResp(desc: 'HTML 文档页')])]
+    public function redoc(): ResponseInterface
+    {
+        $page = @file_get_contents(self::REDOC_FILE);
+        if ($page === false) {
+            throw new RuntimeException('Redoc 文档页缺失：docs/api-docs-redoc.html');
+        }
+
+        return $this->response->html($page);
+    }
+
     /**
      * GET /api/docs：自带样式的文档页.
      */

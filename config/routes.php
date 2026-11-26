@@ -33,6 +33,7 @@ Router::get('/favicon.ico', function () {
 
 // 接口文档（公开）：自带样式的页面 + OpenAPI 3.0 规范
 Router::get('/api/docs', [DocsController::class, 'index']);
+Router::get('/api/docs/redoc', [DocsController::class, 'redoc']);
 Router::get('/api/docs/openapi.json', [DocsController::class, 'json']);
 
 // 公开接口
