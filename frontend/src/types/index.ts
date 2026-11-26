@@ -79,6 +79,9 @@ export interface LoginLogItem {
   ip: string
   user_agent: string
   message: string
+  risk_level: number
+  risk_text: string
+  risk_reasons: string
   created_at: string | null
 }
 
@@ -95,6 +98,7 @@ export interface LoginLogQuery {
   event?: string
   username?: string
   ip?: string
+  risk_level?: number
 }
 
 export interface OperationLogItem {

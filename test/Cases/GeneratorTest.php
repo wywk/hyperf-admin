@@ -77,7 +77,9 @@ class GeneratorTest extends TestCase
         $this->assertStringContainsString('#[SwGet(path: \'/api/gen_test_items\'', $controller);
         $this->assertStringContainsString('summary: \'测试项目列表\'', $controller);
         $this->assertStringContainsString("new SwQuery('status'", $controller);
-        $this->assertStringNotContainsString('OpenApi\\Attributes as OA', $controller);
+        // 批量删除的 schema 需要 OA\Items 描述数组元素
+        $this->assertStringContainsString('use OpenApi\\Attributes as OA;', $controller);
+        $this->assertStringContainsString("new OA\\Items(type: 'integer')", $controller);
     }
 
     public function testGeneratedExportPieces(): void

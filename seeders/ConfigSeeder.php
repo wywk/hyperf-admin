@@ -34,6 +34,8 @@ class ConfigSeeder extends Seeder
         ['security', 'password_min_length', '8', Config::TYPE_NUMBER, '密码最小长度', '新建账号、重置密码、自助改密都会校验，最小 6', 70],
         ['security', 'password_require_complexity', '1', Config::TYPE_BOOLEAN, '密码复杂度校验', '要求密码同时包含字母和数字，且不能包含用户名', 80],
         ['security', 'password_expire_days', '0', Config::TYPE_NUMBER, '密码有效期（天）', '0 表示不过期；到期后登录不拦截，但个人中心会提示修改', 90],
+        ['security', 'risk_enabled', '0', Config::TYPE_BOOLEAN, '登录风控', '登录成功时评估风险（新 IP / 陌生网段 / 异常时段），中高风险推安全提醒；默认关闭，可在配置中心开启', 100],
+        ['security', 'risk_odd_hours', '23-6', Config::TYPE_STRING, '异常时段', '格式「起-止」小时（含首含尾，可跨零点），该时段登录会提升风险等级；留空关闭时段规则', 110],
 
         ['audit', 'login_log_enabled', '1', Config::TYPE_BOOLEAN, '记录登录日志', '关闭后不再写 login_logs（不建议）', 10],
         ['audit', 'operation_log_enabled', '1', Config::TYPE_BOOLEAN, '记录操作日志', '关闭后不再写 operation_logs（不建议）', 20],

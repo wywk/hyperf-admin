@@ -29,6 +29,19 @@ class LoginLog extends Model
 
     public const EVENT_REFRESH_REPLAY = 'refresh_replay';
 
+    /** 登录风控等级 */
+    public const RISK_NORMAL = 0;
+    public const RISK_LOW = 1;
+    public const RISK_MEDIUM = 2;
+    public const RISK_HIGH = 3;
+
+    public const RISK_LABELS = [
+        self::RISK_NORMAL => '正常',
+        self::RISK_LOW => '低风险',
+        self::RISK_MEDIUM => '中风险',
+        self::RISK_HIGH => '高风险',
+    ];
+
     /**
      * 表里只有 created_at，没有 updated_at。
      */
@@ -43,14 +56,22 @@ class LoginLog extends Model
         'ip',
         'user_agent',
         'message',
+        'risk_level',
+        'risk_reasons',
         'created_at',
     ];
 
     protected array $casts = [
         'id' => 'integer',
         'user_id' => 'integer',
+        'risk_level' => 'integer',
         'created_at' => 'datetime',
     ];
+
+    public function riskText(): string
+    {
+        return self::RISK_LABELS[$this->risk_level] ?? (string) $this->risk_level;
+    }
 
     public function eventText(): string
     {

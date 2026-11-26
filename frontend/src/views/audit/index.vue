@@ -29,7 +29,19 @@ const query = reactive({
   page_size: 10,
   event: '',
   username: '',
+  risk_level: undefined as number | undefined,
 })
+
+const RISKS: Array<{ value: number; label: string; type: TagType }> = [
+  { value: 0, label: '正常', type: 'success' },
+  { value: 1, label: '低风险', type: 'info' },
+  { value: 2, label: '中风险', type: 'warning' },
+  { value: 3, label: '高风险', type: 'danger' },
+]
+
+function riskMeta(level: number): { label: string; type: TagType } {
+  return RISKS.find((item) => item.value === level) ?? { label: String(level), type: 'info' }
+}
 
 function eventMeta(event: string): { label: string; type: TagType } {
   const found = EVENTS.find((item) => item.value === event)
@@ -44,6 +56,7 @@ async function load(): Promise<void> {
       page_size: query.page_size,
       event: query.event || undefined,
       username: query.username.trim() || undefined,
+      risk_level: query.risk_level,
     })
     items.value = result.items
     total.value = result.total
@@ -62,6 +75,7 @@ function search(): void {
 function reset(): void {
   query.event = ''
   query.username = ''
+  query.risk_level = undefined
   query.page = 1
   void load()
 }
@@ -133,6 +147,11 @@ async function exportLogs(): Promise<void> {
             @keyup.enter="search"
           />
         </el-form-item>
+        <el-form-item label="风险">
+          <el-select v-model="query.risk_level" placeholder="全部" clearable style="width: 120px" @change="search">
+            <el-option v-for="item in RISKS" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="search">
             <el-icon><Search /></el-icon>
@@ -159,7 +178,17 @@ async function exportLogs(): Promise<void> {
             <span class="mono">{{ row.ip }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="message" label="说明" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="message" label="说明" min-width="160" show-overflow-tooltip />
+        <el-table-column label="风险" width="110">
+          <template #default="{ row }">
+            <el-tooltip :disabled="!row.risk_reasons" :content="row.risk_reasons" placement="top">
+              <el-tag v-if="row.risk_level > 0" :type="riskMeta(row.risk_level).type" effect="light" size="small">
+                {{ row.risk_text }}
+              </el-tag>
+              <span v-else class="text-muted">—</span>
+            </el-tooltip>
+          </template>
+        </el-table-column>
         <el-table-column prop="user_agent" label="User-Agent" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="text-muted">{{ row.user_agent || '—' }}</span>
