@@ -88,6 +88,12 @@ export const layoutRoutes: RouteRecordRaw[] = [
     meta: { title: '任务中心' },
   },
   {
+    path: 'system/health',
+    name: 'health',
+    component: () => import('@/views/system/health/index.vue'),
+    meta: { title: '系统监控', permission: 'health' },
+  },
+  {
     path: 'system/crontabs',
     name: 'crontabs',
     component: () => import('@/views/system/crontabs/index.vue'),
