@@ -46,7 +46,11 @@ class RoleController extends AbstractController
     /**
      * GET /api/roles.
      */
-    #[SwGet(path: '/api/roles', operationId: 'roleIndex', summary: '角色列表', tag: '角色管理',
+    #[SwGet(
+        path: '/api/roles',
+        operationId: 'roleIndex',
+        summary: '角色列表',
+        tag: '角色管理',
         desc: '返回全部角色（平铺，不分页），含 is_system 标记与权限数量。',
         responses: [new SwResp(desc: '角色列表', props: [
             new OA\Property(property: 'data', type: 'array', items: new OA\Items(
@@ -70,7 +74,11 @@ class RoleController extends AbstractController
     /**
      * POST /api/roles.
      */
-    #[SwPost(path: '/api/roles', operationId: 'roleStore', summary: '创建角色', tag: '角色管理',
+    #[SwPost(
+        path: '/api/roles',
+        operationId: 'roleStore',
+        summary: '创建角色',
+        tag: '角色管理',
         desc: '需要 role.add 权限。',
         body: new SwBody(
             props: [
@@ -107,7 +115,11 @@ class RoleController extends AbstractController
     /**
      * PUT /api/roles/{id}.
      */
-    #[SwPut(path: '/api/roles/{id}', operationId: 'roleUpdate', summary: '更新角色', tag: '角色管理',
+    #[SwPut(
+        path: '/api/roles/{id}',
+        operationId: 'roleUpdate',
+        summary: '更新角色',
+        tag: '角色管理',
         desc: '部分更新：传哪些改哪些；内置角色不允许改标识。需要 role.edit 权限。',
         params: [new SwId()],
         body: new SwBody(
@@ -156,7 +168,11 @@ class RoleController extends AbstractController
     /**
      * DELETE /api/roles/{id}.
      */
-    #[SwDelete(path: '/api/roles/{id}', operationId: 'roleDestroy', summary: '删除角色', tag: '角色管理',
+    #[SwDelete(
+        path: '/api/roles/{id}',
+        operationId: 'roleDestroy',
+        summary: '删除角色',
+        tag: '角色管理',
         desc: '内置角色（is_system）不可删除；有用户绑定时拒绝删除。需要 role.delete 权限。',
         params: [new SwId()],
         responses: [new SwResp(desc: '已删除')]
@@ -173,7 +189,11 @@ class RoleController extends AbstractController
     /**
      * GET /api/roles/{id}/permissions：该角色已勾选的权限 ID。
      */
-    #[SwGet(path: '/api/roles/{id}/permissions', operationId: 'rolePermissionIds', summary: '角色已授权的权限 ID', tag: '角色管理',
+    #[SwGet(
+        path: '/api/roles/{id}/permissions',
+        operationId: 'rolePermissionIds',
+        summary: '角色已授权的权限 ID',
+        tag: '角色管理',
         desc: '用于角色授权弹窗回显（前端只需勾选叶子节点）。需要 role.view 权限。',
         params: [new SwId()],
         responses: [new SwResp(desc: '权限 ID 集合', props: [
@@ -192,13 +212,22 @@ class RoleController extends AbstractController
     /**
      * PUT /api/roles/{id}/permissions：覆盖式保存角色权限。
      */
-    #[SwPut(path: '/api/roles/{id}/permissions', operationId: 'roleSyncPermissions', summary: '覆盖式保存角色授权', tag: '角色管理',
+    #[SwPut(
+        path: '/api/roles/{id}/permissions',
+        operationId: 'roleSyncPermissions',
+        summary: '覆盖式保存角色授权',
+        tag: '角色管理',
         desc: '全量覆盖该角色的权限；系统角色会强制补回 is_system 权限防止锁死。保存后 Redis 权限缓存立即失效。需要 role.assign 权限。',
         params: [new SwId()],
         body: new SwBody(
             props: [
-                new SwProp('permission_ids', type: 'array', desc: '全量权限 ID 列表（可为空数组）',
-                    items: new OA\Items(type: 'integer'), example: [1, 2, 41, 47]),
+                new SwProp(
+                    'permission_ids',
+                    type: 'array',
+                    desc: '全量权限 ID 列表（可为空数组）',
+                    items: new OA\Items(type: 'integer'),
+                    example: [1, 2, 41, 47]
+                ),
             ],
             requiredProps: ['permission_ids'],
         ),

@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Controller\Api;
@@ -43,7 +45,11 @@ class DepartmentController extends AbstractController
     /**
      * GET /api/departments.
      */
-    #[SwGet(path: '/api/departments', operationId: 'departmentTree', summary: '部门树', tag: '部门管理',
+    #[SwGet(
+        path: '/api/departments',
+        operationId: 'departmentTree',
+        summary: '部门树',
+        tag: '部门管理',
         desc: '返回完整部门树（含每个部门的用户数）。需要 dept.view 权限。',
         responses: [new SwResp(desc: '部门树', props: [
             new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object', properties: [
@@ -65,7 +71,11 @@ class DepartmentController extends AbstractController
     /**
      * POST /api/departments.
      */
-    #[SwPost(path: '/api/departments', operationId: 'departmentStore', summary: '创建部门', tag: '部门管理',
+    #[SwPost(
+        path: '/api/departments',
+        operationId: 'departmentStore',
+        summary: '创建部门',
+        tag: '部门管理',
         desc: 'parent_id 为 0 表示顶级部门。需要 dept.add 权限。',
         body: new SwBody(
             props: [
@@ -114,7 +124,11 @@ class DepartmentController extends AbstractController
     /**
      * PUT /api/departments/{id}.
      */
-    #[SwPut(path: '/api/departments/{id}', operationId: 'departmentUpdate', summary: '更新部门', tag: '部门管理',
+    #[SwPut(
+        path: '/api/departments/{id}',
+        operationId: 'departmentUpdate',
+        summary: '更新部门',
+        tag: '部门管理',
         desc: '可调整上级部门（不能选自己或自己的下级），移动后子树路径自动重算。需要 dept.edit 权限。',
         body: new SwBody(
             props: [
@@ -150,7 +164,11 @@ class DepartmentController extends AbstractController
     /**
      * DELETE /api/departments/{id}.
      */
-    #[SwDelete(path: '/api/departments/{id}', operationId: 'departmentDestroy', summary: '删除部门', tag: '部门管理',
+    #[SwDelete(
+        path: '/api/departments/{id}',
+        operationId: 'departmentDestroy',
+        summary: '删除部门',
+        tag: '部门管理',
         desc: '有子部门或仍有关联用户时拒绝删除。需要 dept.delete 权限。',
         responses: [new SwResp(desc: '已删除')]
     )]

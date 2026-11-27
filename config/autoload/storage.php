@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
-/**
+/*
  * 文件存储配置。
  *
  * driver：存储驱动，默认 local（写入本地磁盘，经 /uploads 公开访问）。

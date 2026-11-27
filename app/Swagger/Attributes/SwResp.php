@@ -2,13 +2,17 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Swagger\Attributes;
 
+use Attribute;
 use OpenApi\Attributes as OA;
 
 /**
@@ -18,7 +22,7 @@ use OpenApi\Attributes as OA;
  *     params: [new SwId()],
  *     responses: [new SwResp(desc: '示例详情', props: [new SwProp('id', type: 'integer')])])]
  */
-#[\Attribute(\Attribute::TARGET_METHOD)]
+#[Attribute(Attribute::TARGET_METHOD)]
 class SwResp extends OA\Response
 {
     public function __construct(

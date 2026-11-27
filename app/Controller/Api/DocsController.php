@@ -14,6 +14,7 @@ namespace App\Controller\Api;
 
 use App\Controller\AbstractController;
 use App\Swagger\Attributes\SwGet;
+use App\Swagger\Attributes\SwResp;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
 
@@ -32,10 +33,16 @@ class DocsController extends AbstractController
     /**
      * GET /api/docs/redoc：Redoc 视图（渲染器走 CDN，离线时页面内提示回退）.
      */
-    #[SwGet(path: '/api/docs/redoc', operationId: 'docsRedoc', summary: '【公开】接口文档页（Redoc 视图）',
-        tag: '文档', auth: false, errors: [],
+    #[SwGet(
+        path: '/api/docs/redoc',
+        operationId: 'docsRedoc',
+        summary: '【公开】接口文档页（Redoc 视图）',
+        tag: '文档',
+        auth: false,
+        errors: [],
         desc: 'Redoc 渲染的文档视图（渲染器走 CDN）；离线请用 /api/docs 内置页面。',
-        responses: [new \App\Swagger\Attributes\SwResp(desc: 'HTML 文档页')])]
+        responses: [new SwResp(desc: 'HTML 文档页')]
+    )]
     public function redoc(): ResponseInterface
     {
         $page = @file_get_contents(self::REDOC_FILE);
@@ -49,10 +56,16 @@ class DocsController extends AbstractController
     /**
      * GET /api/docs：自带样式的文档页.
      */
-    #[SwGet(path: '/api/docs', operationId: 'docsIndex', summary: '【公开】接口文档页',
-        tag: '文档', auth: false, errors: [],
+    #[SwGet(
+        path: '/api/docs',
+        operationId: 'docsIndex',
+        summary: '【公开】接口文档页',
+        tag: '文档',
+        auth: false,
+        errors: [],
         desc: '离线可用的 Swagger UI 文档页（数据源为 /api/docs/openapi.json）。',
-        responses: [new \App\Swagger\Attributes\SwResp(desc: 'HTML 文档页')])]
+        responses: [new SwResp(desc: 'HTML 文档页')]
+    )]
     public function index(): ResponseInterface
     {
         $page = @file_get_contents(self::PAGE_FILE);
@@ -66,10 +79,16 @@ class DocsController extends AbstractController
     /**
      * GET /api/docs/openapi.json：OpenAPI 3.0 规范.
      */
-    #[SwGet(path: '/api/docs/openapi.json', operationId: 'docsJson', summary: '【公开】OpenAPI 3.0 规范 JSON',
-        tag: '文档', auth: false, errors: [],
+    #[SwGet(
+        path: '/api/docs/openapi.json',
+        operationId: 'docsJson',
+        summary: '【公开】OpenAPI 3.0 规范 JSON',
+        tag: '文档',
+        auth: false,
+        errors: [],
         desc: '由 `php bin/hyperf.php swagger:export` 扫描控制器 Attributes 生成；可直接导入 Swagger UI / Postman / Apifox。',
-        responses: [new \App\Swagger\Attributes\SwResp(desc: 'OpenAPI 3.0 JSON')])]
+        responses: [new SwResp(desc: 'OpenAPI 3.0 JSON')]
+    )]
     public function json(): ResponseInterface
     {
         $raw = @file_get_contents(self::SPEC_FILE);

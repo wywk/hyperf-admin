@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * 部门树测试：路径维护、移动子树、删除守卫。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
@@ -18,6 +20,10 @@ use App\Service\UserService;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class DepartmentTest extends TestCase
 {
     private const PREFIX = 'test_dept_';

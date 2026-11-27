@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Controller\Api;
 
 use App\Common\ApiCode;
@@ -15,8 +18,6 @@ use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
 use App\Model\MallOrder;
 use App\Service\MallOrderService;
-use Hyperf\Di\Annotation\Inject;
-use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use App\Swagger\Attributes\SwBody;
 use App\Swagger\Attributes\SwDelete;
 use App\Swagger\Attributes\SwGet;
@@ -25,6 +26,8 @@ use App\Swagger\Attributes\SwPost;
 use App\Swagger\Attributes\SwProp;
 use App\Swagger\Attributes\SwPut;
 use App\Swagger\Attributes\SwQuery;
+use Hyperf\Di\Annotation\Inject;
+use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -44,14 +47,20 @@ class MallOrderController extends AbstractController
     {
     }
 
-    #[SwGet(path: '/api/mall_order', operationId: 'mall_orderIndex', summary: '订单管理列表', tag: '订单管理', page: true,
-    params: [
-        new SwQuery('order_no', type: 'string', desc: '订单号'),
-        new SwQuery('receiver', type: 'string', desc: '收货人'),
-        new SwQuery('phone', type: 'string', desc: '联系电话'),
-        new SwQuery('status', type: 'string', desc: '订单状态'),
-    ],
-)]    public function index(): ResponseInterface
+    #[SwGet(
+        path: '/api/mall_order',
+        operationId: 'mall_orderIndex',
+        summary: '订单管理列表',
+        tag: '订单管理',
+        page: true,
+        params: [
+            new SwQuery('order_no', type: 'string', desc: '订单号'),
+            new SwQuery('receiver', type: 'string', desc: '收货人'),
+            new SwQuery('phone', type: 'string', desc: '联系电话'),
+            new SwQuery('status', type: 'string', desc: '订单状态'),
+        ],
+    )]
+    public function index(): ResponseInterface
     {
         $this->authorize('mall_order.view');
 
@@ -70,9 +79,14 @@ class MallOrderController extends AbstractController
         ));
     }
 
-    #[SwGet(path: '/api/mall_order/{id}', operationId: 'mall_orderShow', summary: '订单管理详情', tag: '订单管理',
-    params: [new SwId()],
-)]    public function show(int $id): ResponseInterface
+    #[SwGet(
+        path: '/api/mall_order/{id}',
+        operationId: 'mall_orderShow',
+        summary: '订单管理详情',
+        tag: '订单管理',
+        params: [new SwId()],
+    )]
+    public function show(int $id): ResponseInterface
     {
         $this->authorize('mall_order.view');
 
@@ -84,21 +98,26 @@ class MallOrderController extends AbstractController
         return ApiResponse::success($model);
     }
 
-    #[SwPost(path: '/api/mall_order', operationId: 'mall_orderStore', summary: '新增订单管理', tag: '订单管理',
-    body: new SwBody(
-        props: [
-            new SwProp('order_no', type: 'string', desc: '订单号'),
-            new SwProp('receiver', type: 'string', nullable: true, desc: '收货人'),
-            new SwProp('phone', type: 'string', nullable: true, desc: '联系电话'),
-            new SwProp('amount', type: 'number', desc: '金额(元)'),
-            new SwProp('status', type: 'string', nullable: true, desc: '订单状态'),
-            new SwProp('user_id', type: 'number', nullable: true, desc: '用户ID'),
-            new SwProp('address', type: 'string', nullable: true, desc: '收货地址'),
-            new SwProp('remark', type: 'string', nullable: true, desc: '备注'),
-        ],
-        requiredProps: ['order_no', 'amount'],
-    ),
-)]    public function store(): ResponseInterface
+    #[SwPost(
+        path: '/api/mall_order',
+        operationId: 'mall_orderStore',
+        summary: '新增订单管理',
+        tag: '订单管理',
+        body: new SwBody(
+            props: [
+                new SwProp('order_no', type: 'string', desc: '订单号'),
+                new SwProp('receiver', type: 'string', nullable: true, desc: '收货人'),
+                new SwProp('phone', type: 'string', nullable: true, desc: '联系电话'),
+                new SwProp('amount', type: 'number', desc: '金额(元)'),
+                new SwProp('status', type: 'string', nullable: true, desc: '订单状态'),
+                new SwProp('user_id', type: 'number', nullable: true, desc: '用户ID'),
+                new SwProp('address', type: 'string', nullable: true, desc: '收货地址'),
+                new SwProp('remark', type: 'string', nullable: true, desc: '备注'),
+            ],
+            requiredProps: ['order_no', 'amount'],
+        ),
+    )]
+    public function store(): ResponseInterface
     {
         $this->authorize('mall_order.add');
 
@@ -107,23 +126,28 @@ class MallOrderController extends AbstractController
         return ApiResponse::success(['id' => (int) $this->service->create($data)->id], '创建成功');
     }
 
-    #[SwPut(path: '/api/mall_order/{id}', operationId: 'mall_orderUpdate', summary: '更新订单管理', tag: '订单管理',
-    desc: '支持部分字段更新（传哪些改哪些）。',
-    params: [new SwId()],
-    body: new SwBody(
-        props: [
-            new SwProp('order_no', type: 'string', desc: '订单号'),
-            new SwProp('receiver', type: 'string', nullable: true, desc: '收货人'),
-            new SwProp('phone', type: 'string', nullable: true, desc: '联系电话'),
-            new SwProp('amount', type: 'number', desc: '金额(元)'),
-            new SwProp('status', type: 'string', nullable: true, desc: '订单状态'),
-            new SwProp('user_id', type: 'number', nullable: true, desc: '用户ID'),
-            new SwProp('address', type: 'string', nullable: true, desc: '收货地址'),
-            new SwProp('remark', type: 'string', nullable: true, desc: '备注'),
-        ],
-        required: false,
-    ),
-)]    public function update(int $id): ResponseInterface
+    #[SwPut(
+        path: '/api/mall_order/{id}',
+        operationId: 'mall_orderUpdate',
+        summary: '更新订单管理',
+        tag: '订单管理',
+        desc: '支持部分字段更新（传哪些改哪些）。',
+        params: [new SwId()],
+        body: new SwBody(
+            props: [
+                new SwProp('order_no', type: 'string', desc: '订单号'),
+                new SwProp('receiver', type: 'string', nullable: true, desc: '收货人'),
+                new SwProp('phone', type: 'string', nullable: true, desc: '联系电话'),
+                new SwProp('amount', type: 'number', desc: '金额(元)'),
+                new SwProp('status', type: 'string', nullable: true, desc: '订单状态'),
+                new SwProp('user_id', type: 'number', nullable: true, desc: '用户ID'),
+                new SwProp('address', type: 'string', nullable: true, desc: '收货地址'),
+                new SwProp('remark', type: 'string', nullable: true, desc: '备注'),
+            ],
+            required: false,
+        ),
+    )]
+    public function update(int $id): ResponseInterface
     {
         $this->authorize('mall_order.edit');
 
@@ -133,9 +157,14 @@ class MallOrderController extends AbstractController
         return ApiResponse::success(['id' => $id], '保存成功');
     }
 
-    #[SwDelete(path: '/api/mall_order/{id}', operationId: 'mall_orderDestroy', summary: '删除订单管理', tag: '订单管理',
-    params: [new SwId()],
-)]    public function destroy(int $id): ResponseInterface
+    #[SwDelete(
+        path: '/api/mall_order/{id}',
+        operationId: 'mall_orderDestroy',
+        summary: '删除订单管理',
+        tag: '订单管理',
+        params: [new SwId()],
+    )]
+    public function destroy(int $id): ResponseInterface
     {
         $this->authorize('mall_order.delete');
 
@@ -187,10 +216,10 @@ class MallOrderController extends AbstractController
     private function searchFilters(array $data): array
     {
         return [
-        'order_no' => $data['order_no'] ?? null,
-        'receiver' => $data['receiver'] ?? null,
-        'phone' => $data['phone'] ?? null,
-        'status' => $data['status'] ?? null,
+            'order_no' => $data['order_no'] ?? null,
+            'receiver' => $data['receiver'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'status' => $data['status'] ?? null,
         ];
     }
 }

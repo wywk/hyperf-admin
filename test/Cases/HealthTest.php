@@ -2,19 +2,24 @@
 
 declare(strict_types=1);
 /**
- * 系统健康监控测试：权限控制、聚合结构、分位数计算。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
 
-use App\Model\OperationLog;
 use App\Service\HealthService;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class HealthTest extends TestCase
 {
     private HealthService $health;

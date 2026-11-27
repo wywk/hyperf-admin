@@ -2,17 +2,18 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
-
 use Hyperf\Database\Migrations\Migration;
 use Hyperf\Database\Schema\Blueprint;
 use Hyperf\Database\Schema\Schema;
 
-/**
+/*
  * 异步任务表：队列任务的业务侧台账（状态流转 / 结果文件 / 错误信息），
  * 真正的消息体在 Redis 队列里，这里只存「谁提交了什么、跑到哪一步」。
  */

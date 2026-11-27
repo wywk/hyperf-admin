@@ -2,15 +2,17 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Service;
 
 use App\Model\MallGoods;
-use Hyperf\DbConnection\Db;
 
 /**
  * MallGoods 业务服务（由代码生成器生成，业务逻辑在这里扩展）。
@@ -25,7 +27,7 @@ class MallGoodsService
         $query = MallGoods::query()->orderByDesc('id');
 
         if (isset($filters['name']) && $filters['name'] !== null && $filters['name'] !== '') {
-            $query->where('name', 'like', '%'.$filters['name'].'%');
+            $query->where('name', 'like', '%' . $filters['name'] . '%');
         }
         if (isset($filters['category_id']) && $filters['category_id'] !== null && $filters['category_id'] !== '') {
             $query->where('category_id', $filters['category_id']);

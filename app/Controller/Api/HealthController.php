@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Controller\Api;
@@ -31,7 +33,11 @@ class HealthController extends AbstractController
     {
     }
 
-    #[SwGet(path: '/api/health', operationId: 'healthOverview', summary: '系统健康快照', tag: '系统监控',
+    #[SwGet(
+        path: '/api/health',
+        operationId: 'healthOverview',
+        summary: '系统健康快照',
+        tag: '系统监控',
         desc: '聚合 MySQL、Redis、PHP/Swoole 运行时、队列积压、磁盘、定时任务（含下次执行时间）、近 1 小时接口耗时（p50/p95/最慢路径）与最近错误日志。需要 health.view 权限。前端每 30 秒轮询。',
         responses: [new SwResp(desc: '各维度指标', props: [
             new OA\Property(property: 'data', type: 'object', properties: [

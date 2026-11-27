@@ -2,20 +2,28 @@
 
 declare(strict_types=1);
 /**
- * 数据字典测试：类型/字典项 CRUD、编码校验、缓存与失效。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
 
+use App\Exception\BusinessException;
 use App\Model\DictItem;
 use App\Model\DictType;
 use App\Service\DictService;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
+use Throwable;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class DictTest extends TestCase
 {
     private DictService $dict;
@@ -34,7 +42,7 @@ class DictTest extends TestCase
         foreach ($this->typeIds as $id) {
             try {
                 $this->dict->deleteType($id);
-            } catch (\Throwable) {
+            } catch (Throwable) {
             }
         }
         parent::tearDown();
@@ -55,13 +63,13 @@ class DictTest extends TestCase
 
     public function testDuplicateCodeRejected(): void
     {
-        $this->expectException(\App\Exception\BusinessException::class);
+        $this->expectException(BusinessException::class);
         $this->dict->createType(['name' => '重复编码', 'code' => 'common_status']);
     }
 
     public function testInvalidCodeRejected(): void
     {
-        $this->expectException(\App\Exception\BusinessException::class);
+        $this->expectException(BusinessException::class);
         $this->dict->createType(['name' => '非法编码', 'code' => '9bad-code']);
     }
 
@@ -70,7 +78,7 @@ class DictTest extends TestCase
         $type = $this->createType();
         $this->dict->createItem($type->id, ['label' => 'A', 'value' => 'a']);
 
-        $this->expectException(\App\Exception\BusinessException::class);
+        $this->expectException(BusinessException::class);
         $this->dict->createItem($type->id, ['label' => 'B', 'value' => 'a']);
     }
 

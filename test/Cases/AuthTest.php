@@ -2,16 +2,22 @@
 
 declare(strict_types=1);
 /**
- * 认证流程测试：登录 / 刷新 / 鉴权中间件。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
 
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class AuthTest extends TestCase
 {
     public function testLoginSuccessReturnsTokenPair(): void
@@ -96,17 +102,6 @@ class AuthTest extends TestCase
         $this->assertSame(401, $me->json('code'));
     }
 
-    private function loginToken(string $username, string $password): string
-    {
-        $body = $this->json('/api/auth/login', [
-            'username' => $username,
-            'password' => $password,
-        ])->json();
-        $this->assertSame(0, $body['code'], '登录应成功：' . ($body['message'] ?? ''));
-
-        return $body['data']['access_token'];
-    }
-
     public function testLoginLogsExportReturnsXlsx(): void
     {
         $token = $this->loginToken('admin', 'admin123456');
@@ -124,5 +119,16 @@ class AuthTest extends TestCase
         // 未登录 401
         $anon = $this->get('/api/auth/login-logs/export');
         $this->assertSame(401, $anon->getStatusCode());
+    }
+
+    private function loginToken(string $username, string $password): string
+    {
+        $body = $this->json('/api/auth/login', [
+            'username' => $username,
+            'password' => $password,
+        ])->json();
+        $this->assertSame(0, $body['code'], '登录应成功：' . ($body['message'] ?? ''));
+
+        return $body['data']['access_token'];
     }
 }

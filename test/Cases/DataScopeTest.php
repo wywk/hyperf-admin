@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * 数据权限测试：四种范围下的可见用户、列表过滤与写操作守卫。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
@@ -21,6 +23,10 @@ use App\Service\UserService;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class DataScopeTest extends TestCase
 {
     private const PREFIX = 'test_scope_';
@@ -150,10 +156,8 @@ class DataScopeTest extends TestCase
             'dept_id' => $deptId,
         ]);
 
-        /** @var User $user */
-        $user = User::query()->find((int) $created['id']);
-
-        return $user;
+        /* @var User $user */
+        return User::query()->find((int) $created['id']);
     }
 
     private function cleanup(): void

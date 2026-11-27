@@ -203,11 +203,6 @@ class TokenService
         return $count;
     }
 
-    private function sessionTtl(): int
-    {
-        return max(300, (int) config('jwt.refresh_ttl', 604800));
-    }
-
     public function revoke(string $jti, int $expiresIn): void
     {
         if ($jti === '' || $expiresIn <= 0) {
@@ -268,5 +263,10 @@ class TokenService
 
             return false;
         }
+    }
+
+    private function sessionTtl(): int
+    {
+        return max(300, (int) config('jwt.refresh_ttl', 604800));
     }
 }

@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Controller\Api;
@@ -48,7 +50,12 @@ class OperationLogController extends AbstractController
     /**
      * GET /api/operation-logs.
      */
-    #[SwGet(path: '/api/operation-logs', operationId: 'operationLogIndex', summary: '操作日志分页', tag: '操作日志', page: true,
+    #[SwGet(
+        path: '/api/operation-logs',
+        operationId: 'operationLogIndex',
+        summary: '操作日志分页',
+        tag: '操作日志',
+        page: true,
         desc: '登录用户写操作（POST/PUT/DELETE/PATCH）的审计流水，参数已脱敏（password/token 等敏感字段剔除）。需要 oplog.view 权限。',
         params: [
             new SwQuery('user_id', type: 'integer', desc: '操作人用户 ID'),
@@ -101,19 +108,13 @@ class OperationLogController extends AbstractController
     }
 
     /**
-     * @return null|array<int, int>
-     */
-    private function visibleUserIds(): ?array
-    {
-        $user = Context::get('user');
-
-        return $user instanceof User ? $this->dataScope->visibleUserIds($user) : null;
-    }
-
-    /**
      * GET /api/operation-logs/export.
      */
-    #[SwGet(path: '/api/operation-logs/export', operationId: 'operationLogExport', summary: '操作日志导出 Excel', tag: '操作日志',
+    #[SwGet(
+        path: '/api/operation-logs/export',
+        operationId: 'operationLogExport',
+        summary: '操作日志导出 Excel',
+        tag: '操作日志',
         desc: '按当前过滤条件导出 xlsx（最多 5000 条，按 ID 倒序）。需要 oplog.view 权限。',
         params: [
             new SwQuery('user_id', type: 'integer', desc: '操作人用户 ID'),
@@ -154,5 +155,15 @@ class OperationLogController extends AbstractController
         return $this->response->raw($binary)
             ->withHeader('Content-Type', ExcelService::XLSX_MIME)
             ->withHeader('Content-Disposition', 'attachment; filename="operation-logs.xlsx"');
+    }
+
+    /**
+     * @return null|array<int, int>
+     */
+    private function visibleUserIds(): ?array
+    {
+        $user = Context::get('user');
+
+        return $user instanceof User ? $this->dataScope->visibleUserIds($user) : null;
     }
 }

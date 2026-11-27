@@ -2,13 +2,17 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Swagger\Attributes;
 
+use Attribute;
 use OpenApi\Attributes as OA;
 
 /**
@@ -17,7 +21,7 @@ use OpenApi\Attributes as OA;
  * #[SwPut(path: '/api/demo/{id}', summary: '更新示例', tag: '示例管理',
  *     params: [new SwId()], body: new SwBody(props: [new SwProp('name')]))]
  */
-#[\Attribute(\Attribute::TARGET_METHOD)]
+#[Attribute(Attribute::TARGET_METHOD)]
 class SwPut extends OA\Put
 {
     public function __construct(

@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Controller\Api;
@@ -41,7 +43,11 @@ class SessionController extends AbstractController
     /**
      * GET /api/sessions.
      */
-    #[SwGet(path: '/api/sessions', operationId: 'sessionIndex', summary: '在线会话列表', tag: '在线会话',
+    #[SwGet(
+        path: '/api/sessions',
+        operationId: 'sessionIndex',
+        summary: '在线会话列表',
+        tag: '在线会话',
         desc: '基于 Redis 会话表，返回每个登录会话的用户、IP、浏览器、登录时间与最后活跃时间，当前会话置顶。需要 session.view 权限。',
         params: [
             new SwQuery('keyword', desc: '用户名 / 昵称模糊匹配'),
@@ -74,7 +80,11 @@ class SessionController extends AbstractController
     /**
      * DELETE /api/sessions/{userId}/{familyId}.
      */
-    #[SwDelete(path: '/api/sessions/{userId}/{familyId}', operationId: 'sessionKick', summary: '踢掉单个会话', tag: '在线会话',
+    #[SwDelete(
+        path: '/api/sessions/{userId}/{familyId}',
+        operationId: 'sessionKick',
+        summary: '踢掉单个会话',
+        tag: '在线会话',
         desc: '吊销该次登录签发的整条凭证链，对方下一次请求即返回 401。需要 session.kick 权限。',
         responses: [new SwResp(desc: '已踢下线')]
     )]
@@ -90,7 +100,11 @@ class SessionController extends AbstractController
     /**
      * DELETE /api/sessions/user/{userId}.
      */
-    #[SwDelete(path: '/api/sessions/user/{userId}', operationId: 'sessionKickUser', summary: '踢掉用户的全部会话', tag: '在线会话',
+    #[SwDelete(
+        path: '/api/sessions/user/{userId}',
+        operationId: 'sessionKickUser',
+        summary: '踢掉用户的全部会话',
+        tag: '在线会话',
         desc: '吊销该用户所有登录会话；若操作的是自己，会保留当前会话。需要 session.kick 权限。',
         responses: [new SwResp(desc: '已下线')]
     )]

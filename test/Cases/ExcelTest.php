@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * Excel 服务测试：导出往返解析、空列校验、非法文件拒绝。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
@@ -13,8 +15,13 @@ namespace HyperfTest\Cases;
 use App\Exception\BusinessException;
 use App\Service\Excel\ExcelService;
 use Hyperf\Context\ApplicationContext;
+use Hyperf\Contract\Arrayable;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class ExcelTest extends TestCase
 {
     private ExcelService $excel;
@@ -76,7 +83,7 @@ class ExcelTest extends TestCase
     public function testExportAcceptsArrayableModelRows(): void
     {
         // 模拟 Eloquent 模型：Arrayable + 自身属性（(array) 强转会拿到属性表而非数据）
-        $model = new class() implements \Hyperf\Contract\Arrayable {
+        $model = new class implements Arrayable {
             public $incrementing = true;
 
             public function toArray(): array

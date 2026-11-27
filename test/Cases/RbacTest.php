@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 /**
- * RBAC 测试：权限树、角色授权同步、权限解析缓存。
- * 种子数据：admin 角色（全量权限）与 user 角色（子集）。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
@@ -15,6 +16,10 @@ use App\Service\RbacService;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class RbacTest extends TestCase
 {
     private RbacService $rbac;

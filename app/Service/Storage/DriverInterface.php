@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Service\Storage;
 
 /**
@@ -19,7 +22,7 @@ interface DriverInterface
      * 写入文件内容，返回存储相对路径（如 20261125/3f2a...-uuid.png）。
      *
      * @param string $contents 文件二进制内容
-     * @param string $ext      扩展名（小写，不含点）
+     * @param string $ext 扩展名（小写，不含点）
      * @return string 相对路径
      */
     public function put(string $contents, string $ext): string;

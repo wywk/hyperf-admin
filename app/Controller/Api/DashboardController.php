@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Controller\Api;
@@ -28,7 +30,11 @@ use Psr\Http\Message\ResponseInterface;
  */
 class DashboardController extends AbstractController
 {
-    #[SwGet(path: '/api/dashboard/stats', operationId: 'dashboardStats', summary: '仪表盘统计', tag: '仪表盘',
+    #[SwGet(
+        path: '/api/dashboard/stats',
+        operationId: 'dashboardStats',
+        summary: '仪表盘统计',
+        tag: '仪表盘',
         desc: '系统聚合统计：用户/角色/文件数、今日登录与操作数、定时任务状态、近 7 日操作趋势。仅需登录。',
         responses: [new SwResp(desc: '聚合统计对象', props: [
             new OA\Property(property: 'data', type: 'object', properties: [
@@ -50,7 +56,7 @@ class DashboardController extends AbstractController
         $todayStart = date('Y-m-d 00:00:00');
 
         $trend = [];
-        for ($i = 6; $i >= 0; $i--) {
+        for ($i = 6; $i >= 0; --$i) {
             $dayStart = date('Y-m-d 00:00:00', strtotime("-{$i} days"));
             $dayEnd = date('Y-m-d 23:59:59', strtotime("-{$i} days"));
             $trend[] = [

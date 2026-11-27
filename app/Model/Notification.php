@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Model;
@@ -31,6 +33,13 @@ class Notification extends Model
 
     public const LEVEL_ERROR = 'error';
 
+    public const TYPES = [
+        self::TYPE_SYSTEM => '系统',
+        self::TYPE_CRONTAB => '定时任务',
+        self::TYPE_ACCOUNT => '账号',
+        self::TYPE_SECURITY => '安全',
+    ];
+
     protected ?string $table = 'notifications';
 
     protected array $fillable = [
@@ -51,12 +60,5 @@ class Notification extends Model
         'read_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-    ];
-
-    public const TYPES = [
-        self::TYPE_SYSTEM => '系统',
-        self::TYPE_CRONTAB => '定时任务',
-        self::TYPE_ACCOUNT => '账号',
-        self::TYPE_SECURITY => '安全',
     ];
 }

@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * 站内消息测试：推送/未读汇总/已读与清空、越权隔离、事件联动（新建用户欢迎消息）。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
@@ -18,6 +20,10 @@ use App\Service\UserService;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class NotificationTest extends TestCase
 {
     private const PREFIX = 'test_notify_';

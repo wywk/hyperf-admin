@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Controller\Api;
@@ -50,7 +52,12 @@ class FormController extends AbstractController
     /**
      * GET /api/forms 表单列表。
      */
-    #[SwGet(path: '/api/forms', operationId: 'formIndex', summary: '表单列表', tag: '表单管理', page: true,
+    #[SwGet(
+        path: '/api/forms',
+        operationId: 'formIndex',
+        summary: '表单列表',
+        tag: '表单管理',
+        page: true,
         desc: '表单定义分页列表（不含 schema 大字段）。需要 form.view 权限。',
         params: [
             new SwQuery('keyword', desc: '按名称/标识模糊搜索'),
@@ -96,9 +103,14 @@ class FormController extends AbstractController
     /**
      * GET /api/forms/{id} 表单详情（含 Schema）。
      */
-    #[SwGet(path: '/api/forms/{id}', operationId: 'formShow', summary: '表单详情', tag: '表单管理',
+    #[SwGet(
+        path: '/api/forms/{id}',
+        operationId: 'formShow',
+        summary: '表单详情',
+        tag: '表单管理',
         desc: '返回表单定义，含完整 JSON Schema（设计器回显用）。需要 form.view 权限。',
-        params: [new SwId()], errors: [401, 403, 404],
+        params: [new SwId()],
+        errors: [401, 403, 404],
         responses: [new SwResp(desc: '表单定义（含 schema.fields 字段数组）')]
     )]
     public function show(int $id): ResponseInterface
@@ -116,18 +128,29 @@ class FormController extends AbstractController
     /**
      * POST /api/forms 新增表单。
      */
-    #[SwPost(path: '/api/forms', operationId: 'formStore', summary: '创建表单', tag: '表单管理',
+    #[SwPost(
+        path: '/api/forms',
+        operationId: 'formStore',
+        summary: '创建表单',
+        tag: '表单管理',
         desc: 'schema 结构：{fields: [{field, label, type, required?, min?, max?, options?}]}，type 支持 input/textarea/number/select/radio/checkbox/date/switch。需要 form.add 权限。',
         body: new SwBody(
             props: [
                 new SwProp('name', example: '客户报名'),
                 new SwProp('code', desc: '公开提交接口用它定位', example: 'customer_signup'),
                 new SwProp('description'),
-                new OA\Property(property: 'schema', type: 'object',
+                new OA\Property(
+                    property: 'schema',
+                    type: 'object',
                     properties: [
-                        new OA\Property(property: 'fields', type: 'array', items: new OA\Items(type: 'object'),
-                            description: '字段定义数组，每项含 field/label/type'),
-                    ]),
+                        new OA\Property(
+                            property: 'fields',
+                            type: 'array',
+                            items: new OA\Items(type: 'object'),
+                            description: '字段定义数组，每项含 field/label/type'
+                        ),
+                    ]
+                ),
             ],
             requiredProps: ['name', 'code', 'schema'],
         ),
@@ -153,7 +176,11 @@ class FormController extends AbstractController
     /**
      * PUT /api/forms/{id} 更新表单。
      */
-    #[SwPut(path: '/api/forms/{id}', operationId: 'formUpdate', summary: '更新表单', tag: '表单管理',
+    #[SwPut(
+        path: '/api/forms/{id}',
+        operationId: 'formUpdate',
+        summary: '更新表单',
+        tag: '表单管理',
         desc: '全量覆盖 name/code/schema/description，可选更新 status。需要 form.edit 权限。',
         params: [new SwId()],
         body: new SwBody(
@@ -193,7 +220,11 @@ class FormController extends AbstractController
     /**
      * DELETE /api/forms/{id} 删除表单（连同提交数据）。
      */
-    #[SwDelete(path: '/api/forms/{id}', operationId: 'formDestroy', summary: '删除表单', tag: '表单管理',
+    #[SwDelete(
+        path: '/api/forms/{id}',
+        operationId: 'formDestroy',
+        summary: '删除表单',
+        tag: '表单管理',
         desc: '连同该表单的全部提交数据一并删除。需要 form.delete 权限。',
         params: [new SwId()],
         responses: [new SwResp(desc: '已删除')]
@@ -216,9 +247,15 @@ class FormController extends AbstractController
     /**
      * GET /api/forms/{id}/submissions 提交数据列表。
      */
-    #[SwGet(path: '/api/forms/{id}/submissions', operationId: 'formSubmissions', summary: '表单提交数据分页', tag: '表单管理', page: true,
+    #[SwGet(
+        path: '/api/forms/{id}/submissions',
+        operationId: 'formSubmissions',
+        summary: '表单提交数据分页',
+        tag: '表单管理',
+        page: true,
         desc: '返回 form 元信息（含 schema，用于渲染列）与提交数据分页。需要 form.view 权限。',
-        params: [new SwId()], errors: [401, 403, 404],
+        params: [new SwId()],
+        errors: [401, 403, 404],
         responses: [new SwResp(desc: '{form, total, page, page_size, items[]}')]
     )]
     public function submissions(int $id): ResponseInterface
@@ -251,17 +288,25 @@ class FormController extends AbstractController
     /**
      * GET /api/form/{code} 公开：按标识取已发布的表单 Schema（渲染用）。
      */
-    #[SwGet(path: '/api/form/{code}', operationId: 'formPublicSchema', summary: '【公开】按标识取表单 Schema', tag: '表单（公开）', auth: false,
+    #[SwGet(
+        path: '/api/form/{code}',
+        operationId: 'formPublicSchema',
+        summary: '【公开】按标识取表单 Schema',
+        tag: '表单（公开）',
+        auth: false,
         desc: '无需登录；只返回已发布（status=1）的表单，供任意渲染方（H5/静态页）拉取字段定义。',
         params: [new SwId('code', type: 'string', desc: '表单标识', example: 'customer_signup')],
         errors: [404],
         responses: [new SwResp(desc: '{id, name, description, schema}', props: [
-            new OA\Property(property: 'data', type: 'object',
+            new OA\Property(
+                property: 'data',
+                type: 'object',
                 properties: [
                     new OA\Property(property: 'id', type: 'integer'),
                     new OA\Property(property: 'name', type: 'string'),
                     new OA\Property(property: 'schema', type: 'object'),
-                ]),
+                ]
+            ),
         ])]
     )]
     public function publicSchema(string $code): ResponseInterface
@@ -282,7 +327,12 @@ class FormController extends AbstractController
     /**
      * POST /api/form/{code}/submit 公开：提交表单数据（按 Schema 做基础校验）。
      */
-    #[SwPost(path: '/api/form/{code}/submit', operationId: 'formPublicSubmit', summary: '【公开】提交表单数据', tag: '表单（公开）', auth: false,
+    #[SwPost(
+        path: '/api/form/{code}/submit',
+        operationId: 'formPublicSubmit',
+        summary: '【公开】提交表单数据',
+        tag: '表单（公开）',
+        auth: false,
         desc: '无需登录；按表单 Schema 校验必填/类型/数值范围后入库，并记录提交者 IP。',
         params: [new SwId('code', type: 'string', desc: '表单标识', example: 'customer_signup')],
         errors: [404, 422],

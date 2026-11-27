@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Controller\Api;
 
 use App\Common\ApiCode;
@@ -15,8 +18,6 @@ use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
 use App\Model\MallOrderItem;
 use App\Service\MallOrderItemService;
-use Hyperf\Di\Annotation\Inject;
-use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use App\Swagger\Attributes\SwBody;
 use App\Swagger\Attributes\SwDelete;
 use App\Swagger\Attributes\SwGet;
@@ -25,6 +26,8 @@ use App\Swagger\Attributes\SwPost;
 use App\Swagger\Attributes\SwProp;
 use App\Swagger\Attributes\SwPut;
 use App\Swagger\Attributes\SwQuery;
+use Hyperf\Di\Annotation\Inject;
+use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -44,12 +47,18 @@ class MallOrderItemController extends AbstractController
     {
     }
 
-    #[SwGet(path: '/api/mall_order_item', operationId: 'mall_order_itemIndex', summary: '订单明细列表', tag: '订单明细', page: true,
-    params: [
-        new SwQuery('order_id', type: 'number', desc: '订单ID'),
-        new SwQuery('goods_name', type: 'string', desc: '商品名称'),
-    ],
-)]    public function index(): ResponseInterface
+    #[SwGet(
+        path: '/api/mall_order_item',
+        operationId: 'mall_order_itemIndex',
+        summary: '订单明细列表',
+        tag: '订单明细',
+        page: true,
+        params: [
+            new SwQuery('order_id', type: 'number', desc: '订单ID'),
+            new SwQuery('goods_name', type: 'string', desc: '商品名称'),
+        ],
+    )]
+    public function index(): ResponseInterface
     {
         $this->authorize('mall_order_item.view');
 
@@ -68,9 +77,14 @@ class MallOrderItemController extends AbstractController
         ));
     }
 
-    #[SwGet(path: '/api/mall_order_item/{id}', operationId: 'mall_order_itemShow', summary: '订单明细详情', tag: '订单明细',
-    params: [new SwId()],
-)]    public function show(int $id): ResponseInterface
+    #[SwGet(
+        path: '/api/mall_order_item/{id}',
+        operationId: 'mall_order_itemShow',
+        summary: '订单明细详情',
+        tag: '订单明细',
+        params: [new SwId()],
+    )]
+    public function show(int $id): ResponseInterface
     {
         $this->authorize('mall_order_item.view');
 
@@ -82,19 +96,24 @@ class MallOrderItemController extends AbstractController
         return ApiResponse::success($model);
     }
 
-    #[SwPost(path: '/api/mall_order_item', operationId: 'mall_order_itemStore', summary: '新增订单明细', tag: '订单明细',
-    body: new SwBody(
-        props: [
-            new SwProp('order_id', type: 'number', desc: '订单ID'),
-            new SwProp('goods_id', type: 'number', nullable: true, desc: '商品ID'),
-            new SwProp('goods_name', type: 'string', desc: '商品名称'),
-            new SwProp('price', type: 'number', desc: '单价(元)'),
-            new SwProp('quantity', type: 'number', desc: '数量'),
-            new SwProp('amount', type: 'number', desc: '小计(元)'),
-        ],
-        requiredProps: ['order_id', 'goods_name', 'price', 'quantity', 'amount'],
-    ),
-)]    public function store(): ResponseInterface
+    #[SwPost(
+        path: '/api/mall_order_item',
+        operationId: 'mall_order_itemStore',
+        summary: '新增订单明细',
+        tag: '订单明细',
+        body: new SwBody(
+            props: [
+                new SwProp('order_id', type: 'number', desc: '订单ID'),
+                new SwProp('goods_id', type: 'number', nullable: true, desc: '商品ID'),
+                new SwProp('goods_name', type: 'string', desc: '商品名称'),
+                new SwProp('price', type: 'number', desc: '单价(元)'),
+                new SwProp('quantity', type: 'number', desc: '数量'),
+                new SwProp('amount', type: 'number', desc: '小计(元)'),
+            ],
+            requiredProps: ['order_id', 'goods_name', 'price', 'quantity', 'amount'],
+        ),
+    )]
+    public function store(): ResponseInterface
     {
         $this->authorize('mall_order_item.add');
 
@@ -103,21 +122,26 @@ class MallOrderItemController extends AbstractController
         return ApiResponse::success(['id' => (int) $this->service->create($data)->id], '创建成功');
     }
 
-    #[SwPut(path: '/api/mall_order_item/{id}', operationId: 'mall_order_itemUpdate', summary: '更新订单明细', tag: '订单明细',
-    desc: '支持部分字段更新（传哪些改哪些）。',
-    params: [new SwId()],
-    body: new SwBody(
-        props: [
-            new SwProp('order_id', type: 'number', desc: '订单ID'),
-            new SwProp('goods_id', type: 'number', nullable: true, desc: '商品ID'),
-            new SwProp('goods_name', type: 'string', desc: '商品名称'),
-            new SwProp('price', type: 'number', desc: '单价(元)'),
-            new SwProp('quantity', type: 'number', desc: '数量'),
-            new SwProp('amount', type: 'number', desc: '小计(元)'),
-        ],
-        required: false,
-    ),
-)]    public function update(int $id): ResponseInterface
+    #[SwPut(
+        path: '/api/mall_order_item/{id}',
+        operationId: 'mall_order_itemUpdate',
+        summary: '更新订单明细',
+        tag: '订单明细',
+        desc: '支持部分字段更新（传哪些改哪些）。',
+        params: [new SwId()],
+        body: new SwBody(
+            props: [
+                new SwProp('order_id', type: 'number', desc: '订单ID'),
+                new SwProp('goods_id', type: 'number', nullable: true, desc: '商品ID'),
+                new SwProp('goods_name', type: 'string', desc: '商品名称'),
+                new SwProp('price', type: 'number', desc: '单价(元)'),
+                new SwProp('quantity', type: 'number', desc: '数量'),
+                new SwProp('amount', type: 'number', desc: '小计(元)'),
+            ],
+            required: false,
+        ),
+    )]
+    public function update(int $id): ResponseInterface
     {
         $this->authorize('mall_order_item.edit');
 
@@ -127,9 +151,14 @@ class MallOrderItemController extends AbstractController
         return ApiResponse::success(['id' => $id], '保存成功');
     }
 
-    #[SwDelete(path: '/api/mall_order_item/{id}', operationId: 'mall_order_itemDestroy', summary: '删除订单明细', tag: '订单明细',
-    params: [new SwId()],
-)]    public function destroy(int $id): ResponseInterface
+    #[SwDelete(
+        path: '/api/mall_order_item/{id}',
+        operationId: 'mall_order_itemDestroy',
+        summary: '删除订单明细',
+        tag: '订单明细',
+        params: [new SwId()],
+    )]
+    public function destroy(int $id): ResponseInterface
     {
         $this->authorize('mall_order_item.delete');
 
@@ -179,8 +208,8 @@ class MallOrderItemController extends AbstractController
     private function searchFilters(array $data): array
     {
         return [
-        'order_id' => $data['order_id'] ?? null,
-        'goods_name' => $data['goods_name'] ?? null,
+            'order_id' => $data['order_id'] ?? null,
+            'goods_name' => $data['goods_name'] ?? null,
         ];
     }
 }

@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Controller\Api;
 
 use App\Common\ApiCode;
@@ -15,8 +18,6 @@ use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
 use App\Model\MallGoods;
 use App\Service\MallGoodsService;
-use Hyperf\Di\Annotation\Inject;
-use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use App\Swagger\Attributes\SwBody;
 use App\Swagger\Attributes\SwDelete;
 use App\Swagger\Attributes\SwGet;
@@ -25,6 +26,8 @@ use App\Swagger\Attributes\SwPost;
 use App\Swagger\Attributes\SwProp;
 use App\Swagger\Attributes\SwPut;
 use App\Swagger\Attributes\SwQuery;
+use Hyperf\Di\Annotation\Inject;
+use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -44,14 +47,20 @@ class MallGoodsController extends AbstractController
     {
     }
 
-    #[SwGet(path: '/api/mall_goods', operationId: 'mall_goodsIndex', summary: '商品管理列表', tag: '商品管理', page: true,
-    params: [
-        new SwQuery('name', type: 'string', desc: '商品名称'),
-        new SwQuery('category_id', type: 'number', desc: '分类'),
-        new SwQuery('price', type: 'number', desc: '售价(元)'),
-        new SwQuery('status', type: 'string', desc: '状态'),
-    ],
-)]    public function index(): ResponseInterface
+    #[SwGet(
+        path: '/api/mall_goods',
+        operationId: 'mall_goodsIndex',
+        summary: '商品管理列表',
+        tag: '商品管理',
+        page: true,
+        params: [
+            new SwQuery('name', type: 'string', desc: '商品名称'),
+            new SwQuery('category_id', type: 'number', desc: '分类'),
+            new SwQuery('price', type: 'number', desc: '售价(元)'),
+            new SwQuery('status', type: 'string', desc: '状态'),
+        ],
+    )]
+    public function index(): ResponseInterface
     {
         $this->authorize('mall_goods.view');
 
@@ -70,9 +79,14 @@ class MallGoodsController extends AbstractController
         ));
     }
 
-    #[SwGet(path: '/api/mall_goods/{id}', operationId: 'mall_goodsShow', summary: '商品管理详情', tag: '商品管理',
-    params: [new SwId()],
-)]    public function show(int $id): ResponseInterface
+    #[SwGet(
+        path: '/api/mall_goods/{id}',
+        operationId: 'mall_goodsShow',
+        summary: '商品管理详情',
+        tag: '商品管理',
+        params: [new SwId()],
+    )]
+    public function show(int $id): ResponseInterface
     {
         $this->authorize('mall_goods.view');
 
@@ -84,20 +98,25 @@ class MallGoodsController extends AbstractController
         return ApiResponse::success($model);
     }
 
-    #[SwPost(path: '/api/mall_goods', operationId: 'mall_goodsStore', summary: '新增商品管理', tag: '商品管理',
-    body: new SwBody(
-        props: [
-            new SwProp('name', type: 'string', desc: '商品名称'),
-            new SwProp('category_id', type: 'number', desc: '分类'),
-            new SwProp('price', type: 'number', desc: '售价(元)'),
-            new SwProp('stock', type: 'number', nullable: true, desc: '库存'),
-            new SwProp('status', type: 'string', nullable: true, desc: '状态'),
-            new SwProp('cover', type: 'string', nullable: true, desc: '封面图'),
-            new SwProp('summary', type: 'string', nullable: true, desc: '简介'),
-        ],
-        requiredProps: ['name', 'category_id', 'price'],
-    ),
-)]    public function store(): ResponseInterface
+    #[SwPost(
+        path: '/api/mall_goods',
+        operationId: 'mall_goodsStore',
+        summary: '新增商品管理',
+        tag: '商品管理',
+        body: new SwBody(
+            props: [
+                new SwProp('name', type: 'string', desc: '商品名称'),
+                new SwProp('category_id', type: 'number', desc: '分类'),
+                new SwProp('price', type: 'number', desc: '售价(元)'),
+                new SwProp('stock', type: 'number', nullable: true, desc: '库存'),
+                new SwProp('status', type: 'string', nullable: true, desc: '状态'),
+                new SwProp('cover', type: 'string', nullable: true, desc: '封面图'),
+                new SwProp('summary', type: 'string', nullable: true, desc: '简介'),
+            ],
+            requiredProps: ['name', 'category_id', 'price'],
+        ),
+    )]
+    public function store(): ResponseInterface
     {
         $this->authorize('mall_goods.add');
 
@@ -106,22 +125,27 @@ class MallGoodsController extends AbstractController
         return ApiResponse::success(['id' => (int) $this->service->create($data)->id], '创建成功');
     }
 
-    #[SwPut(path: '/api/mall_goods/{id}', operationId: 'mall_goodsUpdate', summary: '更新商品管理', tag: '商品管理',
-    desc: '支持部分字段更新（传哪些改哪些）。',
-    params: [new SwId()],
-    body: new SwBody(
-        props: [
-            new SwProp('name', type: 'string', desc: '商品名称'),
-            new SwProp('category_id', type: 'number', desc: '分类'),
-            new SwProp('price', type: 'number', desc: '售价(元)'),
-            new SwProp('stock', type: 'number', nullable: true, desc: '库存'),
-            new SwProp('status', type: 'string', nullable: true, desc: '状态'),
-            new SwProp('cover', type: 'string', nullable: true, desc: '封面图'),
-            new SwProp('summary', type: 'string', nullable: true, desc: '简介'),
-        ],
-        required: false,
-    ),
-)]    public function update(int $id): ResponseInterface
+    #[SwPut(
+        path: '/api/mall_goods/{id}',
+        operationId: 'mall_goodsUpdate',
+        summary: '更新商品管理',
+        tag: '商品管理',
+        desc: '支持部分字段更新（传哪些改哪些）。',
+        params: [new SwId()],
+        body: new SwBody(
+            props: [
+                new SwProp('name', type: 'string', desc: '商品名称'),
+                new SwProp('category_id', type: 'number', desc: '分类'),
+                new SwProp('price', type: 'number', desc: '售价(元)'),
+                new SwProp('stock', type: 'number', nullable: true, desc: '库存'),
+                new SwProp('status', type: 'string', nullable: true, desc: '状态'),
+                new SwProp('cover', type: 'string', nullable: true, desc: '封面图'),
+                new SwProp('summary', type: 'string', nullable: true, desc: '简介'),
+            ],
+            required: false,
+        ),
+    )]
+    public function update(int $id): ResponseInterface
     {
         $this->authorize('mall_goods.edit');
 
@@ -131,9 +155,14 @@ class MallGoodsController extends AbstractController
         return ApiResponse::success(['id' => $id], '保存成功');
     }
 
-    #[SwDelete(path: '/api/mall_goods/{id}', operationId: 'mall_goodsDestroy', summary: '删除商品管理', tag: '商品管理',
-    params: [new SwId()],
-)]    public function destroy(int $id): ResponseInterface
+    #[SwDelete(
+        path: '/api/mall_goods/{id}',
+        operationId: 'mall_goodsDestroy',
+        summary: '删除商品管理',
+        tag: '商品管理',
+        params: [new SwId()],
+    )]
+    public function destroy(int $id): ResponseInterface
     {
         $this->authorize('mall_goods.delete');
 
@@ -184,10 +213,10 @@ class MallGoodsController extends AbstractController
     private function searchFilters(array $data): array
     {
         return [
-        'name' => $data['name'] ?? null,
-        'category_id' => $data['category_id'] ?? null,
-        'price' => $data['price'] ?? null,
-        'status' => $data['status'] ?? null,
+            'name' => $data['name'] ?? null,
+            'category_id' => $data['category_id'] ?? null,
+            'price' => $data['price'] ?? null,
+            'status' => $data['status'] ?? null,
         ];
     }
 }

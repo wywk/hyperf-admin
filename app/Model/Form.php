@@ -2,12 +2,17 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Model;
+
+use Carbon\Carbon;
 
 /**
  * 表单设计器的表单定义（JSON Schema 存 schema 字段）。
@@ -18,8 +23,8 @@ namespace App\Model;
  * @property array $schema
  * @property string $description
  * @property int $status
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class Form extends Model
 {

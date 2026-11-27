@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * 代码生成器测试：dryRun 预览产物、表/字段校验。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
@@ -18,11 +20,15 @@ use Hyperf\Database\Schema\Schema;
 use Hyperf\DbConnection\Db;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class GeneratorTest extends TestCase
 {
-    private CodeGeneratorService $gen;
-
     private const TABLE = 'gen_test_items';
+
+    private CodeGeneratorService $gen;
 
     protected function setUp(): void
     {
@@ -73,12 +79,12 @@ class GeneratorTest extends TestCase
         $result = $this->gen->generate($this->config(), dryRun: true);
         $controller = $result['files']['app/Controller/Api/GenTestItemsController.php'];
 
-        $this->assertStringContainsString('use App\\Swagger\\Attributes\\SwGet;', $controller);
+        $this->assertStringContainsString('use App\Swagger\Attributes\SwGet;', $controller);
         $this->assertStringContainsString('#[SwGet(path: \'/api/gen_test_items\'', $controller);
         $this->assertStringContainsString('summary: \'测试项目列表\'', $controller);
         $this->assertStringContainsString("new SwQuery('status'", $controller);
         // 批量删除的 schema 需要 OA\Items 描述数组元素
-        $this->assertStringContainsString('use OpenApi\\Attributes as OA;', $controller);
+        $this->assertStringContainsString('use OpenApi\Attributes as OA;', $controller);
         $this->assertStringContainsString("new OA\\Items(type: 'integer')", $controller);
     }
 
@@ -149,8 +155,8 @@ class GeneratorTest extends TestCase
 
         // 后端：不做硬编码 in 校验，放宽为 string；运行时用 DictService 校验字典值
         $this->assertStringNotContainsString("'status' => 'nullable|in:", $controller);
-        $this->assertMatchesRegularExpression("/'status' => 'nullable\|string/", $controller);
-        $this->assertStringContainsString('use App\\Service\\DictService;', $controller);
+        $this->assertMatchesRegularExpression("/'status' => 'nullable\\|string/", $controller);
+        $this->assertStringContainsString('use App\Service\DictService;', $controller);
         $this->assertStringContainsString('protected DictService $dict;', $controller);
         $this->assertStringContainsString('private function validateDictValues(array $data): array', $controller);
         $this->assertStringContainsString("'status' => 'common_status',", $controller);

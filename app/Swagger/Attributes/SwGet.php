@@ -2,13 +2,17 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Swagger\Attributes;
 
+use Attribute;
 use OpenApi\Attributes as OA;
 
 /**
@@ -16,7 +20,7 @@ use OpenApi\Attributes as OA;
  *
  * #[SwGet(path: '/api/demo', summary: '示例列表', tag: '示例管理', page: true)]
  */
-#[\Attribute(\Attribute::TARGET_METHOD)]
+#[Attribute(Attribute::TARGET_METHOD)]
 class SwGet extends OA\Get
 {
     public function __construct(
@@ -32,11 +36,22 @@ class SwGet extends OA\Get
         ?string $operationId = null,
     ) {
         if ($page) {
-            array_push($params,
-                new OA\Parameter(name: 'page', in: 'query', required: null, description: '页码，默认 1',
-                    schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)),
-                new OA\Parameter(name: 'page_size', in: 'query', required: null, description: '每页条数，默认 20',
-                    schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)),
+            array_push(
+                $params,
+                new OA\Parameter(
+                    name: 'page',
+                    in: 'query',
+                    required: null,
+                    description: '页码，默认 1',
+                    schema: new OA\Schema(type: 'integer', minimum: 1, default: 1)
+                ),
+                new OA\Parameter(
+                    name: 'page_size',
+                    in: 'query',
+                    required: null,
+                    description: '每页条数，默认 20',
+                    schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100, default: 20)
+                ),
             );
         }
 

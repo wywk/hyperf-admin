@@ -2,17 +2,19 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Job;
 
 use App\Model\Job;
 use App\Service\JobService;
-use Throwable;
+use Hyperf\Context\ApplicationContext;
 
 /**
  * 异步导出任务：按台账里的 type + payload 生成 xlsx，登记到文件管理后回写 result_file_id。
@@ -28,7 +30,7 @@ class ExportJob extends BaseJob
             return;
         }
 
-        $svc = \Hyperf\Context\ApplicationContext::getContainer()->get(JobService::class);
+        $svc = ApplicationContext::getContainer()->get(JobService::class);
         $fileId = $svc->executeExport($record);
 
         $record->result_file_id = $fileId;

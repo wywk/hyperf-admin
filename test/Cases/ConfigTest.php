@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * 系统配置测试：种子默认值、类型转换、缓存失效、未知键与非法数字拦截。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
@@ -15,6 +17,10 @@ use App\Service\ConfigService;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class ConfigTest extends TestCase
 {
     private ConfigService $configs;

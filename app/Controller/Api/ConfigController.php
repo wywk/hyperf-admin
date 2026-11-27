@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Controller\Api;
@@ -43,7 +45,11 @@ class ConfigController extends AbstractController
     /**
      * GET /api/configs.
      */
-    #[SwGet(path: '/api/configs', operationId: 'configIndex', summary: '系统配置（分组）', tag: '系统配置',
+    #[SwGet(
+        path: '/api/configs',
+        operationId: 'configIndex',
+        summary: '系统配置（分组）',
+        tag: '系统配置',
         desc: '返回按 group 分组的配置项，含 type/name/description，前端据此渲染动态表单。需要 config.view 权限。',
         responses: [new SwResp(desc: '分组配置', props: [
             new OA\Property(property: 'data', type: 'array', items: new OA\Items(
@@ -65,7 +71,11 @@ class ConfigController extends AbstractController
     /**
      * PUT /api/configs：批量保存.
      */
-    #[SwPut(path: '/api/configs', operationId: 'configUpdate', summary: '批量保存配置', tag: '系统配置',
+    #[SwPut(
+        path: '/api/configs',
+        operationId: 'configUpdate',
+        summary: '批量保存配置',
+        tag: '系统配置',
         desc: 'body.items 为 {key: value} 映射；值按各自的 type 校验与转换后落库，保存后立即生效（Redis 缓存失效）。需要 config.edit 权限。',
         body: new SwBody(
             props: [

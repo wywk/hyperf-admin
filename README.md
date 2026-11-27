@@ -87,6 +87,8 @@ docker compose -f docker-compose.dev.yml up -d
 # 首次启动：建表 + 基础数据（等 app 容器就绪后）
 docker compose -f docker-compose.dev.yml exec app php bin/hyperf.php migrate
 docker compose -f docker-compose.dev.yml exec app php bin/hyperf.php db:seed
+# （可选）生成演示数据：50 个账号、4 层部门树、30 天登录/操作日志、任务与通知样例
+docker compose -f docker-compose.dev.yml exec app php bin/hyperf.php demo:seed
 ```
 
 - 后端 API：http://127.0.0.1:9501 · 前端页面：http://127.0.0.1:5173
@@ -118,6 +120,7 @@ composer install
 cp .env.example .env          # 修改数据库/Redis 连接
 php bin/hyperf.php migrate    # 建表
 php bin/hyperf.php db:seed    # 基础数据（权限树 / 角色 / 测试账号）
+php bin/hyperf.php demo:seed  # （可选）演示数据：克隆即见有数据的界面，重复执行自动跳过，--fresh 重建
 php bin/hyperf.php start      # 服务跑在 :9501
 
 # 前端
