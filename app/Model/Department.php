@@ -12,11 +12,15 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use App\Model\Concerns\LogsAttributeChanges;
+
 /**
  * 部门：树形结构，用物化路径 path（形如 '/1/3/8/'）查下级。
  */
 class Department extends Model
 {
+    use LogsAttributeChanges;
+
     public const STATUS_ENABLED = 1;
 
     public const STATUS_DISABLED = 0;

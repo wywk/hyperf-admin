@@ -76,6 +76,7 @@ Router::addGroup('/api', function () {
     Router::get('/auth/login-logs/export', [LoginLogController::class, 'export']);
     Router::get('/operation-logs', [OperationLogController::class, 'index']);
     Router::get('/operation-logs/export', [OperationLogController::class, 'export']);
+    Router::get('/operation-logs/{id:\d+}', [OperationLogController::class, 'show']);
 
     // 站内消息：只操作自己的消息，登录即可
     Router::get('/notifications', [NotificationController::class, 'index']);

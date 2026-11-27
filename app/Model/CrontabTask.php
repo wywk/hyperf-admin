@@ -12,11 +12,15 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use App\Model\Concerns\LogsAttributeChanges;
+
 /**
  * 定时任务：任务定义与调度状态。
  */
 class CrontabTask extends Model
 {
+    use LogsAttributeChanges;
+
     public const STATUS_ENABLED = 1;
 
     public const STATUS_DISABLED = 0;

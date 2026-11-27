@@ -109,11 +109,25 @@ export interface OperationLogItem {
   path: string
   action: string
   params: Record<string, unknown> | null
+  has_diff: boolean
   status_code: number
   cost_ms: number
   ip: string
   user_agent: string
   created_at: string | null
+}
+
+/** 字段级变更快照（操作日志详情） */
+export interface OpLogDiffEntry {
+  table: string
+  id: number | null
+  field: string
+  before: string | null
+  after: string | null
+}
+
+export interface OperationLogDetail extends OperationLogItem {
+  diff: OpLogDiffEntry[] | null
 }
 
 export interface OperationLogQuery {

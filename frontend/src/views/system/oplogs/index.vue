@@ -2,10 +2,10 @@
 import { onMounted, reactive, ref } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from '@/plugins/element'
-import { fetchOperationLogs } from '@/api/oplog'
+import { fetchOperationLogDetail, fetchOperationLogs } from '@/api/oplog'
 import { createExportJob } from '@/api/jobs'
 import { useJobStore } from '@/stores/jobs'
-import type { OperationLogItem } from '@/types'
+import type { OperationLogDetail, OperationLogItem } from '@/types'
 
 type TagType = 'success' | 'warning' | 'danger' | 'info' | 'primary'
 
@@ -90,6 +90,42 @@ function reset(): void {
 function onSizeChange(): void {
   query.page = 1
   void load()
+}
+
+// ---- 字段级变更详情抽屉 ----
+const detailVisible = ref(false)
+const detailLoading = ref(false)
+const detail = ref<OperationLogDetail | null>(null)
+
+async function showDetail(row: OperationLogItem): Promise<void> {
+  detailVisible.value = true
+  detailLoading.value = true
+  detail.value = null
+  try {
+    detail.value = await fetchOperationLogDetail(row.id)
+  } catch {
+    detailVisible.value = false
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+function diffSide(entry: { before: string | null; after: string | null }): string {
+  if (entry.before === null && entry.after !== null) return 'created'
+  if (entry.before !== null && entry.after === null) return 'deleted'
+  return entry.before === entry.after ? 'unchanged' : 'changed'
+}
+
+function diffTagType(entry: { before: string | null; after: string | null }): TagType {
+  const kind = diffSide(entry)
+  if (kind === 'created') return 'success'
+  if (kind === 'deleted') return 'danger'
+  return kind === 'changed' ? 'warning' : 'info'
+}
+
+function diffTagText(entry: { before: string | null; after: string | null }): string {
+  const kind = diffSide(entry)
+  return kind === 'created' ? '新增' : kind === 'deleted' ? '删除' : kind === 'changed' ? '修改' : '未变'
 }
 
 function paramsText(row: OperationLogItem): string {
@@ -219,6 +255,20 @@ async function exportLogs(): Promise<void> {
             <span class="mono">{{ row.created_at }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="变更" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.has_diff"
+              type="primary"
+              link
+              size="small"
+              @click="showDetail(row)"
+            >
+              变更详情
+            </el-button>
+            <span v-else class="text-muted">—</span>
+          </template>
+        </el-table-column>
         <template #empty>
           <el-empty description="暂无日志" :image-size="80" />
         </template>
@@ -237,6 +287,51 @@ async function exportLogs(): Promise<void> {
         />
       </div>
     </el-card>
+
+    <el-dialog v-model="detailVisible" title="字段级变更详情" width="760px" destroy-on-close>
+      <div v-loading="detailLoading" class="detail-body">
+        <template v-if="detail">
+          <el-descriptions :column="3" size="small" border class="detail-meta">
+            <el-descriptions-item label="操作人">{{ detail.username }}</el-descriptions-item>
+            <el-descriptions-item label="路径">
+              <span class="mono">{{ detail.method }} {{ detail.path }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="时间">{{ detail.created_at }}</el-descriptions-item>
+          </el-descriptions>
+
+          <el-table :data="detail.diff ?? []" stripe size="small" class="diff-table">
+            <el-table-column prop="table" label="数据表" width="130">
+              <template #default="{ row }">
+                <span class="mono">{{ row.table }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="id" label="记录 ID" width="90" />
+            <el-table-column prop="field" label="字段" width="160">
+              <template #default="{ row }">
+                <span class="mono">{{ row.field }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="改前" min-width="160">
+              <template #default="{ row }">
+                <span class="mono" :class="{ 'val-old': row.before !== null && row.after !== null && row.before !== row.after }">
+                  {{ row.before ?? '（无）' }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="改后" min-width="160">
+              <template #default="{ row }">
+                <span class="mono val-new">{{ row.after ?? '（无）' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="类型" width="80">
+              <template #default="{ row }">
+                <el-tag :type="diffTagType(row)" size="small" effect="light">{{ diffTagText(row) }}</el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </template>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -265,6 +360,24 @@ code.mono {
 
 .slow {
   color: var(--el-color-danger);
+  font-weight: 600;
+}
+
+.detail-meta {
+  margin-bottom: 12px;
+}
+
+.diff-table {
+  width: 100%;
+}
+
+.val-old {
+  color: var(--el-color-danger);
+  text-decoration: line-through;
+}
+
+.val-new {
+  color: var(--el-color-success);
   font-weight: 600;
 }
 </style>

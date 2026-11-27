@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace App\Middleware;
 
+use App\Model\Concerns\AttrDiffKeys;
 use App\Service\OperationLogService;
 use App\Support\ClientIp;
 use Hyperf\Context\Context;
@@ -57,6 +58,9 @@ class OperationLogMiddleware implements MiddlewareInterface
 
         $start = microtime(true);
 
+        // 开启字段级变更采集：模型事件据此把「改前→改后」快照累积进协程 Context
+        Context::set(AttrDiffKeys::OPEN_KEY, true);
+
         try {
             $response = $handler->handle($request);
         } catch (Throwable $throwable) {
@@ -72,6 +76,11 @@ class OperationLogMiddleware implements MiddlewareInterface
 
     private function log(ServerRequestInterface $request, string $method, int $statusCode, float $start): void
     {
+        // 防重：测试环境 / 中间件意外重复执行时，同一请求只落一条日志
+        if (Context::has('oplog:recorded')) {
+            return;
+        }
+
         try {
             $userId = (int) Context::get('user_id');
             /* @var null|\App\Model\User $user */
@@ -105,10 +114,16 @@ class OperationLogMiddleware implements MiddlewareInterface
                 $statusCode,
                 (int) round((microtime(true) - $start) * 1000),
                 ClientIp::fromRequest($request),
-                mb_substr($request->getHeaderLine('User-Agent'), 0, 512)
+                mb_substr($request->getHeaderLine('User-Agent'), 0, 512),
+                Context::get(AttrDiffKeys::CONTEXT_KEY)
             );
         } catch (Throwable) {
             // 审计失败不影响主流程
+        } finally {
+            // 标记已记录 + 清理协程上下文，防止长连接复用协程时残留
+            Context::set('oplog:recorded', true);
+            Context::set(AttrDiffKeys::OPEN_KEY, null);
+            Context::set(AttrDiffKeys::CONTEXT_KEY, null);
         }
     }
 }

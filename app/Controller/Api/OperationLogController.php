@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Common\ApiCode;
 use App\Common\ApiResponse;
 use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
@@ -20,6 +21,7 @@ use App\Service\DataScopeService;
 use App\Service\Excel\ExcelService;
 use App\Service\OperationLogService;
 use App\Swagger\Attributes\SwGet;
+use App\Swagger\Attributes\SwId;
 use App\Swagger\Attributes\SwQuery;
 use App\Swagger\Attributes\SwResp;
 use Hyperf\Context\Context;
@@ -155,6 +157,40 @@ class OperationLogController extends AbstractController
         return $this->response->raw($binary)
             ->withHeader('Content-Type', ExcelService::XLSX_MIME)
             ->withHeader('Content-Disposition', 'attachment; filename="operation-logs.xlsx"');
+    }
+
+    /**
+     * GET /api/operation-logs/{id}.
+     */
+    #[SwGet(
+        path: '/api/operation-logs/{id}',
+        operationId: 'operationLogShow',
+        summary: '操作日志详情',
+        tag: '操作日志',
+        desc: '返回完整记录，含字段级变更快照 diff（[{table,id,field,before,after}]，敏感字段已脱敏）。数据范围与列表一致。',
+        params: [new SwId()],
+        responses: [new SwResp(desc: '日志详情', props: [
+            new OA\Property(property: 'data', type: 'object', properties: [
+                new OA\Property(
+                    property: 'diff',
+                    type: 'array',
+                    items: new OA\Items(type: 'object'),
+                    nullable: true,
+                    description: '字段级变更；创建类仅 after，删除类仅 before'
+                ),
+            ]),
+        ])]
+    )]
+    public function show(int $id): ResponseInterface
+    {
+        $this->authorize('oplog.view');
+
+        $detail = $this->operationLogService->detail($id, $this->visibleUserIds());
+        if ($detail === null) {
+            return ApiResponse::fail(ApiCode::NOT_FOUND, '日志不存在或不在可见范围内');
+        }
+
+        return ApiResponse::success($detail);
     }
 
     /**
