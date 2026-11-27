@@ -40,6 +40,7 @@ class OperationLogService
      * 记录一次写操作。params 中的敏感字段会被剔除，超过 64KB 的载荷整体截断。
      *
      * @param null|array $params 已提取的请求参数（body + query），null 表示无可记参数
+     * @param null|array $diff 字段级变更快照 [{table,id,field,before,after}]，由模型事件采集
      */
     public function record(
         int $userId,
@@ -51,7 +52,8 @@ class OperationLogService
         int $statusCode,
         int $costMs,
         string $ip,
-        string $userAgent
+        string $userAgent,
+        ?array $diff = null
     ): void {
         if (! $this->configService->bool('operation_log_enabled', (bool) config('security.operation_log_enabled', true))) {
             return;
@@ -65,6 +67,7 @@ class OperationLogService
                 'path' => mb_substr($path, 0, 255),
                 'action' => mb_substr($action, 0, 128),
                 'params' => $this->sanitize($params),
+                'diff' => $diff !== [] && $diff !== null ? array_slice($diff, 0, 100) : null,
                 'status_code' => max(0, min(65535, $statusCode)),
                 'cost_ms' => max(0, $costMs),
                 'ip' => mb_substr($ip, 0, 45),
@@ -120,6 +123,7 @@ class OperationLogService
                 'path' => (string) $row->path,
                 'action' => (string) $row->action,
                 'params' => $row->params,
+                'has_diff' => $row->diff !== null && $row->diff !== [],
                 'status_code' => (int) $row->status_code,
                 'cost_ms' => (int) $row->cost_ms,
                 'ip' => (string) $row->ip,
@@ -133,6 +137,42 @@ class OperationLogService
             'page' => $page,
             'page_size' => $pageSize,
             'items' => $items,
+        ];
+    }
+
+    /**
+     * 详情：返回完整记录（含字段级 diff）。查不到返回 null。
+     *
+     * @return null|array<string, mixed>
+     */
+    public function detail(int $id, ?array $visibleUserIds = null): ?array
+    {
+        $query = OperationLog::query()->where('id', $id);
+
+        if ($visibleUserIds !== null) {
+            $query->whereIn('user_id', $visibleUserIds === [] ? [0] : $visibleUserIds);
+        }
+
+        $row = $query->first();
+        if ($row === null) {
+            return null;
+        }
+
+        /* @var OperationLog $row */
+        return [
+            'id' => (int) $row->id,
+            'user_id' => (int) $row->user_id,
+            'username' => (string) $row->username,
+            'method' => (string) $row->method,
+            'path' => (string) $row->path,
+            'action' => (string) $row->action,
+            'params' => $row->params,
+            'diff' => $row->diff,
+            'status_code' => (int) $row->status_code,
+            'cost_ms' => (int) $row->cost_ms,
+            'ip' => (string) $row->ip,
+            'user_agent' => (string) $row->user_agent,
+            'created_at' => $row->created_at?->toDateTimeString(),
         ];
     }
 

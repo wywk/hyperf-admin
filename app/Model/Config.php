@@ -12,8 +12,12 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use App\Model\Concerns\LogsAttributeChanges;
+
 class Config extends Model
 {
+    use LogsAttributeChanges;
+
     public const TYPE_STRING = 'string';
 
     public const TYPE_TEXT = 'text';

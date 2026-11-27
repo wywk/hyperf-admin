@@ -12,8 +12,12 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use App\Model\Concerns\LogsAttributeChanges;
+
 class User extends Model
 {
+    use LogsAttributeChanges;
+
     protected ?string $table = 'users';
 
     protected array $fillable = [

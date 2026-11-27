@@ -12,10 +12,13 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use App\Model\Concerns\LogsAttributeChanges;
 use Hyperf\Database\Model\Relations\BelongsToMany;
 
 class Role extends Model
 {
+    use LogsAttributeChanges;
+
     public const SYSTEM_ADMIN = 'admin';
 
     protected ?string $table = 'roles';

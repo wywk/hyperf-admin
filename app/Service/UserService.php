@@ -289,8 +289,9 @@ class UserService
         $this->assertNotSelf($id, $operatorId, '不能删除自己的账号');
         $this->assertNotLastAdmin($user, '不能删除最后一个可用管理员');
 
-        Db::transaction(static function () use ($id) {
-            User::query()->where('id', $id)->delete();
+        Db::transaction(static function () use ($id, $user) {
+            // 实例删除以触发模型事件（字段级审计依赖），不要用批量删除绕过
+            $user->delete();
             // 消息跟着人走：账号删了，留着孤儿消息只会占表
             Notification::query()->where('user_id', $id)->delete();
         });

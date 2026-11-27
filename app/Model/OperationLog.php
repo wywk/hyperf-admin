@@ -29,6 +29,7 @@ class OperationLog extends Model
         'path',
         'action',
         'params',
+        'diff',
         'status_code',
         'cost_ms',
         'ip',
@@ -42,6 +43,7 @@ class OperationLog extends Model
         'status_code' => 'integer',
         'cost_ms' => 'integer',
         'params' => 'array',
+        'diff' => 'array',
         'created_at' => 'datetime',
     ];
 }

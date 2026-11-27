@@ -6211,6 +6211,67 @@
                 ]
             }
         },
+        "/api/operation-logs/{id}": {
+            "get": {
+                "tags": [
+                    "操作日志"
+                ],
+                "summary": "操作日志详情",
+                "description": "返回完整记录，含字段级变更快照 diff（[{table,id,field,before,after}]，敏感字段已脱敏）。数据范围与列表一致。",
+                "operationId": "operationLogShow",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "日志详情",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "diff": {
+                                                    "description": "字段级变更；创建类仅 after，删除类仅 before",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    },
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "example": null
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/permissions": {
             "get": {
                 "tags": [

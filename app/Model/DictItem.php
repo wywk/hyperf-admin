@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use App\Model\Concerns\LogsAttributeChanges;
 use Carbon\Carbon;
 
 /**
@@ -29,6 +30,8 @@ use Carbon\Carbon;
  */
 class DictItem extends Model
 {
+    use LogsAttributeChanges;
+
     protected ?string $table = 'dict_items';
 
     protected array $fillable = ['type_id', 'label', 'value', 'sort', 'status', 'remark'];

@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace App\Model;
 
+use App\Model\Concerns\LogsAttributeChanges;
 use Carbon\Carbon;
 use Hyperf\Database\Model\Relations\HasMany;
 
@@ -29,6 +30,8 @@ use Hyperf\Database\Model\Relations\HasMany;
  */
 class DictType extends Model
 {
+    use LogsAttributeChanges;
+
     protected ?string $table = 'dict_types';
 
     protected array $fillable = ['name', 'code', 'description', 'sort', 'status'];
