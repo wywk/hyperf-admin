@@ -2,16 +2,20 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Service;
 
 use App\Common\ApiCode;
 use App\Exception\BusinessException;
 use App\Model\Category;
+use Generator;
 use Hyperf\Database\Exception\QueryException;
 use Hyperf\DbConnection\Db;
 
@@ -28,7 +32,7 @@ class CategoryService
         $query = Category::query()->orderByDesc('id');
 
         if (isset($filters['name']) && $filters['name'] !== null && $filters['name'] !== '') {
-            $query->where('name', 'like', '%'.$filters['name'].'%');
+            $query->where('name', 'like', '%' . $filters['name'] . '%');
         }
         if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
             $query->where('status', $filters['status']);
@@ -43,6 +47,7 @@ class CategoryService
             'items' => $query->forPage($page, $pageSize)->get(),
         ];
     }
+
     /**
      * 全量列表（树形模块）：不分页，按 parent_id、id 排序，树结构由前端组装。
      */
@@ -51,7 +56,7 @@ class CategoryService
         $query = Category::query()->orderBy('parent_id')->orderBy('id');
 
         if (isset($filters['name']) && $filters['name'] !== null && $filters['name'] !== '') {
-            $query->where('name', 'like', '%'.$filters['name'].'%');
+            $query->where('name', 'like', '%' . $filters['name'] . '%');
         }
         if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
             $query->where('status', $filters['status']);
@@ -65,18 +70,18 @@ class CategoryService
     /**
      * 导出全量数据：与列表共用筛选条件，按 id 升序每批 500 条产出（Generator，内存友好）。
      */
-    public function exportRows(array $filters): \Generator
+    public function exportRows(array $filters): Generator
     {
         $page = 1;
         do {
             $query = Category::query()->orderBy('id');
 
-        if (isset($filters['name']) && $filters['name'] !== null && $filters['name'] !== '') {
-            $query->where('name', 'like', '%'.$filters['name'].'%');
-        }
-        if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
-            $query->where('status', $filters['status']);
-        }
+            if (isset($filters['name']) && $filters['name'] !== null && $filters['name'] !== '') {
+                $query->where('name', 'like', '%' . $filters['name'] . '%');
+            }
+            if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
+                $query->where('status', $filters['status']);
+            }
 
             $rows = $query->forPage($page, 500)->get();
             foreach ($rows as $row) {

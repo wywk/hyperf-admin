@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Job;
@@ -14,6 +16,7 @@ use App\Model\Job;
 use App\Model\Notification;
 use App\Service\NotificationService;
 use Hyperf\AsyncQueue\Job as QueueJob;
+use Hyperf\Context\ApplicationContext;
 use Throwable;
 
 /**
@@ -89,7 +92,7 @@ abstract class BaseJob extends QueueJob
 
         $label = Job::TYPE_LABELS[$record->type] ?? $record->type;
         try {
-            $svc = \Hyperf\Context\ApplicationContext::getContainer()->get(NotificationService::class);
+            $svc = ApplicationContext::getContainer()->get(NotificationService::class);
             $svc->push(
                 $record->user_id,
                 $ok ? "任务完成：{$label}" : "任务失败：{$label}",

@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * 登录安全包测试：图形验证码触发与一次性、密码策略、TOTP 全流程、密码有效期。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
@@ -23,6 +25,10 @@ use Hyperf\Context\ApplicationContext;
 use Hyperf\Redis\Redis;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class SecurityTest extends TestCase
 {
     private const PREFIX = 'test_sec_';

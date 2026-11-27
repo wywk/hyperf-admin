@@ -78,6 +78,8 @@ docker compose -f docker-compose.dev.yml up -d
 # First run: create tables + seed base data (once the app container is ready)
 docker compose -f docker-compose.dev.yml exec app php bin/hyperf.php migrate
 docker compose -f docker-compose.dev.yml exec app php bin/hyperf.php db:seed
+# (optional) generate demo data: 50 users, 4-level department tree, 30 days of logs, sample jobs & notifications
+docker compose -f docker-compose.dev.yml exec app php bin/hyperf.php demo:seed
 ```
 
 - Backend API: http://127.0.0.1:9501 · Frontend: http://127.0.0.1:5173
@@ -103,6 +105,7 @@ composer install
 cp .env.example .env          # adjust database/redis connections
 php bin/hyperf.php migrate    # create tables
 php bin/hyperf.php db:seed    # base data (permission tree / roles / test accounts)
+php bin/hyperf.php demo:seed  # (optional) demo data for an instant populated UI; idempotent, --fresh to rebuild
 php bin/hyperf.php start      # serves :9501
 
 # Frontend

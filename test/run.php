@@ -2,24 +2,17 @@
 
 declare(strict_types=1);
 /**
- * PHPUnit 运行器：先在协程外完成 Hyperf 注解扫描，再把整个测试进程包进一个 Swoole 协程。
+ * This file is part of Hyperf.
  *
- * 背景：
- * 1. PHPUnit 10.5 新补丁把 TestCase::runTest() 改为 private，子类（含 Trait）无法覆盖，
- *    Hyperf\Testing 的 RunTestsInCoroutine Trait 随之失效，HTTP 测试客户端会报
- *    "Swoole\Error: API must be called in the coroutine"。
- * 2. Hyperf 的注解扫描依赖 pcntl_fork（PcntlScanHandler），在协程内 fork 不可用，
- *    会导致 Swoole\ExitException。
- *
- * 因此本运行器：协程外扫描 → 协程内跑 phpunit，并把协程内的 exit() 转换为真实退出码。
- *
- * 用法（与 phpunit 参数一致）：
- *   php test/run.php                    # 全量
- *   php test/run.php --filter AuthTest  # 单个用例
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
-
 use Hyperf\Di\ClassLoader;
+use PHPUnit\TextUI\Application;
 use Swoole\Coroutine;
+use Swoole\ExitException;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -41,8 +34,8 @@ define('HYPERF_SCAN_DONE', true);
 $status = null;
 Coroutine\run(static function () use (&$status): void {
     try {
-        $status = (new PHPUnit\TextUI\Application())->run($_SERVER['argv']);
-    } catch (Swoole\ExitException $e) {
+        $status = (new Application())->run($_SERVER['argv']);
+    } catch (ExitException $e) {
         // PHPUnit 内部多处调用 exit()，在协程中会变成 ExitException
         $status = (int) ($e->getStatus() ?: 1);
     }

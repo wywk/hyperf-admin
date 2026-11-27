@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Controller\Api;
 
 use App\Common\ApiCode;
@@ -15,8 +18,6 @@ use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
 use App\Model\MallCategory;
 use App\Service\MallCategoryService;
-use Hyperf\Di\Annotation\Inject;
-use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use App\Swagger\Attributes\SwBody;
 use App\Swagger\Attributes\SwDelete;
 use App\Swagger\Attributes\SwGet;
@@ -25,6 +26,8 @@ use App\Swagger\Attributes\SwPost;
 use App\Swagger\Attributes\SwProp;
 use App\Swagger\Attributes\SwPut;
 use App\Swagger\Attributes\SwQuery;
+use Hyperf\Di\Annotation\Inject;
+use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -44,12 +47,18 @@ class MallCategoryController extends AbstractController
     {
     }
 
-    #[SwGet(path: '/api/mall_category', operationId: 'mall_categoryIndex', summary: '分类管理列表', tag: '分类管理', page: true,
-    params: [
-        new SwQuery('name', type: 'string', desc: '分类名称'),
-        new SwQuery('status', type: 'string', desc: '状态'),
-    ],
-)]    public function index(): ResponseInterface
+    #[SwGet(
+        path: '/api/mall_category',
+        operationId: 'mall_categoryIndex',
+        summary: '分类管理列表',
+        tag: '分类管理',
+        page: true,
+        params: [
+            new SwQuery('name', type: 'string', desc: '分类名称'),
+            new SwQuery('status', type: 'string', desc: '状态'),
+        ],
+    )]
+    public function index(): ResponseInterface
     {
         $this->authorize('mall_category.view');
 
@@ -68,9 +77,14 @@ class MallCategoryController extends AbstractController
         ));
     }
 
-    #[SwGet(path: '/api/mall_category/{id}', operationId: 'mall_categoryShow', summary: '分类管理详情', tag: '分类管理',
-    params: [new SwId()],
-)]    public function show(int $id): ResponseInterface
+    #[SwGet(
+        path: '/api/mall_category/{id}',
+        operationId: 'mall_categoryShow',
+        summary: '分类管理详情',
+        tag: '分类管理',
+        params: [new SwId()],
+    )]
+    public function show(int $id): ResponseInterface
     {
         $this->authorize('mall_category.view');
 
@@ -82,17 +96,22 @@ class MallCategoryController extends AbstractController
         return ApiResponse::success($model);
     }
 
-    #[SwPost(path: '/api/mall_category', operationId: 'mall_categoryStore', summary: '新增分类管理', tag: '分类管理',
-    body: new SwBody(
-        props: [
-            new SwProp('name', type: 'string', desc: '分类名称'),
-            new SwProp('sort', type: 'number', nullable: true, desc: '排序'),
-            new SwProp('status', type: 'string', nullable: true, desc: '状态'),
-            new SwProp('description', type: 'string', nullable: true, desc: '说明'),
-        ],
-        requiredProps: ['name'],
-    ),
-)]    public function store(): ResponseInterface
+    #[SwPost(
+        path: '/api/mall_category',
+        operationId: 'mall_categoryStore',
+        summary: '新增分类管理',
+        tag: '分类管理',
+        body: new SwBody(
+            props: [
+                new SwProp('name', type: 'string', desc: '分类名称'),
+                new SwProp('sort', type: 'number', nullable: true, desc: '排序'),
+                new SwProp('status', type: 'string', nullable: true, desc: '状态'),
+                new SwProp('description', type: 'string', nullable: true, desc: '说明'),
+            ],
+            requiredProps: ['name'],
+        ),
+    )]
+    public function store(): ResponseInterface
     {
         $this->authorize('mall_category.add');
 
@@ -101,19 +120,24 @@ class MallCategoryController extends AbstractController
         return ApiResponse::success(['id' => (int) $this->service->create($data)->id], '创建成功');
     }
 
-    #[SwPut(path: '/api/mall_category/{id}', operationId: 'mall_categoryUpdate', summary: '更新分类管理', tag: '分类管理',
-    desc: '支持部分字段更新（传哪些改哪些）。',
-    params: [new SwId()],
-    body: new SwBody(
-        props: [
-            new SwProp('name', type: 'string', desc: '分类名称'),
-            new SwProp('sort', type: 'number', nullable: true, desc: '排序'),
-            new SwProp('status', type: 'string', nullable: true, desc: '状态'),
-            new SwProp('description', type: 'string', nullable: true, desc: '说明'),
-        ],
-        required: false,
-    ),
-)]    public function update(int $id): ResponseInterface
+    #[SwPut(
+        path: '/api/mall_category/{id}',
+        operationId: 'mall_categoryUpdate',
+        summary: '更新分类管理',
+        tag: '分类管理',
+        desc: '支持部分字段更新（传哪些改哪些）。',
+        params: [new SwId()],
+        body: new SwBody(
+            props: [
+                new SwProp('name', type: 'string', desc: '分类名称'),
+                new SwProp('sort', type: 'number', nullable: true, desc: '排序'),
+                new SwProp('status', type: 'string', nullable: true, desc: '状态'),
+                new SwProp('description', type: 'string', nullable: true, desc: '说明'),
+            ],
+            required: false,
+        ),
+    )]
+    public function update(int $id): ResponseInterface
     {
         $this->authorize('mall_category.edit');
 
@@ -123,9 +147,14 @@ class MallCategoryController extends AbstractController
         return ApiResponse::success(['id' => $id], '保存成功');
     }
 
-    #[SwDelete(path: '/api/mall_category/{id}', operationId: 'mall_categoryDestroy', summary: '删除分类管理', tag: '分类管理',
-    params: [new SwId()],
-)]    public function destroy(int $id): ResponseInterface
+    #[SwDelete(
+        path: '/api/mall_category/{id}',
+        operationId: 'mall_categoryDestroy',
+        summary: '删除分类管理',
+        tag: '分类管理',
+        params: [new SwId()],
+    )]
+    public function destroy(int $id): ResponseInterface
     {
         $this->authorize('mall_category.delete');
 
@@ -173,8 +202,8 @@ class MallCategoryController extends AbstractController
     private function searchFilters(array $data): array
     {
         return [
-        'name' => $data['name'] ?? null,
-        'status' => $data['status'] ?? null,
+            'name' => $data['name'] ?? null,
+            'status' => $data['status'] ?? null,
         ];
     }
 }

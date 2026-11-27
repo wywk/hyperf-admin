@@ -21,7 +21,6 @@ use App\Service\LoginLogService;
 use App\Swagger\Attributes\SwGet;
 use App\Swagger\Attributes\SwQuery;
 use App\Swagger\Attributes\SwResp;
-use App\Swagger\Attributes\SwProp;
 use Hyperf\Context\Context;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
@@ -48,7 +47,12 @@ class LoginLogController extends AbstractController
     /**
      * GET /api/auth/login-logs.
      */
-    #[SwGet(path: '/api/auth/login-logs', operationId: 'loginLogIndex', summary: '登录审计日志分页', tag: '登录审计', page: true,
+    #[SwGet(
+        path: '/api/auth/login-logs',
+        operationId: 'loginLogIndex',
+        summary: '登录审计日志分页',
+        tag: '登录审计',
+        page: true,
         desc: '登录成功/失败/退出等审计事件流水，支持多条件过滤。',
         params: [
             new SwQuery('event', desc: '事件类型，如 login/logout/login_failed'),
@@ -98,9 +102,14 @@ class LoginLogController extends AbstractController
     /**
      * GET /api/auth/login-logs/export.
      */
-    #[SwGet(path: '/api/auth/login-logs/export', operationId: 'loginLogExport', summary: '导出登录审计 Excel', tag: '登录审计',
+    #[SwGet(
+        path: '/api/auth/login-logs/export',
+        operationId: 'loginLogExport',
+        summary: '导出登录审计 Excel',
+        tag: '登录审计',
         desc: '与列表共用筛选条件（event/username/user_id/ip），同样受数据权限约束，最多导出 5000 行。',
-        responses: [new SwResp(desc: 'xlsx 二进制流（Content-Disposition 附件下载）')])]
+        responses: [new SwResp(desc: 'xlsx 二进制流（Content-Disposition 附件下载）')]
+    )]
     public function export(): ResponseInterface
     {
         $data = $this->validatorFactory->make($this->request->all(), [

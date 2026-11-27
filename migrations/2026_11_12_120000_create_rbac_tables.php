@@ -13,7 +13,7 @@ use Hyperf\Database\Migrations\Migration;
 use Hyperf\Database\Schema\Blueprint;
 use Hyperf\Database\Schema\Schema;
 
-/**
+/*
  * RBAC 表化：权限、角色、角色-权限关联。
  * 之前权限写在 config/autoload/rbac.php 里，只能改文件；表化之后可以后台增删改。
  * users.role 保留为角色 code，保持不变，避免影响已有登录逻辑。

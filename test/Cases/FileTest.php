@@ -2,21 +2,29 @@
 
 declare(strict_types=1);
 /**
- * 文件管理测试：上传落盘落库、扩展名校验、删除清理。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
 
+use App\Exception\BusinessException;
 use App\Model\File;
 use App\Service\FileManagerService;
-use App\Service\Storage\LocalDriver;
 use App\Service\Storage\StorageFactory;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
+use RuntimeException;
+use Throwable;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class FileTest extends TestCase
 {
     private FileManagerService $files;
@@ -35,7 +43,7 @@ class FileTest extends TestCase
         foreach ($this->createdIds as $id) {
             try {
                 $this->files->delete($id);
-            } catch (\Throwable) {
+            } catch (Throwable) {
             }
         }
         parent::tearDown();
@@ -75,13 +83,13 @@ class FileTest extends TestCase
 
     public function testDeniedExtRejected(): void
     {
-        $this->expectException(\App\Exception\BusinessException::class);
+        $this->expectException(BusinessException::class);
         $this->files->upload('<?php echo 1;', 'shell.php', 'application/x-php', 0);
     }
 
     public function testOversizeRejected(): void
     {
-        $this->expectException(\App\Exception\BusinessException::class);
+        $this->expectException(BusinessException::class);
         // max_size 默认 10MB；构造超过限制的请求太贵，这里直接校验 0 字节与超大两条规则中的 0 字节路径
         $this->files->upload('', 'empty.txt', 'text/plain', 0);
     }
@@ -122,7 +130,7 @@ class FileTest extends TestCase
     public function testLocalDriverRejectsTraversal(): void
     {
         $driver = ApplicationContext::getContainer()->get(StorageFactory::class)->create('local');
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $driver->absolute('../../.env');
     }
 

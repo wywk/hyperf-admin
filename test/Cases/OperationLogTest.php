@@ -2,17 +2,24 @@
 
 declare(strict_types=1);
 /**
- * 操作日志测试：写操作记录 / GET 不记录 / 参数脱敏 / 分页过滤 / 权限校验。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
 
 use App\Model\OperationLog;
+use App\Model\Role;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class OperationLogTest extends TestCase
 {
     public function testWriteOperationIsRecorded(): void
@@ -42,7 +49,7 @@ class OperationLogTest extends TestCase
         $this->assertNotEmpty($log->created_at);
 
         // 清理测试角色
-        \App\Model\Role::query()->where('code', $unique)->delete();
+        Role::query()->where('code', $unique)->delete();
     }
 
     public function testGetRequestIsNotRecorded(): void
@@ -76,9 +83,9 @@ class OperationLogTest extends TestCase
         $this->assertStringNotContainsString('abc', $params);
 
         if (isset($log->params['code'])) {
-            \App\Model\Role::query()->where('code', $log->params['code'])->delete();
+            Role::query()->where('code', $log->params['code'])->delete();
         } else {
-            \App\Model\Role::query()->where('name', '脱敏验证角色')->delete();
+            Role::query()->where('name', '脱敏验证角色')->delete();
         }
     }
 
@@ -136,7 +143,7 @@ class OperationLogTest extends TestCase
         // xlsx 是 zip 容器，魔数 PK\x03\x04
         $this->assertSame("PK\x03\x04", substr((string) $resp->getBody(), 0, 4));
 
-        \App\Model\Role::query()->where('name', '导出验证角色')->delete();
+        Role::query()->where('name', '导出验证角色')->delete();
     }
 
     private function loginToken(string $username, string $password): string

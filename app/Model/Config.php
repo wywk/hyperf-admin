@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Model;
 
 class Config extends Model
 {
-    protected ?string $table = 'configs';
-
     public const TYPE_STRING = 'string';
 
     public const TYPE_TEXT = 'text';
@@ -23,6 +23,8 @@ class Config extends Model
     public const TYPE_BOOLEAN = 'boolean';
 
     public const TYPE_JSON = 'json';
+
+    protected ?string $table = 'configs';
 
     protected array $fillable = [
         'group',

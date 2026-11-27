@@ -2,26 +2,29 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Controller\Api;
 
 use App\Common\ApiCode;
 use App\Common\ApiResponse;
 use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
+use App\Model\File;
 use App\Service\FileManagerService;
 use App\Service\Storage\StorageFactory;
 use App\Swagger\Attributes\SwDelete;
 use App\Swagger\Attributes\SwGet;
 use App\Swagger\Attributes\SwId;
-use App\Swagger\Attributes\SwPost;
+use App\Swagger\Attributes\SwProp;
 use App\Swagger\Attributes\SwQuery;
 use App\Swagger\Attributes\SwResp;
-use App\Swagger\Attributes\SwProp;
 use Hyperf\Context\Context;
 use Hyperf\Di\Annotation\Inject;
 use OpenApi\Attributes as OA;
@@ -98,7 +101,12 @@ class FileController extends AbstractController
         return ApiResponse::success($this->fileManager->formatItem($file));
     }
 
-    #[SwGet(path: '/api/files', operationId: 'fileIndex', summary: '文件列表', tag: '文件管理', page: true,
+    #[SwGet(
+        path: '/api/files',
+        operationId: 'fileIndex',
+        summary: '文件列表',
+        tag: '文件管理',
+        page: true,
         params: [
             new SwQuery('keyword', desc: '按原始文件名模糊搜索'),
             new SwQuery('ext', desc: '按扩展名过滤，如 png'),
@@ -129,7 +137,11 @@ class FileController extends AbstractController
         return ApiResponse::success($result);
     }
 
-    #[SwDelete(path: '/api/files/{id}', operationId: 'fileDestroy', summary: '删除文件', tag: '文件管理',
+    #[SwDelete(
+        path: '/api/files/{id}',
+        operationId: 'fileDestroy',
+        summary: '删除文件',
+        tag: '文件管理',
         desc: '删除物理文件与记录；物理文件已丢失时仅删记录。',
         params: [new SwId()],
     )]
@@ -142,7 +154,11 @@ class FileController extends AbstractController
         return ApiResponse::success(['id' => $id]);
     }
 
-    #[SwGet(path: '/api/files/{id}/download', operationId: 'fileDownload', summary: '下载文件', tag: '文件管理',
+    #[SwGet(
+        path: '/api/files/{id}/download',
+        operationId: 'fileDownload',
+        summary: '下载文件',
+        tag: '文件管理',
         desc: '按原始文件名输出文件内容（attachment），需要登录。',
         params: [new SwId()],
     )]
@@ -150,7 +166,7 @@ class FileController extends AbstractController
     {
         $this->authorize('file.view', 'file.upload');
 
-        $file = \App\Model\File::query()->find($id);
+        $file = File::query()->find($id);
         if ($file === null) {
             return ApiResponse::fail(ApiCode::NOT_FOUND, '文件不存在或已删除');
         }

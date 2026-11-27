@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * 用户管理测试：创建/重名校验、自我与最后管理员保护、重置密码与停用的会话联动。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
@@ -16,6 +18,10 @@ use App\Service\UserService;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class UserTest extends TestCase
 {
     private const PREFIX = 'test_user_';

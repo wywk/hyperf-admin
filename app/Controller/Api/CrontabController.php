@@ -2,20 +2,23 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Controller\Api;
 
-use App\Common\ApiResponse;
 use App\Common\ApiCode;
+use App\Common\ApiResponse;
 use App\Controller\AbstractController;
 use App\Controller\Concerns\AuthorizesRequests;
 use App\Crontab\CrontabExecutor;
 use App\Exception\BusinessException;
+use App\Model\CrontabLog;
 use App\Model\CrontabTask;
 use App\Service\CrontabService;
 use App\Swagger\Attributes\SwBody;
@@ -53,7 +56,12 @@ class CrontabController extends AbstractController
     /**
      * GET /api/crontabs.
      */
-    #[SwGet(path: '/api/crontabs', operationId: 'crontabIndex', summary: '定时任务分页', tag: '定时任务', page: true,
+    #[SwGet(
+        path: '/api/crontabs',
+        operationId: 'crontabIndex',
+        summary: '定时任务分页',
+        tag: '定时任务',
+        page: true,
         desc: '任务定义与调度状态（最近/下次运行时间、连续失败数）。需要 crontab.view 权限。',
         params: [
             new SwQuery('name', desc: '任务名称（模糊匹配）'),
@@ -92,7 +100,11 @@ class CrontabController extends AbstractController
     /**
      * POST /api/crontabs.
      */
-    #[SwPost(path: '/api/crontabs', operationId: 'crontabStore', summary: '新增定时任务', tag: '定时任务',
+    #[SwPost(
+        path: '/api/crontabs',
+        operationId: 'crontabStore',
+        summary: '新增定时任务',
+        tag: '定时任务',
         body: new SwBody(props: [
             new SwProp('name', type: 'string', desc: '任务名称'),
             new SwProp('handler', type: 'string', desc: '任务处理类，须实现 App\Crontab\TaskInterface'),
@@ -123,7 +135,11 @@ class CrontabController extends AbstractController
     /**
      * PUT /api/crontabs/{id}.
      */
-    #[SwPut(path: '/api/crontabs/{id}', operationId: 'crontabUpdate', summary: '更新定时任务', tag: '定时任务',
+    #[SwPut(
+        path: '/api/crontabs/{id}',
+        operationId: 'crontabUpdate',
+        summary: '更新定时任务',
+        tag: '定时任务',
         body: new SwBody(props: [
             new SwProp('name', type: 'string', desc: '任务名称'),
             new SwProp('handler', type: 'string', desc: '任务处理类'),
@@ -158,7 +174,11 @@ class CrontabController extends AbstractController
     /**
      * DELETE /api/crontabs/{id}.
      */
-    #[SwDelete(path: '/api/crontabs/{id}', operationId: 'crontabDestroy', summary: '删除定时任务', tag: '定时任务',
+    #[SwDelete(
+        path: '/api/crontabs/{id}',
+        operationId: 'crontabDestroy',
+        summary: '删除定时任务',
+        tag: '定时任务',
         desc: '删除任务定义与其执行日志。',
         params: [new SwId('id', desc: '任务 ID')],
         responses: [new SwResp(desc: '空')]
@@ -172,7 +192,7 @@ class CrontabController extends AbstractController
             throw new BusinessException(ApiCode::NOT_FOUND, '任务不存在');
         }
 
-        \App\Model\CrontabLog::query()->where('task_id', $task->id)->delete();
+        CrontabLog::query()->where('task_id', $task->id)->delete();
         $task->delete();
 
         return ApiResponse::success(null);
@@ -181,7 +201,11 @@ class CrontabController extends AbstractController
     /**
      * POST /api/crontabs/{id}/run.
      */
-    #[SwPost(path: '/api/crontabs/{id}/run', operationId: 'crontabRun', summary: '手动触发执行', tag: '定时任务',
+    #[SwPost(
+        path: '/api/crontabs/{id}/run',
+        operationId: 'crontabRun',
+        summary: '手动触发执行',
+        tag: '定时任务',
         desc: '绕过调度立即执行一次任务（同步），返回执行日志。需要 crontab.run 权限。',
         params: [new SwId('id', desc: '任务 ID')],
         responses: [new SwResp(desc: '执行日志：status/status_text/output/cost_ms', props: [new SwProp('data', type: 'object')])]
@@ -211,7 +235,12 @@ class CrontabController extends AbstractController
     /**
      * GET /api/crontabs/{id}/logs.
      */
-    #[SwGet(path: '/api/crontabs/{id}/logs', operationId: 'crontabLogs', summary: '执行日志分页', tag: '定时任务', page: true,
+    #[SwGet(
+        path: '/api/crontabs/{id}/logs',
+        operationId: 'crontabLogs',
+        summary: '执行日志分页',
+        tag: '定时任务',
+        page: true,
         desc: '任务的执行流水（含手动触发）。需要 crontab.view 权限。',
         params: [new SwId('id', desc: '任务 ID')],
         responses: [new SwResp(desc: '分页结果，item 含 status/status_text/output/cost_ms/created_at', props: [

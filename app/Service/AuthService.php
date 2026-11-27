@@ -113,31 +113,6 @@ class AuthService
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    private function finishLogin(User $user, string $ip, string $userAgent): array
-    {
-        $user->last_login_at = date('Y-m-d H:i:s');
-        $user->save();
-
-        // 登录风控：评估风险等级（中高风险会推安全提醒给本人），结果随审计日志落库
-        $risk = $this->risk->assessAndNotify((string) $user->username, (int) $user->id, $ip);
-
-        $this->audit->record(
-            LoginLog::EVENT_LOGIN_SUCCESS,
-            (string) $user->username,
-            $ip,
-            (int) $user->id,
-            '登录成功',
-            $userAgent,
-            $risk['level'],
-            implode('、', $risk['reasons'])
-        );
-
-        return array_merge($this->tokenService->issue($user, null, $ip, $userAgent), ['user' => $this->profile($user)]);
-    }
-
-    /**
      * 用 refresh token 换新的一对 token，旧 refresh token 立即失效（旋转）。
      * 若同一个 refresh token 被重复使用，视为凭证泄露：吊销整条凭证链，强制重新登录。
      *
@@ -273,5 +248,30 @@ class AuthService
             'password_expires_in' => $this->passwordPolicy->daysUntilExpire($user),
             'password_changed_at' => $user->password_changed_at?->toDateTimeString(),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function finishLogin(User $user, string $ip, string $userAgent): array
+    {
+        $user->last_login_at = date('Y-m-d H:i:s');
+        $user->save();
+
+        // 登录风控：评估风险等级（中高风险会推安全提醒给本人），结果随审计日志落库
+        $risk = $this->risk->assessAndNotify((string) $user->username, (int) $user->id, $ip);
+
+        $this->audit->record(
+            LoginLog::EVENT_LOGIN_SUCCESS,
+            (string) $user->username,
+            $ip,
+            (int) $user->id,
+            '登录成功',
+            $userAgent,
+            $risk['level'],
+            implode('、', $risk['reasons'])
+        );
+
+        return array_merge($this->tokenService->issue($user, null, $ip, $userAgent), ['user' => $this->profile($user)]);
     }
 }

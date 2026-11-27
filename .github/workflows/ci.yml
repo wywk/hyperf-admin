@@ -58,13 +58,16 @@ jobs:
         run: |
           find app config migrations seeders -name "*.php" -print0 | xargs -0 -n1 php -l
 
-      - name: Code style (php-cs-fixer)
+      - name: Code style (php-cs-fixer, strict)
         run: |
           if [ -f vendor/bin/php-cs-fixer ]; then
-            PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run --diff || true
+            PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix --dry-run --diff
           else
             echo "php-cs-fixer not installed, skip"
           fi
+
+      - name: Static analysis (phpstan)
+        run: composer analyse
 
       - name: Prepare test database
         run: |
@@ -75,6 +78,28 @@ jobs:
 
       - name: Run tests (phpunit via test/run.php)
         run: php test/run.php
+
+      # 覆盖率报告（协程运行器对 pcov 支持尚不完整，先作为非阻塞报告产出）
+      - name: Coverage report (non-blocking)
+        continue-on-error: true
+        run: |
+          php -d pcov.enabled=1 test/run.php --coverage-clover coverage/clover.xml || true
+          if [ -f coverage/clover.xml ]; then
+            php -r '
+              $xml = simplexml_load_file("coverage/clover.xml");
+              $m = $xml->xpath("//metrics");
+              $el = 0; $ec = 0;
+              foreach ($m as $x) { $el += (int)$x["elements"]; $ec += (int)$x["coveredelements"]; }
+              printf("Line coverage: %.1f%% (%d/%d)%s", $el ? $ec / $el * 100 : 0, $ec, $el, PHP_EOL);
+            '
+          fi
+
+      - name: Upload coverage artifact
+        if: hashFiles('coverage/clover.xml') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-clover
+          path: coverage/clover.xml
 
   frontend:
     name: Frontend (type check + build)

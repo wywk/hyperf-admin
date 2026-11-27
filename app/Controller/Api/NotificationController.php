@@ -2,17 +2,18 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Controller\Api;
 
 use App\Common\ApiResponse;
 use App\Controller\AbstractController;
-use App\Model\Notification;
 use App\Service\NotificationService;
 use App\Swagger\Attributes\SwDelete;
 use App\Swagger\Attributes\SwGet;
@@ -40,7 +41,12 @@ class NotificationController extends AbstractController
     /**
      * GET /api/notifications.
      */
-    #[SwGet(path: '/api/notifications', operationId: 'notificationIndex', summary: '我的消息列表', tag: '消息中心', page: true,
+    #[SwGet(
+        path: '/api/notifications',
+        operationId: 'notificationIndex',
+        summary: '我的消息列表',
+        tag: '消息中心',
+        page: true,
         desc: '只返回当前登录用户的消息，按时间倒序；支持按已读状态与类型过滤。',
         params: [
             new SwQuery('is_read', type: 'integer', desc: '1=已读 0=未读，不传则全部'),
@@ -76,7 +82,11 @@ class NotificationController extends AbstractController
     /**
      * GET /api/notifications/summary.
      */
-    #[SwGet(path: '/api/notifications/summary', operationId: 'notificationSummary', summary: '未读汇总', tag: '消息中心',
+    #[SwGet(
+        path: '/api/notifications/summary',
+        operationId: 'notificationSummary',
+        summary: '未读汇总',
+        tag: '消息中心',
         desc: '顶栏铃铛用：未读总数 + 各类型未读数，一次请求拿全。',
         responses: [new SwResp(desc: '{unread, total, by_type}', props: [
             new OA\Property(property: 'data', type: 'object', properties: [
@@ -94,7 +104,11 @@ class NotificationController extends AbstractController
     /**
      * POST /api/notifications/{id}/read.
      */
-    #[SwPost(path: '/api/notifications/{id}/read', operationId: 'notificationRead', summary: '标记单条已读', tag: '消息中心',
+    #[SwPost(
+        path: '/api/notifications/{id}/read',
+        operationId: 'notificationRead',
+        summary: '标记单条已读',
+        tag: '消息中心',
         desc: '只能标记自己的消息；重复标记不报错。',
         responses: [new SwResp(desc: '已读')]
     )]
@@ -108,7 +122,11 @@ class NotificationController extends AbstractController
     /**
      * POST /api/notifications/read-all.
      */
-    #[SwPost(path: '/api/notifications/read-all', operationId: 'notificationReadAll', summary: '全部标记已读', tag: '消息中心',
+    #[SwPost(
+        path: '/api/notifications/read-all',
+        operationId: 'notificationReadAll',
+        summary: '全部标记已读',
+        tag: '消息中心',
         desc: '把当前用户所有未读消息置为已读，返回影响条数。',
         responses: [new SwResp(desc: '已读条数')]
     )]
@@ -122,7 +140,11 @@ class NotificationController extends AbstractController
     /**
      * DELETE /api/notifications/read.
      */
-    #[SwDelete(path: '/api/notifications/read', operationId: 'notificationClearRead', summary: '清空已读消息', tag: '消息中心',
+    #[SwDelete(
+        path: '/api/notifications/read',
+        operationId: 'notificationClearRead',
+        summary: '清空已读消息',
+        tag: '消息中心',
         desc: '删除当前用户所有已读消息，未读消息不受影响。',
         responses: [new SwResp(desc: '删除条数')]
     )]
@@ -136,7 +158,11 @@ class NotificationController extends AbstractController
     /**
      * DELETE /api/notifications/{id}.
      */
-    #[SwDelete(path: '/api/notifications/{id}', operationId: 'notificationDelete', summary: '删除单条消息', tag: '消息中心',
+    #[SwDelete(
+        path: '/api/notifications/{id}',
+        operationId: 'notificationDelete',
+        summary: '删除单条消息',
+        tag: '消息中心',
         desc: '只能删除自己的消息。',
         responses: [new SwResp(desc: '已删除')]
     )]

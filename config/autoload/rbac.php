@@ -9,7 +9,6 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
-
 /*
  * 最小可用的 RBAC：一个用户一个角色，角色映射到权限码列表，权限码由前端用于菜单/按钮控制。
  * 现在放在配置里，等业务复杂了再换成 roles / permissions / role_permissions 三张表，

@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Controller\Api;
 
 use App\Common\ApiCode;
@@ -17,7 +20,6 @@ use App\Model\Category;
 use App\Service\CategoryService;
 use App\Service\Excel\ExcelService;
 use App\Swagger\Attributes\SwBody;
-use OpenApi\Attributes as OA;
 use App\Swagger\Attributes\SwDelete;
 use App\Swagger\Attributes\SwGet;
 use App\Swagger\Attributes\SwId;
@@ -28,6 +30,7 @@ use App\Swagger\Attributes\SwQuery;
 use App\Swagger\Attributes\SwResp;
 use Hyperf\Di\Annotation\Inject;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -50,10 +53,15 @@ class CategoryController extends AbstractController
     {
     }
 
-    #[SwGet(path: '/api/category', operationId: 'categoryIndex', summary: '商品分类列表', tag: '商品分类', page: true,
+    #[SwGet(
+        path: '/api/category',
+        operationId: 'categoryIndex',
+        summary: '商品分类列表',
+        tag: '商品分类',
+        page: true,
         params: [
-        new SwQuery('name', type: 'string', desc: '分类名称'),
-        new SwQuery('status', type: 'string', desc: '状态'),
+            new SwQuery('name', type: 'string', desc: '分类名称'),
+            new SwQuery('status', type: 'string', desc: '状态'),
         ],
     )]
     public function index(): ResponseInterface
@@ -69,7 +77,11 @@ class CategoryController extends AbstractController
         ));
     }
 
-    #[SwGet(path: '/api/category/{id}', operationId: 'categoryShow', summary: '商品分类详情', tag: '商品分类',
+    #[SwGet(
+        path: '/api/category/{id}',
+        operationId: 'categoryShow',
+        summary: '商品分类详情',
+        tag: '商品分类',
         params: [new SwId()],
     )]
     public function show(int $id): ResponseInterface
@@ -84,13 +96,17 @@ class CategoryController extends AbstractController
         return ApiResponse::success($model);
     }
 
-    #[SwPost(path: '/api/category', operationId: 'categoryStore', summary: '新增商品分类', tag: '商品分类',
+    #[SwPost(
+        path: '/api/category',
+        operationId: 'categoryStore',
+        summary: '新增商品分类',
+        tag: '商品分类',
         body: new SwBody(
             props: [
-            new SwProp('name', type: 'string', desc: '分类名称'),
-            new SwProp('sort', type: 'number', desc: '排序'),
-            new SwProp('status', type: 'string', desc: '状态'),
-            new SwProp('parent_id', type: 'number', desc: '上级'),
+                new SwProp('name', type: 'string', desc: '分类名称'),
+                new SwProp('sort', type: 'number', desc: '排序'),
+                new SwProp('status', type: 'string', desc: '状态'),
+                new SwProp('parent_id', type: 'number', desc: '上级'),
             ],
             requiredProps: ['name'],
         ),
@@ -104,15 +120,19 @@ class CategoryController extends AbstractController
         return ApiResponse::success(['id' => (int) $this->service->create($data)->id], '创建成功');
     }
 
-    #[SwPut(path: '/api/category/{id}', operationId: 'categoryUpdate', summary: '更新商品分类', tag: '商品分类',
+    #[SwPut(
+        path: '/api/category/{id}',
+        operationId: 'categoryUpdate',
+        summary: '更新商品分类',
+        tag: '商品分类',
         desc: '支持部分字段更新（传哪些改哪些）。',
         params: [new SwId()],
         body: new SwBody(
             props: [
-            new SwProp('name', type: 'string', desc: '分类名称'),
-            new SwProp('sort', type: 'number', desc: '排序'),
-            new SwProp('status', type: 'string', desc: '状态'),
-            new SwProp('parent_id', type: 'number', desc: '上级'),
+                new SwProp('name', type: 'string', desc: '分类名称'),
+                new SwProp('sort', type: 'number', desc: '排序'),
+                new SwProp('status', type: 'string', desc: '状态'),
+                new SwProp('parent_id', type: 'number', desc: '上级'),
             ],
             required: false,
         ),
@@ -127,7 +147,11 @@ class CategoryController extends AbstractController
         return ApiResponse::success(['id' => $id], '保存成功');
     }
 
-    #[SwDelete(path: '/api/category/{id}', operationId: 'categoryDestroy', summary: '删除商品分类', tag: '商品分类',
+    #[SwDelete(
+        path: '/api/category/{id}',
+        operationId: 'categoryDestroy',
+        summary: '删除商品分类',
+        tag: '商品分类',
         params: [new SwId()],
     )]
     public function destroy(int $id): ResponseInterface
@@ -139,11 +163,19 @@ class CategoryController extends AbstractController
         return ApiResponse::success(null, '已删除');
     }
 
-    #[SwPost(path: '/api/category/batch-delete', operationId: 'categoryBatchDestroy', summary: '批量删除商品分类', tag: '商品分类',
+    #[SwPost(
+        path: '/api/category/batch-delete',
+        operationId: 'categoryBatchDestroy',
+        summary: '批量删除商品分类',
+        tag: '商品分类',
         desc: '按 ID 数组批量删除，返回实际删除数量。需要 category.delete 权限。',
         body: new SwBody(props: [
-            new SwProp('ids', type: 'array', desc: '待删除的 ID 数组（1-100 个）',
-                items: new OA\Items(type: 'integer')),
+            new SwProp(
+                'ids',
+                type: 'array',
+                desc: '待删除的 ID 数组（1-100 个）',
+                items: new OA\Items(type: 'integer')
+            ),
         ], requiredProps: ['ids']),
         responses: [new SwResp(desc: '删除数量', props: [
             new SwProp('deleted', type: 'integer'),
@@ -167,11 +199,15 @@ class CategoryController extends AbstractController
         return ApiResponse::success(['deleted' => $deleted], '已删除');
     }
 
-    #[SwGet(path: '/api/category/export', operationId: 'categoryExport', summary: '导出商品分类 Excel', tag: '商品分类',
+    #[SwGet(
+        path: '/api/category/export',
+        operationId: 'categoryExport',
+        summary: '导出商品分类 Excel',
+        tag: '商品分类',
         desc: '与列表共用搜索参数，导出全部匹配记录为 xlsx（按 id 升序分批读取）。',
         params: [
-        new SwQuery('name', type: 'string', desc: '分类名称'),
-        new SwQuery('status', type: 'string', desc: '状态'),
+            new SwQuery('name', type: 'string', desc: '分类名称'),
+            new SwQuery('status', type: 'string', desc: '状态'),
         ],
     )]
     public function export(): ResponseInterface
@@ -192,7 +228,11 @@ class CategoryController extends AbstractController
             ->withHeader('Content-Disposition', 'attachment; filename="category.xlsx"');
     }
 
-    #[SwPost(path: '/api/category/import', operationId: 'categoryImport', summary: '导入商品分类 Excel', tag: '商品分类',
+    #[SwPost(
+        path: '/api/category/import',
+        operationId: 'categoryImport',
+        summary: '导入商品分类 Excel',
+        tag: '商品分类',
         desc: '上传 xlsx（multipart，字段 file；表头与导出列一致），逐行校验后批量入库，返回成功数与失败行明细。',
         body: new SwBody(
             props: [
@@ -245,7 +285,6 @@ class CategoryController extends AbstractController
         ], $failed === [] ? '导入完成' : '导入完成（部分行校验失败）');
     }
 
-
     private function rules(): array
     {
         return [
@@ -285,9 +324,9 @@ class CategoryController extends AbstractController
     private function exportColumns(): array
     {
         return [
-        'name' => '分类名称',
-        'sort' => '排序',
-        'status' => '状态',
+            'name' => '分类名称',
+            'sort' => '排序',
+            'status' => '状态',
         ];
     }
 
@@ -295,8 +334,8 @@ class CategoryController extends AbstractController
     private function searchFilters(array $data): array
     {
         return [
-        'name' => $data['name'] ?? null,
-        'status' => $data['status'] ?? null,
+            'name' => $data['name'] ?? null,
+            'status' => $data['status'] ?? null,
         ];
     }
 }

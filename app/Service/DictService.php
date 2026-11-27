@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Service;
 
 use App\Common\ApiCode;
@@ -239,33 +242,6 @@ class DictService
         return $result;
     }
 
-    // ---------- 内部 ----------
-
-    private function findTypeOrFail(int $id): DictType
-    {
-        /** @var null|DictType $type */
-        $type = DictType::query()->find($id);
-        if ($type === null) {
-            throw new BusinessException(ApiCode::NOT_FOUND, '字典类型不存在');
-        }
-
-        return $type;
-    }
-
-    private function invalidateByTypeId(int $typeId): void
-    {
-        /** @var null|DictType $type */
-        $type = DictType::query()->find($typeId);
-        if ($type !== null) {
-            $this->invalidate($type->code);
-        }
-    }
-
-    private function invalidate(string $code): void
-    {
-        $this->redis->del(self::CACHE_PREFIX . $code);
-    }
-
     public function formatType(DictType $type): array
     {
         return [
@@ -291,5 +267,32 @@ class DictService
             'status' => (int) $item->status,
             'remark' => (string) $item->remark,
         ];
+    }
+
+    // ---------- 内部 ----------
+
+    private function findTypeOrFail(int $id): DictType
+    {
+        /** @var null|DictType $type */
+        $type = DictType::query()->find($id);
+        if ($type === null) {
+            throw new BusinessException(ApiCode::NOT_FOUND, '字典类型不存在');
+        }
+
+        return $type;
+    }
+
+    private function invalidateByTypeId(int $typeId): void
+    {
+        /** @var null|DictType $type */
+        $type = DictType::query()->find($typeId);
+        if ($type !== null) {
+            $this->invalidate($type->code);
+        }
+    }
+
+    private function invalidate(string $code): void
+    {
+        $this->redis->del(self::CACHE_PREFIX . $code);
     }
 }

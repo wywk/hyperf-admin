@@ -2,13 +2,17 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Swagger\Attributes;
 
+use Attribute;
 use OpenApi\Attributes as OA;
 
 /**
@@ -18,7 +22,7 @@ use OpenApi\Attributes as OA;
  * new SwProp('price', type: 'number', nullable: true)
  * new SwProp('status', type: 'integer', enum: [0, 1])
  */
-#[\Attribute(\Attribute::TARGET_METHOD)]
+#[Attribute(Attribute::TARGET_METHOD)]
 class SwProp extends OA\Property
 {
     public function __construct(

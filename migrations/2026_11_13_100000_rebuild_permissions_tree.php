@@ -9,12 +9,12 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
-use Hyperf\DbConnection\Db;
 use Hyperf\Database\Migrations\Migration;
 use Hyperf\Database\Schema\Blueprint;
 use Hyperf\Database\Schema\Schema;
+use Hyperf\DbConnection\Db;
 
-/**
+/*
  * 权限表重构为树形：菜单权限（menu）与按钮权限（button）通过 parent_id 组成一棵树。
  *
  * 旧表是平铺的权限码列表（靠 group_name 分组），无法表达「页面 → 按钮」的层级，

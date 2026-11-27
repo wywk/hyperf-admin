@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Controller\Api;
@@ -53,7 +55,12 @@ class JobController extends AbstractController
     /**
      * GET /api/jobs.
      */
-    #[SwGet(path: '/api/jobs', operationId: 'jobIndex', summary: '异步任务列表', tag: '任务中心', page: true,
+    #[SwGet(
+        path: '/api/jobs',
+        operationId: 'jobIndex',
+        summary: '异步任务列表',
+        tag: '任务中心',
+        page: true,
         desc: '异步任务（导出等）的分页列表。拥有任务中心权限的账号看全部，否则只看自己提交的任务。下载结果用 files 模块的 /api/files/{result_file_id}/download。',
         params: [
             new SwQuery('status', type: 'integer', desc: '0=排队中 1=执行中 2=已完成 3=失败'),
@@ -91,7 +98,11 @@ class JobController extends AbstractController
     /**
      * GET /api/jobs/running.
      */
-    #[SwGet(path: '/api/jobs/running', operationId: 'jobRunningCount', summary: '进行中的任务数', tag: '任务中心',
+    #[SwGet(
+        path: '/api/jobs/running',
+        operationId: 'jobRunningCount',
+        summary: '进行中的任务数',
+        tag: '任务中心',
         desc: '排队 + 执行中的任务数（仅统计自己的），供顶栏角标轮询。',
         responses: [new SwResp(desc: '数量', props: [
             new OA\Property(property: 'data', type: 'object', properties: [
@@ -109,7 +120,11 @@ class JobController extends AbstractController
     /**
      * POST /api/jobs/export.
      */
-    #[SwPost(path: '/api/jobs/export', operationId: 'jobCreateExport', summary: '创建异步导出任务', tag: '任务中心',
+    #[SwPost(
+        path: '/api/jobs/export',
+        operationId: 'jobCreateExport',
+        summary: '创建异步导出任务',
+        tag: '任务中心',
         desc: '提交一个异步导出任务（登录审计 / 操作日志 / 商品）。返回任务记录，完成后有站内消息提醒，结果文件在任务中心或文件管理下载。数据权限范围在提交时定格。',
         responses: [new SwResp(desc: '创建的任务记录', props: [
             new OA\Property(property: 'data', type: 'object', properties: [
@@ -145,7 +160,11 @@ class JobController extends AbstractController
     /**
      * POST /api/jobs/{id}/retry.
      */
-    #[SwPost(path: '/api/jobs/{id}/retry', operationId: 'jobRetry', summary: '重试失败任务', tag: '任务中心',
+    #[SwPost(
+        path: '/api/jobs/{id}/retry',
+        operationId: 'jobRetry',
+        summary: '重试失败任务',
+        tag: '任务中心',
         desc: '基于失败任务重建一条排队任务并重新入队，原失败记录保留可追溯。仅限本人任务。',
         responses: [new SwResp(desc: '新建的任务记录')]
     )]
@@ -162,7 +181,11 @@ class JobController extends AbstractController
     /**
      * DELETE /api/jobs/{id}.
      */
-    #[SwDelete(path: '/api/jobs/{id}', operationId: 'jobDestroy', summary: '删除任务记录', tag: '任务中心',
+    #[SwDelete(
+        path: '/api/jobs/{id}',
+        operationId: 'jobDestroy',
+        summary: '删除任务记录',
+        tag: '任务中心',
         desc: '删除一条已结束（成功/失败）的任务记录；排队/执行中的任务不可删。仅限本人任务。',
         responses: [new SwResp(desc: '已删除')]
     )]

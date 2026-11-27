@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Controller\Api;
 
 use App\Common\ApiResponse;
@@ -40,7 +43,12 @@ class DictController extends AbstractController
     #[Inject]
     protected DictService $dict;
 
-    #[SwGet(path: '/api/dict/types', operationId: 'dictTypes', summary: '字典类型列表', tag: '数据字典', page: false,
+    #[SwGet(
+        path: '/api/dict/types',
+        operationId: 'dictTypes',
+        summary: '字典类型列表',
+        tag: '数据字典',
+        page: false,
         desc: '全部类型按 sort 排序，item_count 为该类型字典项数量。',
         params: [new SwQuery('keyword', desc: '按名称/编码模糊搜索')],
         responses: [new SwResp(desc: '类型数组，item 含 name/code/description/sort/status/item_count', props: [
@@ -56,14 +64,19 @@ class DictController extends AbstractController
         return ApiResponse::success(['items' => $this->dict->types($keyword)]);
     }
 
-    #[SwPost(path: '/api/dict/types', operationId: 'dictTypeStore', summary: '新增字典类型', tag: '数据字典',
+    #[SwPost(
+        path: '/api/dict/types',
+        operationId: 'dictTypeStore',
+        summary: '新增字典类型',
+        tag: '数据字典',
         body: new SwBody(props: [
             new SwProp('name', desc: '类型名称'),
             new SwProp('code', desc: '类型编码，小写字母开头，业务按此取字典'),
             new SwProp('description', desc: '描述'),
             new SwProp('sort', type: 'integer', desc: '排序'),
             new SwProp('status', type: 'integer', enum: [0, 1], desc: '1=启用 0=停用'),
-        ], requiredProps: ['name', 'code']))]
+        ], requiredProps: ['name', 'code'])
+    )]
     public function storeType(): ResponseInterface
     {
         $this->authorize('dict.add');
@@ -73,7 +86,11 @@ class DictController extends AbstractController
         return ApiResponse::success($this->dict->formatType($type));
     }
 
-    #[SwPut(path: '/api/dict/types/{id}', operationId: 'dictTypeUpdate', summary: '更新字典类型', tag: '数据字典',
+    #[SwPut(
+        path: '/api/dict/types/{id}',
+        operationId: 'dictTypeUpdate',
+        summary: '更新字典类型',
+        tag: '数据字典',
         desc: '编码不可修改；停用类型会同时清掉其缓存。',
         params: [new SwId()],
         body: new SwBody(required: false, props: [
@@ -81,7 +98,8 @@ class DictController extends AbstractController
             new SwProp('description', desc: '描述'),
             new SwProp('sort', type: 'integer', desc: '排序'),
             new SwProp('status', type: 'integer', enum: [0, 1], desc: '1=启用 0=停用'),
-        ]))]
+        ])
+    )]
     public function updateType(int $id): ResponseInterface
     {
         $this->authorize('dict.edit');
@@ -91,9 +109,14 @@ class DictController extends AbstractController
         return ApiResponse::success($this->dict->formatType($type));
     }
 
-    #[SwDelete(path: '/api/dict/types/{id}', operationId: 'dictTypeDestroy', summary: '删除字典类型', tag: '数据字典',
+    #[SwDelete(
+        path: '/api/dict/types/{id}',
+        operationId: 'dictTypeDestroy',
+        summary: '删除字典类型',
+        tag: '数据字典',
         desc: '同时删除该类型下全部字典项并清缓存。',
-        params: [new SwId()])]
+        params: [new SwId()]
+    )]
     public function destroyType(int $id): ResponseInterface
     {
         $this->authorize('dict.delete');
@@ -103,7 +126,11 @@ class DictController extends AbstractController
         return ApiResponse::success(['id' => $id]);
     }
 
-    #[SwGet(path: '/api/dict/types/{id}/items', operationId: 'dictItems', summary: '字典项列表', tag: '数据字典',
+    #[SwGet(
+        path: '/api/dict/types/{id}/items',
+        operationId: 'dictItems',
+        summary: '字典项列表',
+        tag: '数据字典',
         desc: '管理视角：含停用项，按 sort 排序。',
         params: [new SwId()],
         responses: [new SwResp(desc: '字典项数组，item 含 label/value/sort/status/remark', props: [
@@ -117,7 +144,11 @@ class DictController extends AbstractController
         return ApiResponse::success(['items' => $this->dict->itemsOf($id)]);
     }
 
-    #[SwPost(path: '/api/dict/types/{id}/items', operationId: 'dictItemStore', summary: '新增字典项', tag: '数据字典',
+    #[SwPost(
+        path: '/api/dict/types/{id}/items',
+        operationId: 'dictItemStore',
+        summary: '新增字典项',
+        tag: '数据字典',
         params: [new SwId()],
         body: new SwBody(props: [
             new SwProp('label', desc: '显示文本'),
@@ -125,7 +156,8 @@ class DictController extends AbstractController
             new SwProp('sort', type: 'integer', desc: '排序'),
             new SwProp('status', type: 'integer', enum: [0, 1], desc: '1=启用 0=停用'),
             new SwProp('remark', desc: '备注'),
-        ], requiredProps: ['label', 'value']))]
+        ], requiredProps: ['label', 'value'])
+    )]
     public function storeItem(int $id): ResponseInterface
     {
         $this->authorize('dict.add');
@@ -135,7 +167,11 @@ class DictController extends AbstractController
         return ApiResponse::success($this->dict->formatItem($item));
     }
 
-    #[SwPut(path: '/api/dict/items/{id}', operationId: 'dictItemUpdate', summary: '更新字典项', tag: '数据字典',
+    #[SwPut(
+        path: '/api/dict/items/{id}',
+        operationId: 'dictItemUpdate',
+        summary: '更新字典项',
+        tag: '数据字典',
         desc: '值不得与同类型下其他项冲突；修改后清所属类型缓存。',
         params: [new SwId()],
         body: new SwBody(required: false, props: [
@@ -144,7 +180,8 @@ class DictController extends AbstractController
             new SwProp('sort', type: 'integer', desc: '排序'),
             new SwProp('status', type: 'integer', enum: [0, 1], desc: '1=启用 0=停用'),
             new SwProp('remark', desc: '备注'),
-        ]))]
+        ])
+    )]
     public function updateItem(int $id): ResponseInterface
     {
         $this->authorize('dict.edit');
@@ -154,8 +191,13 @@ class DictController extends AbstractController
         return ApiResponse::success($this->dict->formatItem($item));
     }
 
-    #[SwDelete(path: '/api/dict/items/{id}', operationId: 'dictItemDestroy', summary: '删除字典项', tag: '数据字典',
-        params: [new SwId()])]
+    #[SwDelete(
+        path: '/api/dict/items/{id}',
+        operationId: 'dictItemDestroy',
+        summary: '删除字典项',
+        tag: '数据字典',
+        params: [new SwId()]
+    )]
     public function destroyItem(int $id): ResponseInterface
     {
         $this->authorize('dict.delete');
@@ -165,7 +207,11 @@ class DictController extends AbstractController
         return ApiResponse::success(['id' => $id]);
     }
 
-    #[SwGet(path: '/api/dict/{code}', operationId: 'dictData', summary: '按编码取字典项', tag: '数据字典',
+    #[SwGet(
+        path: '/api/dict/{code}',
+        operationId: 'dictData',
+        summary: '按编码取字典项',
+        tag: '数据字典',
         desc: '仅返回启用类型下的启用项（带缓存），下拉数据源用；只需登录，无需字典管理权限。',
         params: [new SwQuery('code', desc: '字典编码，如 order_status', required: true)],
         responses: [new SwResp(desc: '数组 [{label, value}]，按 sort 排序', props: [
@@ -179,11 +225,16 @@ class DictController extends AbstractController
         return ApiResponse::success(['items' => $this->dict->items($code)]);
     }
 
-    #[SwPost(path: '/api/dict/batch', operationId: 'dictBatch', summary: '批量取多个字典', tag: '数据字典',
+    #[SwPost(
+        path: '/api/dict/batch',
+        operationId: 'dictBatch',
+        summary: '批量取多个字典',
+        tag: '数据字典',
         desc: '页面初始化时一次拉取多个下拉数据源；只需登录。',
         body: new SwBody(props: [
             new SwProp('codes', type: 'array', desc: '字典编码数组', items: new OA\Items(type: 'string')),
-        ], requiredProps: ['codes']))]
+        ], requiredProps: ['codes'])
+    )]
     public function batch(): ResponseInterface
     {
         $body = (array) $this->request->getParsedBody();

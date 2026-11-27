@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 /**
- * 异步任务中心测试：创建落库、执行状态流转、失败记录与重试、可见范围与归属保护。
+ * This file is part of Hyperf.
  *
- * 注意：测试进程不跑队列消费进程（开发 server 的消费者可能并发抢走消息），
- * 所以执行环节直接同步调用 Job::handle()，只断言同步语义下的结果。
- *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
 
+use App\Exception\BusinessException;
 use App\Job\BaseJob;
 use App\Job\ExportJob;
 use App\Model\File;
@@ -21,9 +21,15 @@ use App\Model\LoginLog;
 use App\Model\Notification;
 use App\Model\User;
 use App\Service\JobService;
+use App\Service\TokenService;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
+use RuntimeException;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class JobTest extends TestCase
 {
     private const USERNAME = 'test_job_user';
@@ -102,7 +108,7 @@ class JobTest extends TestCase
         $failing = new class((int) $record->id) extends BaseJob {
             public function run(): void
             {
-                throw new \RuntimeException('boom');
+                throw new RuntimeException('boom');
             }
         };
         $failing->handle();
@@ -126,7 +132,7 @@ class JobTest extends TestCase
 
         // 已成功任务不能重试；未结束任务不能删
         $record->refresh();
-        $this->expectException(\App\Exception\BusinessException::class);
+        $this->expectException(BusinessException::class);
         // 重试成功后：先把新任务跑成功，再对失败任务重试应被拒（失败→重试合法），改测「对 waiting 任务重试」
         $this->jobs->retry($retried);
     }
@@ -140,7 +146,7 @@ class JobTest extends TestCase
         $record->refresh();
         $this->assertSame(Job::STATUS_SUCCEEDED, $record->status);
 
-        $this->expectException(\App\Exception\BusinessException::class);
+        $this->expectException(BusinessException::class);
         $this->jobs->retry($record);
     }
 
@@ -152,7 +158,7 @@ class JobTest extends TestCase
         try {
             $this->jobs->destroy($record);
             $this->fail('waiting 任务不应能删除');
-        } catch (\App\Exception\BusinessException $e) {
+        } catch (BusinessException $e) {
             $this->assertStringContainsString('尚未结束', $e->getMessage());
         }
 
@@ -266,7 +272,7 @@ class JobTest extends TestCase
         LoginLog::query()->where('username', self::USERNAME)->delete();
 
         if ($user !== null) {
-            ApplicationContext::getContainer()->get(\App\Service\TokenService::class)
+            ApplicationContext::getContainer()->get(TokenService::class)
                 ->revokeAllForUser((int) $user->id);
             $user->delete();
         }

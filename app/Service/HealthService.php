@@ -2,16 +2,20 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Service;
 
 use App\Model\CrontabTask;
 use Cron\CronExpression;
+use Hyperf\DbConnection\Db;
+use Hyperf\Redis\Redis;
 use Throwable;
 
 use function Hyperf\Config\config;
@@ -24,7 +28,7 @@ use function Hyperf\Config\config;
  */
 class HealthService
 {
-    public function __construct(protected \Hyperf\Redis\Redis $redis)
+    public function __construct(protected Redis $redis)
     {
     }
 
@@ -47,12 +51,51 @@ class HealthService
     }
 
     /**
+     * 耗时统计（纯函数，便于单测）：总数 / 平均 / P95 / 按平均耗时倒序的最慢路径。
+     *
+     * @param array<int, array{path: string, cost_ms: int}> $rows
+     * @return array{total: int, avg_ms: null|int, p95_ms: null|int, slowest: array<int, array{path: string, count: int, avg_ms: int, max_ms: int}>}
+     */
+    public static function computeStats(array $rows): array
+    {
+        $total = count($rows);
+        if ($total === 0) {
+            return ['total' => 0, 'avg_ms' => null, 'p95_ms' => null, 'slowest' => []];
+        }
+
+        $costs = array_column($rows, 'cost_ms');
+        sort($costs);
+        $byPath = [];
+        foreach ($rows as $row) {
+            $byPath[$row['path']][] = $row['cost_ms'];
+        }
+
+        $slowest = [];
+        foreach ($byPath as $path => $list) {
+            $slowest[] = [
+                'path' => $path,
+                'count' => count($list),
+                'avg_ms' => (int) round(array_sum($list) / count($list)),
+                'max_ms' => max($list),
+            ];
+        }
+        usort($slowest, static fn ($a, $b) => $b['avg_ms'] <=> $a['avg_ms']);
+
+        return [
+            'total' => $total,
+            'avg_ms' => (int) round(array_sum($costs) / $total),
+            'p95_ms' => (int) $costs[min($total - 1, (int) floor($total * 0.95))],
+            'slowest' => array_slice($slowest, 0, 10),
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function database(): array
     {
         try {
-            $pdo = \Hyperf\DbConnection\Db::connection()->getPdo();
+            $pdo = Db::connection()->getPdo();
 
             $version = (string) $pdo->query('SELECT VERSION()')->fetchColumn();
             $threads = (int) $pdo->query("SHOW STATUS LIKE 'Threads_connected'")->fetchColumn(1);
@@ -196,7 +239,7 @@ class HealthService
     {
         try {
             $since = date('Y-m-d H:i:s', time() - 3600);
-            $rows = \Hyperf\DbConnection\Db::table('operation_logs')
+            $rows = Db::table('operation_logs')
                 ->where('created_at', '>=', $since)
                 ->orderByDesc('id')
                 ->limit(5000)
@@ -208,45 +251,6 @@ class HealthService
         } catch (Throwable $e) {
             return ['error' => $e->getMessage()];
         }
-    }
-
-    /**
-     * 耗时统计（纯函数，便于单测）：总数 / 平均 / P95 / 按平均耗时倒序的最慢路径。
-     *
-     * @param array<int, array{path: string, cost_ms: int}> $rows
-     * @return array{total: int, avg_ms: null|int, p95_ms: null|int, slowest: array<int, array{path: string, count: int, avg_ms: int, max_ms: int}>}
-     */
-    public static function computeStats(array $rows): array
-    {
-        $total = count($rows);
-        if ($total === 0) {
-            return ['total' => 0, 'avg_ms' => null, 'p95_ms' => null, 'slowest' => []];
-        }
-
-        $costs = array_column($rows, 'cost_ms');
-        sort($costs);
-        $byPath = [];
-        foreach ($rows as $row) {
-            $byPath[$row['path']][] = $row['cost_ms'];
-        }
-
-        $slowest = [];
-        foreach ($byPath as $path => $list) {
-            $slowest[] = [
-                'path' => $path,
-                'count' => count($list),
-                'avg_ms' => (int) round(array_sum($list) / count($list)),
-                'max_ms' => max($list),
-            ];
-        }
-        usort($slowest, static fn ($a, $b) => $b['avg_ms'] <=> $a['avg_ms']);
-
-        return [
-            'total' => $total,
-            'avg_ms' => (int) round(array_sum($costs) / $total),
-            'p95_ms' => (int) $costs[min($total - 1, (int) floor($total * 0.95))],
-            'slowest' => array_slice($slowest, 0, 10),
-        ];
     }
 
     /**

@@ -13,7 +13,9 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Model\LoginLog;
+use Generator;
 use Hyperf\Contract\StdoutLoggerInterface;
+use Hyperf\Database\Model\Builder;
 use Throwable;
 
 use function Hyperf\Config\config;
@@ -109,9 +111,9 @@ class LoginLogService
      * 导出全量：与列表共用筛选条件，按 id 升序每批 500 条产出（Generator，内存友好），上限 5000 行。
      *
      * @param array{event?: string, username?: string, user_id?: int, ip?: string} $filters
-     * @return \Generator<int, array<string, null|string>>
+     * @return Generator<int, array<string, null|string>>
      */
-    public function exportRows(array $filters, ?array $visibleUserIds = null): \Generator
+    public function exportRows(array $filters, ?array $visibleUserIds = null): Generator
     {
         $rows = $this->filteredQuery($filters, $visibleUserIds)->orderBy('id')->limit(5000)->get();
 
@@ -133,7 +135,7 @@ class LoginLogService
      *
      * @param null|array<int, int> $visibleUserIds 数据权限：null=不限；数组=只看这些用户（含空数组=什么都看不到）
      */
-    private function filteredQuery(array $filters, ?array $visibleUserIds = null): \Hyperf\Database\Model\Builder
+    private function filteredQuery(array $filters, ?array $visibleUserIds = null): Builder
     {
         $query = LoginLog::query();
 

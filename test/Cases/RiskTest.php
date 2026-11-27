@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * 登录风控测试：IP 历史规则、网段规则、异常时段、配置开关、审计筛选与通知。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
@@ -15,9 +17,14 @@ use App\Model\Notification;
 use App\Model\User;
 use App\Service\ConfigService;
 use App\Service\LoginRiskService;
+use App\Service\TokenService;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class RiskTest extends TestCase
 {
     private const USERNAME = 'test_risk_user';
@@ -191,7 +198,7 @@ class RiskTest extends TestCase
             Notification::query()->where('user_id', $uid)->delete();
         }
         if ($user !== null) {
-            ApplicationContext::getContainer()->get(\App\Service\TokenService::class)
+            ApplicationContext::getContainer()->get(TokenService::class)
                 ->revokeAllForUser((int) $user->id);
             $user->delete();
         }

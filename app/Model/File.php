@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Model;
 
 use Carbon\Carbon;
@@ -28,14 +31,14 @@ use Carbon\Carbon;
  */
 class File extends Model
 {
+    /** 图片类扩展名（前端用于判断是否展示缩略图） */
+    public const IMAGE_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'ico'];
+
     protected ?string $table = 'files';
 
     protected array $fillable = ['name', 'path', 'driver', 'mime', 'ext', 'size', 'sha1', 'user_id'];
 
     protected array $casts = ['id' => 'integer', 'size' => 'integer', 'user_id' => 'integer'];
-
-    /** 图片类扩展名（前端用于判断是否展示缩略图） */
-    public const IMAGE_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'ico'];
 
     public function isImage(): bool
     {

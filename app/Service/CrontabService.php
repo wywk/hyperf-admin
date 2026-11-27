@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Service;
@@ -13,6 +15,7 @@ namespace App\Service;
 use App\Model\CrontabLog;
 use App\Model\CrontabTask;
 use Cron\CronExpression;
+use DateTimeImmutable;
 use Hyperf\Contract\StdoutLoggerInterface;
 use Throwable;
 
@@ -101,7 +104,7 @@ class CrontabService
 
         try {
             return CronExpression::factory($task->rule)
-                ->getNextRunDate(new \DateTimeImmutable('now'))
+                ->getNextRunDate(new DateTimeImmutable('now'))
                 ->format('Y-m-d H:i:s');
         } catch (Throwable) {
             return null;

@@ -2,20 +2,27 @@
 
 declare(strict_types=1);
 /**
- * 在线会话测试：登录登记、列表可见、踢下线立即失效、改密码保留当前会话。
+ * This file is part of Hyperf.
  *
- * @internal
- * @coversNothing
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace HyperfTest\Cases;
 
+use App\Exception\BusinessException;
 use App\Model\User;
 use App\Service\SessionService;
 use App\Service\TokenService;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Testing\TestCase;
 
+/**
+ * @internal
+ * @coversNothing
+ */
 class SessionTest extends TestCase
 {
     private const USERNAME = 'test_sess_user';
@@ -73,7 +80,7 @@ class SessionTest extends TestCase
 
     public function testUnknownSessionKickRejected(): void
     {
-        $this->expectException(\App\Exception\BusinessException::class);
+        $this->expectException(BusinessException::class);
         $this->sessions->kick(1, 'deadbeefdeadbeef');
     }
 

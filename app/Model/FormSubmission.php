@@ -2,12 +2,17 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Model;
+
+use Carbon\Carbon;
 
 /**
  * 表单提交数据（data 存提交时的 JSON，不做结构约束）。
@@ -16,7 +21,7 @@ namespace App\Model;
  * @property int $form_id
  * @property array $data
  * @property string $client_ip
- * @property \Carbon\Carbon $created_at
+ * @property Carbon $created_at
  */
 class FormSubmission extends Model
 {

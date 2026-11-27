@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Process;
@@ -13,9 +15,10 @@ namespace App\Process;
 use App\Crontab\CrontabExecutor;
 use App\Model\CrontabTask;
 use Cron\CronExpression;
-use Hyperf\Process\AbstractProcess;
+use DateTimeImmutable;
 use Hyperf\Contract\StdoutLoggerInterface;
 use Hyperf\Di\Annotation\Inject;
+use Hyperf\Process\AbstractProcess;
 use Hyperf\Redis\RedisFactory;
 use Throwable;
 
@@ -26,6 +29,14 @@ use Throwable;
  */
 class CrontabProcess extends AbstractProcess
 {
+    /**
+     * 每个 worker 都会跑一份本进程，用「任务 ID + 执行窗口分钟」的 Redis 锁
+     * 保证同一任务同一窗口只被一个 worker 执行；TTL 300s 自然过期。
+     */
+    private const LOCK_PREFIX = 'crontab:lock:';
+
+    public string $name = 'crontab-scheduler';
+
     #[Inject]
     protected CrontabExecutor $executor;
 
@@ -34,14 +45,6 @@ class CrontabProcess extends AbstractProcess
 
     #[Inject]
     protected RedisFactory $redisFactory;
-
-    public string $name = 'crontab-scheduler';
-
-    /**
-     * 每个 worker 都会跑一份本进程，用「任务 ID + 执行窗口分钟」的 Redis 锁
-     * 保证同一任务同一窗口只被一个 worker 执行；TTL 300s 自然过期。
-     */
-    private const LOCK_PREFIX = 'crontab:lock:';
 
     public function handle(): void
     {
@@ -80,16 +83,16 @@ class CrontabProcess extends AbstractProcess
      * 到期判定：以 last_run_at（无记录则取任务创建时间）为基准，
      * cron 表达式的下一次运行时间已过即视为到期；返回该次运行时间（作为窗口标识）。
      */
-    public function nextRun(CrontabTask $task, ?\DateTimeImmutable $now = null): ?\DateTimeImmutable
+    public function nextRun(CrontabTask $task, ?DateTimeImmutable $now = null): ?DateTimeImmutable
     {
         if (! CronExpression::isValidExpression($task->rule)) {
             return null;
         }
 
-        $now ??= new \DateTimeImmutable();
+        $now ??= new DateTimeImmutable();
         $base = $task->last_run_at ?? $task->created_at ?? $now;
-        if (! $base instanceof \DateTimeImmutable) {
-            $base = new \DateTimeImmutable($base->format('Y-m-d H:i:s'));
+        if (! $base instanceof DateTimeImmutable) {
+            $base = new DateTimeImmutable($base->format('Y-m-d H:i:s'));
         }
 
         try {
@@ -99,7 +102,7 @@ class CrontabProcess extends AbstractProcess
             return null;
         }
 
-        $next = \DateTimeImmutable::createFromInterface($next);
+        $next = DateTimeImmutable::createFromInterface($next);
 
         return $next->getTimestamp() <= $now->getTimestamp() ? $next : null;
     }

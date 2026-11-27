@@ -2,15 +2,17 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Service;
 
 use App\Model\MallGoodsSku;
-use Hyperf\DbConnection\Db;
 
 /**
  * MallGoodsSku 业务服务（由代码生成器生成，业务逻辑在这里扩展）。
@@ -28,7 +30,7 @@ class MallGoodsSkuService
             $query->where('goods_id', $filters['goods_id']);
         }
         if (isset($filters['sku_code']) && $filters['sku_code'] !== null && $filters['sku_code'] !== '') {
-            $query->where('sku_code', 'like', '%'.$filters['sku_code'].'%');
+            $query->where('sku_code', 'like', '%' . $filters['sku_code'] . '%');
         }
         if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
             $query->where('status', $filters['status']);

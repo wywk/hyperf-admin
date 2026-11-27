@@ -21,15 +21,15 @@ use App\Service\AuthService;
 use App\Service\CaptchaService;
 use App\Service\TotpService;
 use App\Support\ClientIp;
-use Hyperf\Context\Context;
-use Hyperf\Di\Annotation\Inject;
-use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use App\Swagger\Attributes\SwBody;
 use App\Swagger\Attributes\SwGet;
 use App\Swagger\Attributes\SwPost;
 use App\Swagger\Attributes\SwProp;
 use App\Swagger\Attributes\SwQuery;
 use App\Swagger\Attributes\SwResp;
+use Hyperf\Context\Context;
+use Hyperf\Di\Annotation\Inject;
+use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 
@@ -48,7 +48,12 @@ class AuthController extends AbstractController
     /**
      * POST /api/auth/login.
      */
-    #[SwPost(path: '/api/auth/login', operationId: 'authLogin', summary: '登录获取双 Token', tag: '认证', auth: false,
+    #[SwPost(
+        path: '/api/auth/login',
+        operationId: 'authLogin',
+        summary: '登录获取双 Token',
+        tag: '认证',
+        auth: false,
         desc: '校验用户名密码，签发 access_token（2 小时）与 refresh_token（30 天，含旋转与家族吊销）。',
         errors: [422],
         body: new SwBody(
@@ -98,7 +103,12 @@ class AuthController extends AbstractController
     /**
      * GET /api/auth/captcha：按需签发图形验证码.
      */
-    #[SwGet(path: '/api/auth/captcha', operationId: 'authCaptcha', summary: '获取图形验证码', tag: '认证', auth: false,
+    #[SwGet(
+        path: '/api/auth/captcha',
+        operationId: 'authCaptcha',
+        summary: '获取图形验证码',
+        tag: '认证',
+        auth: false,
         desc: '先判断当前用户名/IP 是否需要验证码：不需要时只返回 required=false；需要时返回 SVG 图片（data URI）与一次性 captcha_id。',
         params: [new SwQuery('username', desc: '正在登录的用户名，用于判断失败次数')],
         responses: [new SwResp(desc: '{required, captcha_id?, image?, expires_in?}')]
@@ -122,7 +132,12 @@ class AuthController extends AbstractController
     /**
      * POST /api/auth/totp/verify：两步验证第二步，换正式 token.
      */
-    #[SwPost(path: '/api/auth/totp/verify', operationId: 'authTotpVerify', summary: '校验动态验证码完成登录', tag: '认证', auth: false,
+    #[SwPost(
+        path: '/api/auth/totp/verify',
+        operationId: 'authTotpVerify',
+        summary: '校验动态验证码完成登录',
+        tag: '认证',
+        auth: false,
         desc: '用登录接口返回的 totp_token + 6 位动态码换取正式 token 对；凭证 5 分钟内有效且只能用一次。',
         errors: [401, 422],
         body: new SwBody(
@@ -156,7 +171,11 @@ class AuthController extends AbstractController
     /**
      * POST /api/auth/totp/setup：生成待绑定的 TOTP 密钥.
      */
-    #[SwPost(path: '/api/auth/totp/setup', operationId: 'authTotpSetup', summary: '生成两步验证密钥', tag: '认证',
+    #[SwPost(
+        path: '/api/auth/totp/setup',
+        operationId: 'authTotpSetup',
+        summary: '生成两步验证密钥',
+        tag: '认证',
         desc: '返回 Base32 密钥与 otpauth 链接（前端可自行渲染二维码）。密钥 10 分钟内有效，验证通过后才写入账号。',
         responses: [new SwResp(desc: '{secret, otpauth_url, issuer}')]
     )]
@@ -168,7 +187,11 @@ class AuthController extends AbstractController
     /**
      * POST /api/auth/totp/enable：校验动态码后开启两步验证.
      */
-    #[SwPost(path: '/api/auth/totp/enable', operationId: 'authTotpEnable', summary: '开启两步验证', tag: '认证',
+    #[SwPost(
+        path: '/api/auth/totp/enable',
+        operationId: 'authTotpEnable',
+        summary: '开启两步验证',
+        tag: '认证',
         desc: '校验动态码通过后把密钥写入账号，下次登录需要两步验证。',
         errors: [422],
         body: new SwBody(props: [new SwProp('code', desc: '6 位动态码')], requiredProps: ['code']),
@@ -188,7 +211,11 @@ class AuthController extends AbstractController
     /**
      * POST /api/auth/totp/disable：校验动态码后关闭两步验证.
      */
-    #[SwPost(path: '/api/auth/totp/disable', operationId: 'authTotpDisable', summary: '关闭两步验证', tag: '认证',
+    #[SwPost(
+        path: '/api/auth/totp/disable',
+        operationId: 'authTotpDisable',
+        summary: '关闭两步验证',
+        tag: '认证',
         desc: '需要提供当前动态码，避免 token 被盗后直接关掉二次验证。',
         errors: [422],
         body: new SwBody(props: [new SwProp('code', desc: '6 位动态码')], requiredProps: ['code']),
@@ -205,20 +232,15 @@ class AuthController extends AbstractController
         return ApiResponse::success(null, '两步验证已关闭');
     }
 
-    private function currentUser(): User
-    {
-        $user = Context::get('user');
-        if (! $user instanceof User) {
-            throw new BusinessException(ApiCode::UNAUTHORIZED);
-        }
-
-        return $user;
-    }
-
     /**
      * POST /api/auth/refresh：用 refresh token 换新的 token 对.
      */
-    #[SwPost(path: '/api/auth/refresh', operationId: 'authRefresh', summary: '刷新 access_token', tag: '认证', auth: false,
+    #[SwPost(
+        path: '/api/auth/refresh',
+        operationId: 'authRefresh',
+        summary: '刷新 access_token',
+        tag: '认证',
+        auth: false,
         desc: '用 refresh_token 换新 token 对；旧 refresh_token 被重放会触发整个家族吊销。',
         body: new SwBody(
             props: [new SwProp('refresh_token', desc: '登录时返回的刷新令牌')],
@@ -247,7 +269,11 @@ class AuthController extends AbstractController
     /**
      * POST /api/auth/logout（需登录）.
      */
-    #[SwPost(path: '/api/auth/logout', operationId: 'authLogout', summary: '退出登录', tag: '认证',
+    #[SwPost(
+        path: '/api/auth/logout',
+        operationId: 'authLogout',
+        summary: '退出登录',
+        tag: '认证',
         desc: '将当前 access_token（jti）加入黑名单。',
         errors: [401],
         responses: [new SwResp(desc: '已退出登录')]
@@ -267,7 +293,11 @@ class AuthController extends AbstractController
     /**
      * GET /api/auth/me（需登录）.
      */
-    #[SwGet(path: '/api/auth/me', operationId: 'authMe', summary: '当前用户信息', tag: '认证',
+    #[SwGet(
+        path: '/api/auth/me',
+        operationId: 'authMe',
+        summary: '当前用户信息',
+        tag: '认证',
         desc: '返回用户资料、角色、权限码集合与菜单树（侧边栏数据源）。',
         errors: [401],
         responses: [new SwResp(desc: '用户信息', props: [
@@ -292,7 +322,11 @@ class AuthController extends AbstractController
     /**
      * POST /api/auth/password：修改自己的密码（需登录）.
      */
-    #[SwPost(path: '/api/auth/password', operationId: 'authChangePassword', summary: '修改自己的密码', tag: '认证',
+    #[SwPost(
+        path: '/api/auth/password',
+        operationId: 'authChangePassword',
+        summary: '修改自己的密码',
+        tag: '认证',
         desc: '校验旧密码后设置新密码；修改成功后除当前设备外的其他登录会话立即失效。',
         errors: [401, 422],
         body: new SwBody(
@@ -330,6 +364,16 @@ class AuthController extends AbstractController
         );
 
         return ApiResponse::success(null, '密码已更新，其他设备的登录已失效');
+    }
+
+    private function currentUser(): User
+    {
+        $user = Context::get('user');
+        if (! $user instanceof User) {
+            throw new BusinessException(ApiCode::UNAUTHORIZED);
+        }
+
+        return $user;
     }
 
     private function userAgent(): string

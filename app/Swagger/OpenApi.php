@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Swagger;
 
 use OpenApi\Attributes as OA;
@@ -74,27 +77,37 @@ abstract class OpenApi
         new OA\Property(property: 'table', type: 'string', example: 'ha_mall_goods', description: '物理表名'),
         new OA\Property(property: 'module', type: 'string', example: 'mall_goods', description: '模块标识（路由/权限码/前端文件名）'),
         new OA\Property(property: 'controller', type: 'string', example: 'MallGoods', description: '类名前缀，缺省按模块名 StudlyCase'),
-        new OA\Property(property: 'menu', type: 'object',
+        new OA\Property(
+            property: 'menu',
+            type: 'object',
             properties: [
                 new OA\Property(property: 'parent_id', type: 'integer', description: '菜单父节点 ID，0 为顶级目录'),
                 new OA\Property(property: 'name', type: 'string', example: '商品管理'),
                 new OA\Property(property: 'path', type: 'string', example: 'mall/goods', description: '前端路由 path（建议与菜单一致）'),
                 new OA\Property(property: 'icon', type: 'string', example: 'Goods'),
                 new OA\Property(property: 'sort', type: 'integer'),
-            ]),
+            ]
+        ),
         new OA\Property(property: 'fields', type: 'array', items: new OA\Items(
             required: ['name', 'label', 'form_type'],
             properties: [
                 new OA\Property(property: 'name', type: 'string', example: 'name'),
                 new OA\Property(property: 'label', type: 'string', example: '商品名称'),
-                new OA\Property(property: 'form_type', type: 'string',
-                    enum: ['input', 'textarea', 'number', 'select', 'radio', 'checkbox', 'switch', 'date']),
+                new OA\Property(
+                    property: 'form_type',
+                    type: 'string',
+                    enum: ['input', 'textarea', 'number', 'select', 'radio', 'checkbox', 'switch', 'date']
+                ),
                 new OA\Property(property: 'required', type: 'boolean'),
                 new OA\Property(property: 'list', type: 'boolean', description: '是否出现在列表'),
                 new OA\Property(property: 'search', type: 'boolean', description: '是否作为搜索条件'),
                 new OA\Property(property: 'form', type: 'boolean', description: '是否出现在表单'),
-                new OA\Property(property: 'options', type: 'array', items: new OA\Items(type: 'string'),
-                    description: 'select/radio 选项，支持 "1=上架" 值=标签写法'),
+                new OA\Property(
+                    property: 'options',
+                    type: 'array',
+                    items: new OA\Items(type: 'string'),
+                    description: 'select/radio 选项，支持 "1=上架" 值=标签写法'
+                ),
             ]
         )),
     ]

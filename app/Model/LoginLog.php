@@ -31,8 +31,11 @@ class LoginLog extends Model
 
     /** 登录风控等级 */
     public const RISK_NORMAL = 0;
+
     public const RISK_LOW = 1;
+
     public const RISK_MEDIUM = 2;
+
     public const RISK_HIGH = 3;
 
     public const RISK_LABELS = [

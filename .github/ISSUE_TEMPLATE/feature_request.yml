@@ -1,0 +1,31 @@
+name: ✨ 功能建议 / Feature Request
+description: 提出新功能或改进建议 / Suggest an idea
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 想解决什么问题 / What problem does this solve?
+      description: 描述当前遇到的限制或痛点。
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望的方案 / Proposed solution
+      description: 你希望它如何工作？可附草图、接口设计或参考实现。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 备选方案 / Alternatives considered
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: 愿意贡献吗？/ Willing to contribute?
+      options:
+        - label: 我愿意提交 PR 实现该功能 / I would like to submit a PR

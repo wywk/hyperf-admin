@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace App\Service;
 
 use App\Common\ApiCode;
@@ -31,11 +34,10 @@ class FileManagerService
     /**
      * 上传文件并落库。
      *
-     * @param string $contents   文件二进制内容
+     * @param string $contents 文件二进制内容
      * @param string $clientName 原始文件名
      * @param string $clientMime 客户端报告的 MIME
-     * @param int    $userId     上传者 ID
-     * @return File
+     * @param int $userId 上传者 ID
      */
     public function upload(string $contents, string $clientName, string $clientMime, int $userId): File
     {

@@ -50,7 +50,11 @@ class PermissionController extends AbstractController
     /**
      * GET /api/permissions?keyword=.
      */
-    #[SwGet(path: '/api/permissions', operationId: 'permissionIndex', summary: '权限树查询', tag: '权限管理',
+    #[SwGet(
+        path: '/api/permissions',
+        operationId: 'permissionIndex',
+        summary: '权限树查询',
+        tag: '权限管理',
         desc: '返回整棵权限树（menu/button 节点带 children）；带 keyword 时返回平铺的过滤结果。需要 permission.view 或 role.view 权限。',
         params: [new SwQuery('keyword', desc: '按名称/权限码过滤（返回平铺列表）')],
         responses: [new SwResp(desc: '权限树或平铺列表', props: [
@@ -86,7 +90,11 @@ class PermissionController extends AbstractController
     /**
      * POST /api/permissions.
      */
-    #[SwPost(path: '/api/permissions', operationId: 'permissionStore', summary: '创建权限节点', tag: '权限管理',
+    #[SwPost(
+        path: '/api/permissions',
+        operationId: 'permissionStore',
+        summary: '创建权限节点',
+        tag: '权限管理',
         desc: '创建菜单或按钮权限；按钮只能挂在菜单下；创建后自动授予全部系统角色。需要 permission.add 权限。',
         body: new SwBody(
             props: [
@@ -126,7 +134,11 @@ class PermissionController extends AbstractController
     /**
      * PUT /api/permissions/{id}.
      */
-    #[SwPut(path: '/api/permissions/{id}', operationId: 'permissionUpdate', summary: '更新权限节点', tag: '权限管理',
+    #[SwPut(
+        path: '/api/permissions/{id}',
+        operationId: 'permissionUpdate',
+        summary: '更新权限节点',
+        tag: '权限管理',
         desc: '按「传哪些改哪些」处理部分更新；type 创建后不可改；内置节点（is_system）不允许改权限码。需要 permission.edit 权限。',
         params: [new SwId()],
         body: new SwBody(
@@ -185,7 +197,11 @@ class PermissionController extends AbstractController
     /**
      * DELETE /api/permissions/{id}.
      */
-    #[SwDelete(path: '/api/permissions/{id}', operationId: 'permissionDestroy', summary: '删除权限节点', tag: '权限管理',
+    #[SwDelete(
+        path: '/api/permissions/{id}',
+        operationId: 'permissionDestroy',
+        summary: '删除权限节点',
+        tag: '权限管理',
         desc: '有子节点或为内置节点（is_system）时拒绝删除。需要 permission.delete 权限。',
         params: [new SwId()],
         responses: [new SwResp(desc: '已删除')]

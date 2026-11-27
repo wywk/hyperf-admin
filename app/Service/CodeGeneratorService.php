@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/your-name/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Service;
@@ -15,6 +17,7 @@ use App\Exception\BusinessException;
 use App\Model\Permission;
 use Hyperf\DbConnection\Db;
 use Hyperf\Di\Annotation\Inject;
+use stdClass;
 
 /**
  * 全栈 CRUD 代码生成器。
@@ -25,9 +28,6 @@ use Hyperf\Di\Annotation\Inject;
  */
 class CodeGeneratorService
 {
-    #[Inject]
-    protected RbacService $rbacService;
-
     /** 框架自身的表，不允许生成 CRUD */
     private const SYSTEM_TABLES = [
         'migrations',
@@ -39,6 +39,9 @@ class CodeGeneratorService
         'forms',
         'form_submissions',
     ];
+
+    #[Inject]
+    protected RbacService $rbacService;
 
     /**
      * 可供选择的业务表（information_schema，当前库）。
@@ -54,7 +57,7 @@ class CodeGeneratorService
             . ' FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY table_name'
         );
 
-        return array_values(array_map(function (\stdClass $row) use ($prefix): array {
+        return array_values(array_map(function (stdClass $row) use ($prefix): array {
             $bare = $this->stripPrefix($row->name, $prefix);
 
             return [
@@ -84,7 +87,7 @@ class CodeGeneratorService
             [$table]
         );
 
-        return array_values(array_map(static function (\stdClass $row): array {
+        return array_values(array_map(static function (stdClass $row): array {
             return [
                 'name' => $row->name,
                 'data_type' => $row->data_type,
@@ -164,6 +167,25 @@ class CodeGeneratorService
             'config/routes.php（已更新，需重启后端生效）',
             'frontend/src/router/routes.ts（已更新）',
         ]), 'permissions' => $permissions];
+    }
+
+    /* ---------------- 上下文 ---------------- */
+
+    /** module → StudlyCase */
+    public static function studly(string $value): string
+    {
+        return str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $value)));
+    }
+
+    /** 解析选项串："1=启用" → 值 1 / 标签 启用；无等号时值与标签相同 */
+    public static function splitOption(string $opt): array
+    {
+        $pos = strpos($opt, '=');
+        if ($pos === false) {
+            return ['value' => $opt, 'label' => $opt];
+        }
+
+        return ['value' => substr($opt, 0, $pos), 'label' => substr($opt, $pos + 1)];
     }
 
     /** 项目根目录（Hyperf 里没有 Laravel 的 base_path()） */
@@ -278,14 +300,6 @@ class CodeGeneratorService
         // 用回调替换，避免 $ / 反斜杠被当成反向引用
         $content = preg_replace_callback($anchor, static fn (): string => $wrapped . "\n]", $content, 1) ?? $content;
         file_put_contents($file, $content);
-    }
-
-    /* ---------------- 上下文 ---------------- */
-
-    /** module → StudlyCase */
-    public static function studly(string $value): string
-    {
-        return str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $value)));
     }
 
     private function buildContext(string $module, string $studly, string $table, array $fields, string $menuName, string $menuPath, array $columnMeta = []): array
@@ -408,7 +422,7 @@ class CodeGeneratorService
                     . "      <template #default=\"{ row }\">\n"
                     . "        <el-tag :type=\"row.{$name} ? 'success' : 'info'\">{{ row.{$name} ? '是' : '否' }}</el-tag>\n"
                     . "      </template>\n"
-                    . "    </el-table-column>";
+                    . '    </el-table-column>';
                 } elseif ($formType === 'select' && ($field['options'] ?? []) !== []) {
                     $pairs = [];
                     if ($dictCode !== '') {
@@ -425,7 +439,7 @@ class CodeGeneratorService
                     . "      <template #default=\"{ row }\">\n"
                     . "        <el-tag type=\"info\">{{ {$name}Labels[String(row.{$name})] ?? row.{$name} }}</el-tag>\n"
                     . "      </template>\n"
-                    . "    </el-table-column>";
+                    . '    </el-table-column>';
                 } else {
                     $tableColumns[] = "    <el-table-column prop=\"{$name}\" label=\"{$label}\" min-width=\"130\" show-overflow-tooltip />";
                 }
@@ -497,7 +511,7 @@ VUE : '';
             'form_rules' => $formRules === [] ? '{}' : "{\n" . implode("\n", $formRules) . "\n}",
             'option_maps' => $optionMaps === [] ? '' : implode("\n\n", $optionMaps) . "\n",
             'routes_block' => $this->renderRoutesBlock($module, $studly),
-            'export_columns' => implode("\n", $exportColumns) ?: "        // 无导出字段",
+            'export_columns' => implode("\n", $exportColumns) ?: '        // 无导出字段',
             'frontend_route' => $this->renderFrontendRoute($module, $studly, $menuName, $menuPath),
             'vue_imports' => $hasDict || $isTree ? "import { computed, onMounted, reactive, ref } from 'vue'" : "import { onMounted, reactive, ref } from 'vue'",
             'dict_import' => $hasDict ? "import { fetchDict } from '@/api/dict'" : '',
@@ -599,16 +613,16 @@ PHP : '',
             'radio' => $dictCode !== ''
                 ? "          <el-radio-group v-model=\"{$model}.{$name}\">\n"
                     . "            <el-radio v-for=\"opt in {$name}Options\" :key=\"opt.value\" :value=\"opt.value\">{{ opt.label }}</el-radio>\n"
-                    . "          </el-radio-group>"
+                    . '          </el-radio-group>'
                 : "          <el-radio-group v-model=\"{$model}.{$name}\">\n"
-                    . implode("\n", array_map(static function (string $opt) use ($name, $model): string {
+                    . implode("\n", array_map(static function (string $opt): string {
                         $o = self::splitOption($opt);
 
                         return "            <el-radio key=\"{$o['value']}\" value=\"{$o['value']}\">{$o['label']}</el-radio>";
                     }, $options))
                     . "\n          </el-radio-group>",
             'checkbox' => "          <el-checkbox-group v-model=\"{$model}.{$name}\">\n"
-                . implode("\n", array_map(static function (string $opt) use ($name, $model): string {
+                . implode("\n", array_map(static function (string $opt): string {
                     $o = self::splitOption($opt);
 
                     return "            <el-checkbox key=\"{$o['value']}\" value=\"{$o['value']}\">{$o['label']}</el-checkbox>";
@@ -668,7 +682,7 @@ declare(strict_types=1);
  * @link     https://github.com/your-name/hyperf-admin
  * @license  MIT
  */
-namespace App\Model;
+namespace App\\Model;
 
 /**
  * 数据表 {$ctx['table']} 的模型（由代码生成器生成，可按需修改）。
@@ -706,13 +720,13 @@ declare(strict_types=1);
  * @link     https://github.com/your-name/hyperf-admin
  * @license  MIT
  */
-namespace App\Service;
+namespace App\\Service;
 
-use App\Common\\ApiCode;
+use App\\Common\\ApiCode;
 use App\\Exception\\BusinessException;
-use App\Model\\{$ctx['studly']};
-use Hyperf\Database\\Exception\\QueryException;
-use Hyperf\DbConnection\Db;
+use App\\Model\\{$ctx['studly']};
+use Hyperf\\Database\\Exception\\QueryException;
+use Hyperf\\DbConnection\\Db;
 
 /**
  * {$ctx['studly']} 业务服务（由代码生成器生成，业务逻辑在这里扩展）。
@@ -904,7 +918,7 @@ declare(strict_types=1);
  * @link     https://github.com/your-name/hyperf-admin
  * @license  MIT
  */
-namespace App\Controller\Api;
+namespace App\\Controller\\Api;
 
 use App\\Common\\ApiCode;
 use App\\Common\\ApiResponse;
@@ -1665,17 +1679,6 @@ TS
         }
 
         return $values === [] ? 'string|max:191' : 'in:' . implode(',', $values);
-    }
-
-    /** 解析选项串："1=启用" → 值 1 / 标签 启用；无等号时值与标签相同 */
-    public static function splitOption(string $opt): array
-    {
-        $pos = strpos($opt, '=');
-        if ($pos === false) {
-            return ['value' => $opt, 'label' => $opt];
-        }
-
-        return ['value' => substr($opt, 0, $pos), 'label' => substr($opt, $pos + 1)];
     }
 
     private function assertTable(string $table): void

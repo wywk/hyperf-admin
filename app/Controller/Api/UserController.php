@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 /**
- * This file is part of hyperf-admin.
+ * This file is part of Hyperf.
  *
- * @link     https://github.com/wywk/hyperf-admin
- * @license  MIT
+ * @link     https://www.hyperf.io
+ * @document https://hyperf.wiki
+ * @contact  group@hyperf.io
+ * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
 namespace App\Controller\Api;
@@ -49,7 +51,12 @@ class UserController extends AbstractController
     /**
      * GET /api/users.
      */
-    #[SwGet(path: '/api/users', operationId: 'userIndex', summary: '用户分页列表', tag: '用户管理', page: true,
+    #[SwGet(
+        path: '/api/users',
+        operationId: 'userIndex',
+        summary: '用户分页列表',
+        tag: '用户管理',
+        page: true,
         desc: '支持按用户名/昵称/邮箱模糊搜索，按角色与状态过滤。需要 user.view 权限。',
         params: [
             new SwQuery('keyword', desc: '用户名 / 昵称 / 邮箱模糊匹配'),
@@ -97,7 +104,11 @@ class UserController extends AbstractController
     /**
      * POST /api/users.
      */
-    #[SwPost(path: '/api/users', operationId: 'userStore', summary: '创建用户', tag: '用户管理',
+    #[SwPost(
+        path: '/api/users',
+        operationId: 'userStore',
+        summary: '创建用户',
+        tag: '用户管理',
         desc: '密码使用 bcrypt 哈希存储。需要 user.add 权限。',
         body: new SwBody(
             props: [
@@ -140,7 +151,11 @@ class UserController extends AbstractController
     /**
      * PUT /api/users/{id}.
      */
-    #[SwPut(path: '/api/users/{id}', operationId: 'userUpdate', summary: '更新用户', tag: '用户管理',
+    #[SwPut(
+        path: '/api/users/{id}',
+        operationId: 'userUpdate',
+        summary: '更新用户',
+        tag: '用户管理',
         desc: '部分更新。改角色或停用会立即吊销该用户的全部登录会话。需要 user.edit 权限。',
         params: [new SwId()],
         body: new SwBody(
@@ -198,7 +213,11 @@ class UserController extends AbstractController
     /**
      * PUT /api/users/{id}/status：启用 / 停用.
      */
-    #[SwPut(path: '/api/users/{id}/status', operationId: 'userUpdateStatus', summary: '启用或停用用户', tag: '用户管理',
+    #[SwPut(
+        path: '/api/users/{id}/status',
+        operationId: 'userUpdateStatus',
+        summary: '启用或停用用户',
+        tag: '用户管理',
         desc: '停用后该用户立即无法登录，已登录的会话全部失效；不能停用自己或最后一个可用管理员。需要 user.edit 权限。',
         params: [new SwId()],
         body: new SwBody(props: [new SwProp('status', type: 'integer', enum: [0, 1])], requiredProps: ['status']),
@@ -224,7 +243,11 @@ class UserController extends AbstractController
     /**
      * PUT /api/users/{id}/password：管理员重置密码.
      */
-    #[SwPut(path: '/api/users/{id}/password', operationId: 'userResetPassword', summary: '重置用户密码', tag: '用户管理',
+    #[SwPut(
+        path: '/api/users/{id}/password',
+        operationId: 'userResetPassword',
+        summary: '重置用户密码',
+        tag: '用户管理',
         desc: '管理员直接设置新密码，无需旧密码；重置后该用户全部会话下线，需用新密码重新登录。需要 user.reset 权限。',
         params: [new SwId()],
         body: new SwBody(
@@ -252,7 +275,11 @@ class UserController extends AbstractController
     /**
      * DELETE /api/users/{id}.
      */
-    #[SwDelete(path: '/api/users/{id}', operationId: 'userDestroy', summary: '删除用户', tag: '用户管理',
+    #[SwDelete(
+        path: '/api/users/{id}',
+        operationId: 'userDestroy',
+        summary: '删除用户',
+        tag: '用户管理',
         desc: '不能删除自己或最后一个可用管理员；删除后会话立即失效。需要 user.delete 权限。',
         params: [new SwId()],
         responses: [new SwResp(desc: '已删除')]
